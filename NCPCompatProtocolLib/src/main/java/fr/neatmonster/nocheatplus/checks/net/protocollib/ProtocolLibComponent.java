@@ -145,7 +145,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         	// if (!BridgeMisc.hasIsUsingItemMethod()) {
         	    register("fr.neatmonster.nocheatplus.checks.net.protocollib.UseItemAdapter", plugin);
         	// }
-            register("fr.neatmonster.nocheatplus.checks.net.protocollib.Velocity", plugin);
+            register("fr.neatmonster.nocheatplus.checks.net.protocollib.VelocityAdapter", plugin);
         }
         else {
             // Fuck 1.7.

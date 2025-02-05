@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -43,6 +42,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
@@ -70,16 +70,15 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.BlockPositionContainer;
-import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.ICollidePassable;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.PassableAxisTracing;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.PassableRayTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockUtils;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.ICollidePassable;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.PassableAxisTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.PassableRayTracing;
 import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.location.RichEntityLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache.IBlockCacheNode;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
-import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 
@@ -505,7 +504,7 @@ public class BlockProperties {
     /**
      * NMS friction factors library for vertical motion
      * 
-     * @param player
+     * @param entity
      * @param location Inaccurate with split moves, should be avoided.
      * @param yOnGround
      * @param thisMove Should be used over location to compose the correct position (split moves) 
@@ -606,11 +605,11 @@ public class BlockProperties {
         final Material blockBelow;
         // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
         if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-            final Location loc = getOnPos(blockCache, eLoc, findSupportingBlockLoc(eLoc.getWorld(), blockCache, eLoc.getMinX(), eLoc.getMinY(), eLoc.getMinZ(), eLoc.getMaxX(), eLoc.getMaxY(), eLoc.getMaxZ(), correctedLoc), yBelow);
-            blockBelow = blockCache.getOrCreateBlockCacheNode(loc.getX(), loc.getY(), loc.getZ(), false).getType();
+           // TODO: IMPLEMENT
+             
         }
         else {
-            // getOnBlock()
+            // LEGACY
             blockBelow = eLoc.getTypeId(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
         }
         // Finally, determine the friction for the grabbed block.
@@ -669,8 +668,8 @@ public class BlockProperties {
             final Material blockBelow;
             // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                final Location loc = getOnPos(blockCache, eLoc, findSupportingBlockLoc(eLoc.getWorld(), blockCache, eLoc.getMinX(), eLoc.getMinY(), eLoc.getMinZ(), eLoc.getMaxX(), eLoc.getMaxY(), eLoc.getMaxZ(), correctedLoc), yBelow);
-                blockBelow = blockCache.getOrCreateBlockCacheNode(loc.getX(), loc.getY(), loc.getZ(), false).getType();
+                // TODO: IMPLEMENT
+                
             }
             else {
                 blockBelow = eLoc.getTypeId(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
@@ -4581,106 +4580,6 @@ public class BlockProperties {
             }
         }
         return flags;
-    }
-
-    /**
-     * Return the block location closest to the player's current location.
-     * This is for Mojang's 1.20 fix for block properties. See: https://bugs.mojang.com/browse/MC-262690 <br>
-     * Does not check for collision against the actual AABB of the block.
-     * 
-     * @param access
-     * @param minX Entity's AABB...
-     * @param minY
-     * @param minZ
-     * @param maxX
-     * @param maxY
-     * @param maxZ
-     * @param loc Entity / Player's location.
-     * @return Null, if the block at any given location doesn't have the SOLID+GROUND flag.
-     */
-    public static Location findSupportingBlockLoc(final World world, final BlockCache access, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, Location loc) {
-        // From VoxelShapeSpliterator.java
-        final int minBlockX = (int) Math.floor(minX - CollisionUtil.COLLISION_EPSILON) - 1;
-        final int maxBlockX = (int) Math.floor(maxX + CollisionUtil.COLLISION_EPSILON) + 1;
-        final int minBlockY = (int) Math.floor(minY - CollisionUtil.COLLISION_EPSILON) - 1;
-        final int maxBlockY = (int) Math.min(Math.floor(maxY + CollisionUtil.COLLISION_EPSILON) + 1, access.getMaxBlockY());
-        final int minBlockZ = (int) Math.floor(minZ - CollisionUtil.COLLISION_EPSILON) - 1;
-        final int maxBlockZ = (int) Math.floor(maxZ + CollisionUtil.COLLISION_EPSILON) + 1;
-        // 0: Collect all valid block locations first.
-        List<Location> blockLocations = new ArrayList<Location>(); // An AABB can at maximum stay on 4 different blocks simultaneously (i.e.: Being at the center of slime, soulsand, honeyblock and ice)
-        for (int x = minBlockX; x <= maxBlockX; x++) {
-            for (int y = minBlockY; y <= maxBlockY; y++) {
-                for (int z = minBlockZ; z <= maxBlockZ; z++) {
-                    // Collect all block flags attached to the block at the given coordinates. 
-                    final IBlockCacheNode node = access.getOrCreateBlockCacheNode(x, y, z, false);
-                    if (isAir(node.getType()) || isPassable(node.getType())) {
-                        continue;
-                    }
-                    blockLocations.add(new Location(loc.getWorld(), x, y, z));
-                }
-            }
-        }
-        // 1: Surely not on ground.
-        if (blockLocations.isEmpty()) {
-            return null;
-        }
-        // 2: Find out which block location is closest to the player's current position
-        Location closestBlockLoc = null;
-        double lastDistance = Double.MAX_VALUE;
-        for (Location bLoc : blockLocations) {
-            double thisDistance = TrigUtil.distanceToCenterSqr(bLoc, loc);
-            if (thisDistance < lastDistance || thisDistance == lastDistance && (closestBlockLoc == null || TrigUtil.compareTo(closestBlockLoc, bLoc) < 0)) {
-                closestBlockLoc = bLoc;
-                lastDistance = thisDistance;
-            }
-        }
-        return closestBlockLoc;
-    }
-
-    public static Location getOnPos(final BlockCache access, final RichEntityLocation eLoc, final Location mainBlockPos, double yBelow) {
-        if (mainBlockPos != null) {
-            final IBlockCacheNode node = access.getOrCreateBlockCacheNode(mainBlockPos.getX(), mainBlockPos.getY(), mainBlockPos.getZ(), false);
-            final long flags = BlockFlags.getBlockFlags(node.getType());
-            final Material mat = node.getType();
-            // I genuinely don't understand this code, or why fences are special
-            boolean shouldReturn = (!(yBelow <= 0.5D) || (flags & BlockFlags.F_HEIGHT150) == 0) 
-                                   && !MaterialUtil.ALL_WALLS.contains(mat)
-                                   && !MaterialUtil.WOODEN_FENCE_GATES.contains(mat);
-            if (shouldReturn) {
-                return new Location(null, mainBlockPos.getX(), MathUtil.floor(eLoc.getY() - yBelow), mainBlockPos.getBlockZ());
-            }
-            return mainBlockPos;
-        } 
-        return new Location(null, eLoc.getBlockX(), MathUtil.floor(eLoc.getY() - yBelow), eLoc.getBlockZ());
-    }
-    
-    /**
-     * Gets the closest solid+ground block location to the player, and checks if they are colliding with the block contained in said location.
-     * 
-     * @param world
-     * @param access
-     * @param minX
-     * @param minY
-     * @param minZ
-     * @param maxX
-     * @param maxY
-     * @param maxZ
-     * @param loc
-     * @return Material.AIR, if the supporting block's location is null or the player doesn't collide with it.
-     */
-    public static Material getMainSupportingBlock(final World world, final BlockCache access, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, Location loc) {
-        final Location supportingLoc = findSupportingBlockLoc(world, access, minX, minY, minZ, maxX, maxY, maxZ, loc);
-        if (supportingLoc == null) {
-            Bukkit.getServer().broadcastMessage("Null loc!");
-            return Material.AIR;
-        }
-        final IBlockCacheNode supportingNode = access.getOrCreateBlockCacheNode(supportingLoc.getBlockX(), supportingLoc.getBlockY(), supportingLoc.getBlockZ(), false);
-        final Material supportingMat = supportingNode.getType();
-        if (collidesBlock(access, minX, minY - 1.0E-6D, minZ, maxX, maxY, maxZ, supportingMat)) {
-            Bukkit.getServer().broadcastMessage("Block: " + supportingMat.toString());
-            return supportingMat;
-        }
-        return Material.AIR;
     }
     
     /**

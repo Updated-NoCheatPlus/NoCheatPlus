@@ -171,7 +171,7 @@ public class PlayerEnvelopes {
         ////////////////////////////////
         // 1: Jump phase condition.
         ////////////////////////////////
-        if (data.sfJumpPhase > 1) { // NOTE on the ">" sign and not ">="
+        if (data.sfJumpPhase <= 1) { // NOTE on the "<" sign and not "<="
             // This event cannot be a jump: the player has been in air for far too long.
             return false;
         }

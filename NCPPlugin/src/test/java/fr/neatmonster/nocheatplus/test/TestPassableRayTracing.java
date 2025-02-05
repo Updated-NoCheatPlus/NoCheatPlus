@@ -20,7 +20,7 @@ import org.junit.Test;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.utilities.build.BuildParameters;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.PassableRayTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.PassableRayTracing;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.FakeBlockCache;
 import fr.neatmonster.nocheatplus.MockServerBase;

@@ -37,8 +37,9 @@ import fr.neatmonster.nocheatplus.permissions.PermissionNode;
 import fr.neatmonster.nocheatplus.permissions.PermissionPolicy.FetchingPolicy;
 import fr.neatmonster.nocheatplus.permissions.PermissionRegistry;
 import fr.neatmonster.nocheatplus.permissions.RegisteredPermission;
-import fr.neatmonster.nocheatplus.utilities.InventoryUtil;
+import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData;
 import fr.neatmonster.nocheatplus.utilities.ds.corw.DualSet;
 import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 import fr.neatmonster.nocheatplus.utilities.ds.map.HashMapLOW;
@@ -169,6 +170,7 @@ public class PlayerData implements IPlayerData {
     private boolean isShiftKeyPressed = false;
     private boolean sprinting = false;
     private Material itemInUse = null;
+    private SupportingBlockData supportingBlockData = null;
 
     private boolean frequentPlayerTaskShouldBeScheduled = false;
     /** Actually queried ones. */
@@ -461,6 +463,7 @@ public class PlayerData implements IPlayerData {
         versionID = -1;
         itemInUse = null;
         clientVersion = ClientVersion.UNKNOWN;
+        supportingBlockData = null;
     }
 
     /**
@@ -483,6 +486,7 @@ public class PlayerData implements IPlayerData {
         }
         requestLazyPermissionUpdate(permissionRegistry.getPreferKeepUpdatedOffline());
         lastJoinTime = timeNow;
+        supportingBlockData = new SupportingBlockData(null, false);
     }
 
     private void updateCurrentWorld(final World world, final WorldDataManager worldDataManager) {
@@ -804,6 +808,16 @@ public class PlayerData implements IPlayerData {
     @Override
     public void setBedrockPlayer(final boolean bedrockPlayer) {
         this.bedrockPlayer = bedrockPlayer;
+    }
+    
+    @Override
+    public void setSupportingBlockData(final SupportingBlockData supportingBlockData) {
+        this.supportingBlockData = supportingBlockData;
+    }
+    
+    @Override
+    public SupportingBlockData getSupportingBlockData() {
+        return supportingBlockData;
     }
     
     @Override

@@ -191,6 +191,7 @@ public class AxisAlignedBBUtils {
     /**
      * Offsets an AABB by the specified coordinate points.
      * <p>The method supports multi-bounding box double arrays. If a multi-AABB is passed, each bounding box in the array will be offset.</p>
+     * The AABB is cloned for safety.
      *
      * @param AABB A double array containing a single or multiple bounding boxes.
      * @param x The offsets in the x, y and z dimensions...
@@ -227,6 +228,7 @@ public class AxisAlignedBBUtils {
      *   <li>If `x` is greater than the current maximum X, the maximum X boundary is adjusted.</li>
      *   <li>Similar adjustments are made for the Y and Z dimensions.</li>
      * </ul>
+     * The AABB is cloned for safety.
      *
      * @param AABB The AABB to expand or contract.
      * @param x The X coordinate to include in the bounding box. The bounding box will be expanded if this coordinate is outside 
@@ -366,14 +368,20 @@ public class AxisAlignedBBUtils {
      * Checks whether two axis-aligned bounding boxes intersect.
      * An epsilon value is used here.
      *
-     * @param aabb1 The first AABB, represented by a double array [minX, minY, minZ, maxX, maxY, maxZ].
-     * @param aabb2 The second AABB, represented by a double array [minX, minY, minZ, maxX, maxY, maxZ].
+     * @param multiAABB The first array, which can contain multiple AABBs. The length must be a multiple of 6.
+     * @param singleAABB The second AABB. This does not accept double arrays containing multiple AABBs. If a multi AABB is inputted, only the first six doubles in the array (1st AABB) will be considered for intersection checking.
      * @return True if the two AABBs intersect, false otherwise.
      */
-    public static boolean isIntersected(double[] aabb1, double[] aabb2) {
-        return aabb2[3] - CollisionUtil.COLLISION_EPSILON > aabb1[0] && aabb2[0] + CollisionUtil.COLLISION_EPSILON < aabb1[3] // x
-                && aabb2[4] - CollisionUtil.COLLISION_EPSILON > aabb1[1] && aabb2[1] + CollisionUtil.COLLISION_EPSILON < aabb1[4] // y
-                && aabb2[5] - CollisionUtil.COLLISION_EPSILON > aabb1[2] && aabb2[2] + CollisionUtil.COLLISION_EPSILON < aabb1[5]; // z
+    public static boolean isIntersected(double[] multiAABB, double[] singleAABB) {
+        for (int i = 0; i < getNumberOfAABBs(multiAABB); i++) {
+            int index = i * 6;
+            if (singleAABB[3] - CollisionUtil.COLLISION_EPSILON > multiAABB[index] && singleAABB[0] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 3] // x
+                && singleAABB[4] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 1] && singleAABB[1] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 4] // y
+                && singleAABB[5] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 2] && singleAABB[2] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 5]) { // z
+                return true;
+            }
+        }
+        return false; 
     }
     
     /**

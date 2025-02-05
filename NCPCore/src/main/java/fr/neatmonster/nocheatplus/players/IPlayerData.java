@@ -34,6 +34,8 @@ import fr.neatmonster.nocheatplus.components.data.checktype.IBaseDataAccess;
 import fr.neatmonster.nocheatplus.components.registry.IGetGenericInstance;
 import fr.neatmonster.nocheatplus.hooks.ExemptionContext;
 import fr.neatmonster.nocheatplus.permissions.RegisteredPermission;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData;
+import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.worlds.IWorldData;
 import fr.neatmonster.nocheatplus.worlds.WorldIdentifier;
 
@@ -329,7 +331,7 @@ public interface IPlayerData extends IData, IBaseDataAccess, IGetGenericInstance
     /**
      * Hacky way to circumvent item usage de-synchronization issues between the server and the client.
      * This also calls requestUpdateInventory().
-     * See {@link fr.neatmonster.nocheatplus.utilities.InventoryUtil#itemResyncTask(Player, IPlayerData)} for more details.
+     * See {@link InventoryUtil#itemResyncTask(Player, IPlayerData)} for more details.
      */
     public void requestItemUseResync();
 
@@ -431,4 +433,18 @@ public interface IPlayerData extends IData, IBaseDataAccess, IGetGenericInstance
      * @return The enum Material of the item in use.
      */
     public Material getItemInUse();
+    
+    /**
+     * Set the current supporting block data.
+     * 
+     * @param data Data to set.
+     */
+    public void setSupportingBlockData(SupportingBlockData data);
+    
+    /**
+     * Get the currently set supporting block data
+     * 
+     * @return the data.
+     */
+    public SupportingBlockData getSupportingBlockData();
 }

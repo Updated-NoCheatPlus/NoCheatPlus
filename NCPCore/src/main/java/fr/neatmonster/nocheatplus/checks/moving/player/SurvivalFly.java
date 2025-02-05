@@ -58,6 +58,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockUtils;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -772,6 +773,7 @@ public class SurvivalFly extends Check {
      *         <li>Handle wall collisions via {@code Entity.collide()} (speed is cut-off and the collision flag is set) <br>
      * <em><strong>After {@code [Entity].collide()} is called, the next movement is prepared. Every subsequent operation 
      *           applies to the next move for the client.</strong></em>
+     *         <li>Set the supporting block data; call {@code setGroundWithMovement()}</li>
      *         <li>Handle horizontal collisions (speed is now reset to 0 on the colliding axis)
      *         <li>Invoke {@code checkFallDamage()} (apply fluid pushing if not previously in water)
      *         <li>Invoke {@code [Block].updateEntityAfterFallOn()} (for slime bouncing)
@@ -1079,6 +1081,7 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance = collisionVector.getZ();
             // More edge data...
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
+            pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), from.getAABBCopy(), onGround));
             // Check for block push.
             // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end.
             final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
@@ -1247,6 +1250,7 @@ public class SurvivalFly extends Check {
                     thisMove.collideZ = collideZ[i];
                     thisMove.collidesHorizontally = thisMove.collideX || thisMove.collideZ;
                     thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
+                    pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), from.getAABBCopy(), onGround));
                     break;
                 }
             }

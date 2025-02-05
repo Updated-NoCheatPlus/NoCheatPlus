@@ -12,7 +12,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package fr.neatmonster.nocheatplus.utilities.collision.ray;
+package fr.neatmonster.nocheatplus.utilities.collision.tracing.ray;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +20,7 @@ import java.util.UUID;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeReference;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.ICollidePassable;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -39,8 +40,7 @@ public class PassableRayTracing extends RayTracing implements ICollidePassable {
     }
 
     @Override
-    public void setBlockChangeTracker(BlockChangeTracker blockChangeTracker,
-            BlockChangeReference blockChangeReference, int tick, UUID worldId) {
+    public void setBlockChangeTracker(BlockChangeTracker blockChangeTracker, BlockChangeReference blockChangeReference, int tick, UUID worldId) {
         // (Not supported.)
     }
 
@@ -60,7 +60,7 @@ public class PassableRayTracing extends RayTracing implements ICollidePassable {
     }
 
     @Override
-    public void cleanup(){
+    public void cleanup() {
         blockCache = null;
     }
 
@@ -68,16 +68,14 @@ public class PassableRayTracing extends RayTracing implements ICollidePassable {
     protected boolean step(final int blockX, final int blockY, final int blockZ, final double oX, final double oY, final double oZ, final double dT, final boolean isPrimary) {
         // Check if initially colliding blocks are meant to be skipped.
         if (isPrimary && step == 1 && ignoreInitiallyColliding 
-                && !BlockProperties.isPassable(blockCache, 
-                        oX + blockX, oY + blockY, oZ + blockZ, 
-                        blockCache.getOrCreateBlockCacheNode(blockX, blockY, blockZ, false), null)){
+            && !BlockProperties.isPassable(blockCache, oX + blockX, oY + blockY, oZ + blockZ, blockCache.getOrCreateBlockCacheNode(blockX, blockY, blockZ, false), null)){
             return true;
         }
         // Actual collision check for this block vs. the move.
         if (BlockProperties.isPassableRay(blockCache, blockX, blockY, blockZ, oX, oY, oZ, dX, dY, dZ, dT)){
             return true;
         }
-        else{
+        else {
             collides = true;
             return false;
         }

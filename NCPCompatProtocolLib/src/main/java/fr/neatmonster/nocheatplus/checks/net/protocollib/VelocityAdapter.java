@@ -34,7 +34,7 @@ import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 
-public class Velocity extends BaseAdapter {
+public class VelocityAdapter extends BaseAdapter {
     private static PacketType[] initPacketTypes() {
         final List<PacketType> types = new LinkedList<PacketType>(Arrays.asList(
                 PacketType.Play.Server.EXPLOSION
@@ -43,7 +43,7 @@ public class Velocity extends BaseAdapter {
         return types.toArray(new PacketType[types.size()]);
     }
 
-    public Velocity(Plugin plugin) {
+    public VelocityAdapter(Plugin plugin) {
         super(plugin, ListenerPriority.MONITOR, initPacketTypes());
     }
 

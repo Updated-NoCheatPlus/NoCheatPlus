@@ -199,9 +199,9 @@ public class RichEntityLocation extends RichBoundsLocation {
     }
     
     /**
-     * Legacy collision method.
+     * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
-     * @return Whether the entity is on a slime block; always false for 1.7 and below
+     * @return Whether the entity is on a slime block; always false for 1.7 and below.
      */
     public boolean isOnSlimeBlock() {
         if (onSlimeBlock != null) {
@@ -212,20 +212,16 @@ public class RichEntityLocation extends RichBoundsLocation {
             onSlimeBlock = false;
             return onSlimeBlock;
         }
-        if (GenericVersion.isAtMost(entity, "1.19.4")) {
-            // Before 1.20, block properties were applied only if the player is at the center of the block.
-            final Material typeId = getTypeIdBelow();
-            final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            onSlimeBlock = isOnGround() && (theseFlags & BlockFlags.F_SLIME) != 0;
-            return onSlimeBlock;
+        if (GenericVersion.isAtLeast(entity, "1.20")) {
+            
         }
-        // Not a legacy client.
+        // A legacy client.
         return super.isOnSlimeBlock();
 
     }
     
     /**
-     * Legacy collision method.
+     * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
      * @return Whether the entity is on a ice-like block.
      */
@@ -233,19 +229,15 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (onIce != null) {
             return onIce;
         }
-        if (GenericVersion.isAtMost(entity, "1.19.4")) {
-            // Before 1.20, block properties were applied only if the player stood at the center of the block.
-            final Material typeId = getTypeIdBelow();
-            final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            onIce = isOnGround() && (theseFlags & BlockFlags.F_ICE) != 0;
-            return onIce;
+        if (GenericVersion.isAtLeast(entity, "1.20")) {
+            
         }
-        // Not a legacy client.
+        // A legacy client.
         return super.isOnIce();
     }
     
     /**
-     * Legacy collision method.
+     * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
      * @return Whether the entity is on blue ice. Always false for 1.12 and below (in which case, the onIce field is changed instead).
      */
@@ -253,19 +245,15 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (onBlueIce != null) {
             return onBlueIce;
         }
-        if (GenericVersion.isAtMost(entity, "1.19.4")) {
-            // Before 1.20, block properties were applied only if the player stood at the center of the block.
-            final Material typeId = getTypeIdBelow();
-            final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            onBlueIce = isOnGround() && (theseFlags & BlockFlags.F_BLUE_ICE) != 0;
-            if (onBlueIce && GenericVersion.isLowerThan(entity, "1.13")) {
-                // Does not exist, but assume multiprotocol plugins to map it to regular ice.
-                onBlueIce = false;
-                onIce = true;
-            }
-            return onBlueIce;
+        if (onBlueIce && GenericVersion.isLowerThan(entity, "1.13")) {
+            // Does not exist, but assume multiprotocol plugins to map it to regular ice.
+            onBlueIce = false;
+            onIce = true;
         }
-        // Not a legacy client.
+        if (GenericVersion.isAtLeast(entity, "1.20")) {
+            
+        }
+        // A legacy client.
         return super.isOnBlueIce();
     }
     
@@ -401,7 +389,7 @@ public class RichEntityLocation extends RichBoundsLocation {
     }
     
     /**
-     * Legacy collision method.
+     * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
      * @return Whether the entity is on a honey block; always false for 1.14 and below.
      */
@@ -417,17 +405,15 @@ public class RichEntityLocation extends RichBoundsLocation {
             onHoneyBlock = false;
             return onHoneyBlock;
         }
-        if (GenericVersion.isAtMost(entity, "1.19.4")) {
-            // Only if in the block and at the center. Collision logic was changed in 1.20
-            onHoneyBlock = (BlockFlags.getBlockFlags(getTypeId()) & BlockFlags.F_STICKY) != 0;
-            return onHoneyBlock;
+        if (GenericVersion.isAtLeast(entity, "1.20")) {
+            
         }
-        // Not a legacy client.
+        // A legacy client.
         return super.isOnHoneyBlock();
     }
     
     /**
-     * Legacy collision method.
+     * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
      * @return Whether the entity is in a soul sand block.
      */
@@ -435,12 +421,10 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (inSoulSand != null) {
             return inSoulSand;
         }
-        if (GenericVersion.isAtMost(entity, "1.19.4")) {
-            // Only if in the block and at the center.
-            inSoulSand = (BlockFlags.getBlockFlags(getTypeId()) & BlockFlags.F_SOULSAND) != 0;
-            return inSoulSand;
+        if (GenericVersion.isAtLeast(entity, "1.20")) {
+            
         }
-        // Not a legacy client
+        // A legacy client
         return super.isInSoulSand();
     }
 
@@ -549,7 +533,7 @@ public class RichEntityLocation extends RichBoundsLocation {
     
     /**
      * From Entity.java <br>
-     * Checks if the bounding box of the entity, when moved by the specified offsets, is free of any obstruction (liquid or solid blocks).
+     * Checks if the bounding box of the entity, when moved by the given offsets, is free of any obstruction (liquid or solid blocks).
      *
      * @param xOffset The translation offset in the X direction.
      * @param yOffset The translation offset in the Y direction.

@@ -12,7 +12,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package fr.neatmonster.nocheatplus.utilities.collision.ray;
+package fr.neatmonster.nocheatplus.utilities.collision.tracing.axis;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +20,8 @@ import java.util.UUID;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeReference;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ICollideBlocks;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ISetMargins;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 

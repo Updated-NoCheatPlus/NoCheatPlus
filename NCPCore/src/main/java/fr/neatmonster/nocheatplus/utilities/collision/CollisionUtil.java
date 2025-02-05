@@ -39,7 +39,7 @@ import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.GenericVersion;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.InteractAxisTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.InteractAxisTracing;
 import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
@@ -958,16 +958,12 @@ public class CollisionUtil {
     }
     
     /**
+     * From: {@code VoxelShapeSpliterator.java}.<br>
      * Checks for collisions between an entity and blocks within a specified region around the entity's bounding box. 
      * Optionally includes world border collisions if the entity is near the world border.
      *
-     * <p>This method performs the following:
-     * 1. Includes world border collision boxes if the entity is within a certain distance from the world border and the 
-     *    world border is active.
-     * 2. Iterates through blocks in the region defined by the entity's bounding box expanded by a small epsilon margin.
-     * 3. For each block, determines if it should be considered for collision detection based on its material and exposure.
-     * 4. Depending on the `onlyCheckCollide` flag:
-     *    - If `onlyCheckCollide` is true, checks if the entity collides with any block and returns immediately if a collision is detected.
+     * <p> Depending on the {@code onlyCheckCollide} flag:<br>
+     *    - If `onlyCheckCollide` is true, checks if the entity collides with any block and returns immediately if a collision is detected.<br>
      *    - If `onlyCheckCollide` is false, collects all relevant collision boxes into the `collisionBoxes` list for further processing.
      *
      * @param blockCache The cache of block materials used to determine the type of blocks in the world.

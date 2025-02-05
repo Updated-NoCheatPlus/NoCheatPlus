@@ -623,27 +623,6 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         }
         return BlockProperties.collides(blockCache, minX, minY - yOnGround, minZ, maxX, minY, maxZ, flags);
     }
-    
-    /**
-     * This is similar to standsOnBlock, but checks for the closest block-position to the player's position, 
-     * to solve conflicts where the player may stand on more than a single block that has motion properties (i.e.: standing half on ice and half on slime)
-     * Does not use the yOnGround parameter for collision (!).
-     * 
-     * @param flagToMatch
-     * @return False, if the player is not on ground by NCP's definition, or the supporting block couldn't be found.
-     *         True, if the supporting block has the given flag and the player collides with it.
-     */
-    public boolean isSupportedBy(final long flagToMatch) {
-        final Material supportingMat = BlockProperties.getMainSupportingBlock(world, blockCache, minX, minY, minZ, maxX, maxY, maxZ, getLocation());
-        if (supportingMat == Material.AIR) {
-            return false;
-        }
-        if (!isOnGround()) {
-            return false;
-        }
-        final long collectedFlag = BlockFlags.getBlockFlags(supportingMat);
-        return (collectedFlag & flagToMatch) != 0;
-    }
 
     /**
      * @return true, if is above stairs
@@ -884,43 +863,40 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     }
     
     /**
+     * Cross-version checking is done in RichEntityLocation.
+     * 
      * @return true, if is in powder snow.
      */
     public boolean isInPowderSnow() {
         if (inPowderSnow == null) {
             if (blockFlags == null || (blockFlags & BlockFlags.F_POWDER_SNOW) != 0L) {
-                inPowderSnow = checkPowderSnowCollision();
+                final int iMinX = Location.locToBlock(minX + 0.001);
+                final int iMaxX = Location.locToBlock(maxX - 0.001);
+                final int iMinY = Location.locToBlock(minY + 0.001);
+                final int iMaxY = Math.min(Location.locToBlock(maxY - 0.001), blockCache.getMaxBlockY());
+                final int iMinZ = Location.locToBlock(minZ + 0.001);
+                final int iMaxZ = Location.locToBlock(maxZ - 0.001);
+                for (int x = iMinX; x <= iMaxX; x++) {
+                    for (int z = iMinZ; z <= iMaxZ; z++) {
+                        for (int y = iMaxY; y >= iMinY; y--) {
+                            if (x == Math.floor(getX()) && y == Math.floor(getY()) && z == Math.floor(getZ())  //  Ensure that we only check the exact block the player is currently inside.
+                                // Use collidesBlock to avoid having to check for a second collision loop within collides()
+                                // Do not check for flags as they already have been checked within isInPowderSnow
+                                && BlockProperties.collidesBlock(blockCache, minX, minY, minZ, maxX, maxY, maxZ, x, y, z, node, null, BlockFlags.F_POWDER_SNOW)) {
+                                inPowderSnow = true;
+                            }
+                        }
+                    }
+                }
             }
             else inPowderSnow = false;
         }
         return inPowderSnow;
     }
-    
-    /**
-     * Like {@link #isInsideBlock(long)}, but specifically for powder snow.
-     */
-    private boolean checkPowderSnowCollision() {
-        final int iMinX = Location.locToBlock(minX + 0.001);
-        final int iMaxX = Location.locToBlock(maxX - 0.001);
-        final int iMinY = Location.locToBlock(minY + 0.001);
-        final int iMaxY = Math.min(Location.locToBlock(maxY - 0.001), blockCache.getMaxBlockY());
-        final int iMinZ = Location.locToBlock(minZ + 0.001);
-        final int iMaxZ = Location.locToBlock(maxZ - 0.001);
-        for (int x = iMinX; x <= iMaxX; x++) {
-            for (int z = iMinZ; z <= iMaxZ; z++) {
-                for (int y = iMaxY; y >= iMinY; y--) {
-                    if (x == Math.floor(getX()) && y == Math.floor(getY()) && z == Math.floor(getZ())  //  Ensure that we only check the exact block the player is currently inside.
-                        && BlockProperties.collides(blockCache, minX, minY, minZ, maxX, maxY, maxZ, BlockFlags.F_POWDER_SNOW)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
 
     /**
      * Cross-version checking is done in RichEntityLocation.
+     * 
      * @return true, if is in a berry bush.
      */
     public boolean isInBerryBush() {
@@ -934,14 +910,21 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     }
 
     /**     
-     * @return true, if is on ice
+     * Cross-version checking is done in RichEntityLocation. 
+     * 
+     * @return true, if is on ice, using the legacy method.
      */
     public boolean isOnIce() {
         if (onIce == null) {
             if (blockFlags != null && (blockFlags & BlockFlags.F_ICE) == 0) {
                 onIce = false;
             } 
-            else onIce = isSupportedBy(BlockFlags.F_ICE);
+            else {
+                // Before 1.20, block properties were applied only if the player stood at the center of the block.
+                final Material typeId = getTypeIdBelow();
+                final long theseFlags = BlockFlags.getBlockFlags(typeId);
+                onIce = isOnGround() && (theseFlags & BlockFlags.F_ICE) != 0;
+            }
         }
         return onIce;
     }
@@ -949,14 +932,19 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /**
      * Cross-version checking is done in RichEntityLocation.
      *
-     * @return true, if is on blue ice
+     * @return true, if is on blue ice using the legacy method
      */
     public boolean isOnBlueIce() {
         if (onBlueIce == null) {
             if (blockFlags != null && (blockFlags & BlockFlags.F_BLUE_ICE) == 0) {
                 onBlueIce = false;
             } 
-            else onBlueIce = isSupportedBy(BlockFlags.F_BLUE_ICE);
+            else {
+                // Before 1.20, block properties were applied only if the player stood at the center of the block.
+                final Material typeId = getTypeIdBelow();
+                final long theseFlags = BlockFlags.getBlockFlags(typeId);
+                onBlueIce = isOnGround() && (theseFlags & BlockFlags.F_BLUE_ICE) != 0;
+            }
         }
         return onBlueIce;
     }
@@ -964,14 +952,17 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /**
      * Cross-version checking is done in RichEntityLocation.
      * 
-     * @return true, if is in soul sand
+     * @return true, if is in soul sand using the legacy method.
      */
     public boolean isInSoulSand() {
         if (inSoulSand == null) {
             if (blockFlags != null && (blockFlags & BlockFlags.F_SOULSAND) == 0) {
                 inSoulSand = false;
             } 
-            else inSoulSand = isSupportedBy(BlockFlags.F_SOULSAND);
+            else {
+                // Only if in the block and at the center; pre 1.20
+                inSoulSand = (BlockFlags.getBlockFlags(getTypeId()) & BlockFlags.F_SOULSAND) != 0;
+            }
         }
         return inSoulSand;
     }
@@ -979,7 +970,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /**
      * Cross-version checking is done in RichEntityLocation.
      *
-     * @return true, if is on slime block
+     * @return true, if is on slime block using the legacy method.
      */
     public boolean isOnSlimeBlock() {
         if (onSlimeBlock == null) {
@@ -987,9 +978,10 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
                 onSlimeBlock = false;
             } 
             else {
+                // Before 1.20, block properties were applied only if the player is at the center of the block.
                 final Material typeId = getTypeIdBelow();
                 final long theseFlags = BlockFlags.getBlockFlags(typeId);
-                onSlimeBlock = isOnGround() && (theseFlags & BlockFlags.F_SLIME) != 0; // isSupportedBy(BlockFlags.F_SLIME);
+                onSlimeBlock = isOnGround() && (theseFlags & BlockFlags.F_SLIME) != 0;
             } 
         }
         return onSlimeBlock;
@@ -1016,14 +1008,17 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /**
      * Cross-version checking is done in RichEntityLocation.
      *
-     * @return true, if is on honey block
+     * @return true, if is on honey block using the legacy method.
      */
     public boolean isOnHoneyBlock() {
         if (onHoneyBlock == null) {
             if (blockFlags != null && (blockFlags & BlockFlags.F_STICKY) == 0) {
                 onHoneyBlock = false;
             } 
-            else onHoneyBlock = isSupportedBy(BlockFlags.F_STICKY);
+            else {
+                // Only if in the block and at the center. Collision logic was changed in 1.20
+                onHoneyBlock = (BlockFlags.getBlockFlags(getTypeId()) & BlockFlags.F_STICKY) != 0;
+            }
         }
         return onHoneyBlock;
     }

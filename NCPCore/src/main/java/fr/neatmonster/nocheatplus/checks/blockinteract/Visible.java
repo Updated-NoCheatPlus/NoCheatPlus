@@ -37,7 +37,7 @@ import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis.RichAxisData;
-import fr.neatmonster.nocheatplus.utilities.collision.ray.InteractAxisTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.InteractAxisTracing;
 import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.MapUtil;
