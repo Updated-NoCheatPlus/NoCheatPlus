@@ -17,10 +17,12 @@ package fr.neatmonster.nocheatplus.players;
 import java.util.Map;
 import java.util.UUID;
 
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.utilities.entity.PassengerUtil;
 
 
 /**
@@ -38,7 +40,6 @@ public class DataManager {
      * API... NCPStatic or so will be the "direct" static API, if at all.
      */
     // TODO: Should/can some data structures share the same lock?
-
     static PlayerDataManager instance = null;
 
     /**
@@ -202,6 +203,21 @@ public class DataManager {
      */
     public static IPlayerData getPlayerData(final Player player) {
         return instance.getPlayerData(player, true);
+    }
+    
+    /**
+     * Wrapper around {@link #getPlayerData(Player)}.<br>
+     * If the given entity is not a player, data will be retrieved for the first player passenger 
+     * 
+     * @param entity
+     * @param passengerUtil Utilities for passenger handling 
+     * @return
+     */
+    public static IPlayerData getPlayerDataForEntity(final Entity entity, PassengerUtil passengerUtil) {
+        if (entity instanceof Player) {
+            return getPlayerData((Player) entity);
+        }
+        return getPlayerData(passengerUtil.getFirstPlayerPassenger(entity));
     }
 
     /**

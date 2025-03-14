@@ -29,7 +29,7 @@ import fr.neatmonster.nocheatplus.utilities.Validate;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
 /**
- * Utility methods for dealing with axis-aligned bounding boxes <br>
+ * Utility methods for dealing with axis-aligned bounding box double arrays <br>
  * (A bounding box defined by its minimum and maximum corner coordinates in a 3D space)
  */
 public class AxisAlignedBBUtils {
@@ -65,9 +65,12 @@ public class AxisAlignedBBUtils {
      * Converts a BoundingBox object (Bukkit) into a double array representing its min/max coordinates.
      *
      * @param box The BoundingBox to be converted.
-     * @return A double array containing the minX, minY, minZ, maxX, maxY, maxZ coords of the bounding box.
+     * @return A double array containing the minX, minY, minZ, maxX, maxY, maxZ coords of the bounding box.<br> May be null. If so, a zero array will be created.
      */
     public static double[] toArray(BoundingBox box) {
+        if (box == null) {
+            return new double[]{0.0,0.0,0.0, 0.0,0.0,0.0};
+        }
         return new double[] {
                 box.getMinX(), box.getMinY(), box.getMinZ(), 
                 box.getMaxX(), box.getMaxY(), box.getMaxZ()
@@ -146,16 +149,15 @@ public class AxisAlignedBBUtils {
     }
     
     /**
-     * Infers a new axis-aligned bounding box from the given Entity's width and height.
-     * This method calculates the bounding box centered at its location and dimensions.
+     * Infers a new axis-aligned bounding box from the given {@link Entity}'s width, height and center location.
      *
      * @param entity The entity for which to calculate the AABB.
      * @return A new array of doubles containing the entity's AABB coordinates in the following order:
      *         {minX, minY, minZ, maxX, maxY, maxZ}     
      */
-    public static double[] createAABB(Entity entity) {
-        final double halfWidth = mcAccess.getHandle().getWidth(entity) / 2f; // from the center position to add on each horizontal side. --.--
-        final double height = mcAccess.getHandle().getHeight(entity);
+    public static double[] createBoundingBoxFor(Entity entity) {
+        double halfWidth = mcAccess.getHandle().getWidth(entity) / 2f; // from the center position to add on each horizontal side. --.--
+        double height = mcAccess.getHandle().getHeight(entity);
         final Location loc = entity.getLocation();
         return new double[] {loc.getX() - halfWidth, // minX
                              loc.getY(),             // minY - feet
@@ -166,18 +168,21 @@ public class AxisAlignedBBUtils {
     }
     
     /**
-     * Infers a new axis-aligned bounding box from the given Entity's width and height.
-     * This method calculates the bounding box centered at its location and dimensions.
-     * <p>The width resolution is adjusted to 0.5 units by rounding to the nearest half unit.</p>
+     * Infers a new axis-aligned bounding box from the given {@link Entity}'s width and height, with the width's resolution being adjusted to 0.5 units, by rounding to the nearest half unit.<br>
+     * The method calculates the bounding box centered at its location and dimensions.
      *
      * @param entity The entity for which to calculate the AABB.
-     * @param loc The central location around which the AABB is to be created
+     * @param refLoc The central location around which the AABB is to be created. <br>Can be null. <br> If so, the location is determined by {@link Entity#getLocation()}.
      * @return A new array of doubles containing the entity's AABB coordinates in the following order:
      *         {minX, minY, minZ, maxX, maxY, maxZ}
      */
-    public static double[] createAABBAtWidthResolution(Entity entity, Location loc) {
-        final double widthRes = Math.round(mcAccess.getHandle().getWidth(entity) * 500.0) / 1000.0;
-        final double height = mcAccess.getHandle().getHeight(entity);
+    public static double[] createBoundingBoxAtWidthResolutionFor(Entity entity, Location refLoc) {
+        double widthRes = Math.round(mcAccess.getHandle().getWidth(entity) * 500.0) / 1000.0;
+        double height = mcAccess.getHandle().getHeight(entity);
+        Location loc = refLoc;
+        if (loc == null) {
+            loc = entity.getLocation();
+        }
         return new double[] {
                 loc.getX() - widthRes, // minX
                 loc.getY(),            // minY - feet
@@ -200,8 +205,7 @@ public class AxisAlignedBBUtils {
      * 
      * @throws IllegalArgumentException If the array length is not a multiple of 6.
      *
-     * @return A new array of bounding boxes, each translated by the given offsets.<br> 
-     *     
+     * @return A new array of bounding boxes, each translated by the given offsets.<br>
      */
     public static double[] move(double[] AABB, double x, double y, double z) {
         double[] tAABB = AABB.clone();
@@ -220,25 +224,16 @@ public class AxisAlignedBBUtils {
     
     /**
      * Expands or contracts an axis-aligned bounding box to ensure it includes the given point (specified by its x, y, z coordinates).
-     *
-     * <p> If the point is outside the current bounds of the AABB, the method expands the bounding box to include this point. If the point is within the current bounds, 
-     * the AABB remains unchanged. The adjustments are made only in the directions where necessary:
-     * <ul>
-     *   <li>If `x` is less than the current minimum X, the minimum X boundary is adjusted.</li>
-     *   <li>If `x` is greater than the current maximum X, the maximum X boundary is adjusted.</li>
-     *   <li>Similar adjustments are made for the Y and Z dimensions.</li>
-     * </ul>
-     * The AABB is cloned for safety.
+     * <p>
+     * The AABB is cloned for safety.<br>
+     * This does not support multi-AABB double arrays. If given such an array, only the primary 6 doubles will actually be expanded or contracted.
      *
      * @param AABB The AABB to expand or contract.
-     * @param x The X coordinate to include in the bounding box. The bounding box will be expanded if this coordinate is outside 
-     *          the current X bounds.
-     * @param y The Y coordinate to include in the bounding box. The bounding box will be expanded if this coordinate is outside 
-     *          the current Y bounds.
-     * @param z The Z coordinate to include in the bounding box. The bounding box will be expanded if this coordinate is outside 
-     *          the current Z bounds.
-     *
-     * @return A new bounding box where the dimensions have been adjusted to include the specified coordinate point.
+     * @param x The amount to expand along the X-axis. Negative values decrease minX, positive values increase maxX.
+     * @param y The amount to expand along the Y-axis. Negative values decrease minY, positive values increase maxY.
+     * @param z The amount to expand along the Z-axis. Negative values decrease minZ, positive values increase maxZ.
+     * 
+     * @return A new double array representing the expanded bounding box.
      */
     public static double[] expandTowards(double[] AABB, double x, double y, double z) {
         double[] tAABB = AABB.clone();
@@ -390,17 +385,14 @@ public class AxisAlignedBBUtils {
      * @param blockAABB A double array representing the bounding box of a block. This can be a complex shape, 
      *                meaning the array can contain multiple bounding boxes each defined by six <i>consecutive</i> elements 
      *                [minX, minY, minZ, maxX, maxY, maxZ / minX_1, minY_1 (...)], therefore, the length of the array must be a multiple of 6.<br>
-     * @param x The coordinate of the block's position in the world.
+     * @param x The coordinate of the block's position in the world...
      * @param y
      * @param z
-     * @param sAABB The single double array containing the AABB to check for collision. <br>
-     *              If an array with multiple AABBs is passed, only the primary bounding box (first six doubles) will be considered for collision detection.
-     * @param allowEdge A boolean indicating whether collisions at the edges of the AABBs should be considered 
-     *                  as a valid collision. If true, an AABB touching the edge of the block's AABB will 
-     *                  be considered a collision.
+     * @param sAABB The single double array containing the AABB to check for collision.<br> If an array with multiple AABBs is passed, only the primary bounding box (first six doubles) will be considered for collision detection.
+     * @param allowEdge A boolean indicating whether collisions at the edges of the AABBs should be considered as a valid collision. If true, an AABB touching the edge of the block's AABB will be considered a collision.
      * @param startIndex The index (starting from 1) of the AABB in `blockAABB` from which to start checking for collisions.<br> Cannot be less than 1.
      *
-     * @throws IllegalArgumentException If rawAABB length is not a multiple of 6 or is null, or the startIndex parameter is less than 1.
+     * @throws IllegalArgumentException If blockAABB length is not a multiple of 6 or is null, or the startIndex parameter is less than 1.
      *
      * @return Returns {@code true} if the single AABB collides with any part of the block's AABB, taking into account the {@code allowEdge} flag. Otherwise, returns {@code false}.
      */
@@ -434,7 +426,7 @@ public class AxisAlignedBBUtils {
     }
     
     /**
-     * Checks if a single axis-aligned bounding box (sAABB) collides with any part of a block's bounding box.
+     * Checks, starting from the first blockAABB's box, if a single axis-aligned bounding box (sAABB) collides with any part of a block's bounding box.
      *
      * @param blockAABB A double array representing the bounding box of a block. This can be a complex shape, 
      *                meaning the array can contain multiple bounding boxes each defined by six <i>consecutive</i> elements 
@@ -464,7 +456,7 @@ public class AxisAlignedBBUtils {
      * @return {@code true} if the bounds represent a full block (i.e., [0, 0, 0, 1, 1, 1]), 
      *         {@code false} otherwise. Returns {@code false} if the bounds array is {@code null}.
      */
-    public static final boolean isFullBounds(final double[] bounds) {
+    public static boolean isFullBounds(final double[] bounds) {
         if (bounds == null) return false;
         for (int i = 0; i < 3; i++) {
             if (bounds[i] != 0.0 || bounds[i + 3] != 1.0) {
@@ -515,7 +507,7 @@ public class AxisAlignedBBUtils {
      *         have differing values. Note: a full block in one array will not be considered
      *         equal to a {@code null} array.
      */
-    public static final boolean isSameShape(final double[] bounds1, final double[] bounds2) {
+    public static boolean isSameShape(final double[] bounds1, final double[] bounds2) {
         if (bounds1 == null || bounds2 == null) {
             return bounds1 == bounds2;
         }

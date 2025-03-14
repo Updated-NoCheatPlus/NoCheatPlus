@@ -24,10 +24,12 @@ import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.LostGround;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveData;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
@@ -40,6 +42,7 @@ import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockUtils;
 import fr.neatmonster.nocheatplus.utilities.entity.PassengerUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache.IBlockCacheNode;
@@ -178,6 +181,22 @@ public class RichEntityLocation extends RichBoundsLocation {
         return mcAccess;
     }
     
+    
+    /**
+     * Checks whether the player is currently supported by the block with the given flag.<br>
+     * See {@link SupportingBlockUtils}.
+     * @param flag
+     * @return
+     */
+    public boolean isSupportedBy(long flag) {
+        final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
+        Vector supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData.getSupportingBlockData(), (float)0.5000001D);
+        final Material supportingBlock = getBlockType((int) supportingBlockPos.getX(), (int) supportingBlockPos.getY(), (int) supportingBlockPos.getZ());
+        final double[] AABB = getBoundingBox();
+        return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0 
+               && BlockProperties.collidesBlock(blockCache, AABB[0],AABB[1],AABB[2],AABB[3],AABB[4],AABB[5], (int) supportingBlockPos.getX(),(int) supportingBlockPos.getY(),(int) supportingBlockPos.getZ(), getOrCreateBlockCacheNode(), null, flag);
+    }
+    
     /**
      * @return False, for 1.11 and lower clients jumping on beds.
      */
@@ -213,9 +232,10 @@ public class RichEntityLocation extends RichBoundsLocation {
             return onSlimeBlock;
         }
         if (GenericVersion.isAtLeast(entity, "1.20")) {
-            
+            onSlimeBlock = isSupportedBy(BlockFlags.F_SLIME);
+            return onSlimeBlock;
         }
-        // A legacy client.
+        // A legacy client (post 1.8, pre 1.20).
         return super.isOnSlimeBlock();
 
     }
@@ -230,30 +250,33 @@ public class RichEntityLocation extends RichBoundsLocation {
             return onIce;
         }
         if (GenericVersion.isAtLeast(entity, "1.20")) {
-            
+            onIce = isSupportedBy(BlockFlags.F_ICE);
+            return onIce;
         }
-        // A legacy client.
+        // A legacy client (pre 1.20).
         return super.isOnIce();
     }
     
     /**
      * Uses the 1.20 fix. See {@link fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData}
      * 
-     * @return Whether the entity is on blue ice. Always false for 1.12 and below (in which case, the onIce field is changed instead).
+     * @return Whether the entity is on blue ice. Always false for 1.12 and below (in which case, the {@link RichBoundsLocation#onIce} field is changed instead, but this would still return false).
      */
     public boolean isOnBlueIce() {
         if (onBlueIce != null) {
             return onBlueIce;
         }
-        if (onBlueIce && GenericVersion.isLowerThan(entity, "1.13")) {
+        if (GenericVersion.isLowerThan(entity, "1.13")) {
             // Does not exist, but assume multiprotocol plugins to map it to regular ice.
-            onBlueIce = false;
-            onIce = true;
+            if (onBlueIce) onIce = true;
+            onBlueIce = false; // Must stay false regardless.
+            return onBlueIce; 
         }
         if (GenericVersion.isAtLeast(entity, "1.20")) {
-            
+            onBlueIce = isSupportedBy(BlockFlags.F_BLUE_ICE);
+            return onBlueIce;
         }
-        // A legacy client.
+        // A legacy client (post 1.13, pre 1.20).
         return super.isOnBlueIce();
     }
     
@@ -299,6 +322,7 @@ public class RichEntityLocation extends RichBoundsLocation {
             inPowderSnow = false;
             return inPowderSnow;
         }
+        // Not a legacy client.
         return super.isInPowderSnow();
     }
 
@@ -316,7 +340,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (GenericVersion.isLowerThan(entity, "1.14")) {
             // Force-override the inLava result from RichBoundsLocation.
             inLava = false;
-            double[] aaBB = getAABBCopy();
+            double[] aaBB = getBoundingBox();
             int iMinX = MathUtil.floor(aaBB[0] + 0.1);
             int iMaxX = MathUtil.floor(aaBB[3] - 0.1 + 1.0);
             int iMinY = MathUtil.floor(aaBB[1] + 0.4);
@@ -406,9 +430,10 @@ public class RichEntityLocation extends RichBoundsLocation {
             return onHoneyBlock;
         }
         if (GenericVersion.isAtLeast(entity, "1.20")) {
-            
+            onHoneyBlock = isSupportedBy(BlockFlags.F_STICKY);
+            return onHoneyBlock;
         }
-        // A legacy client.
+        // A legacy client (post 1.15, pre 1.20).
         return super.isOnHoneyBlock();
     }
     
@@ -422,9 +447,10 @@ public class RichEntityLocation extends RichBoundsLocation {
             return inSoulSand;
         }
         if (GenericVersion.isAtLeast(entity, "1.20")) {
-            
+            inSoulSand = isSupportedBy(BlockFlags.F_SOULSAND);
+            return inSoulSand;
         }
-        // A legacy client
+        // A legacy client (pre 1.20).
         return super.isInSoulSand();
     }
 
@@ -451,8 +477,7 @@ public class RichEntityLocation extends RichBoundsLocation {
      * @return if the player is sliding on a honey block.
      */
     public boolean isSlidingDown() {
-        final Player p = (Player) entity;
-        final IPlayerData pData = DataManager.getPlayerData(p);
+        final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
         final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData playerMove = data.playerMoves.getCurrentMove();
         final VehicleMoveData vehicleMove = data.vehicleMoves.getCurrentMove();
@@ -465,25 +490,16 @@ public class RichEntityLocation extends RichBoundsLocation {
             // Not sliding, clearly.
             return false;
         }
-        // With the current implementation, this condition is never run due to from.getBlockY(), it should be the location of the block not player's
-        //if (from.getY() > from.getBlockY() + 0.9375D - 1.0E-7D) {
-        //    // Too far from the block.
-        //    return false;
-        //} 
         if (yDistance >= -Magic.DEFAULT_GRAVITY) {
             // Minimum speed.
             return false;
         }
-        // With the current implementation, this condition will always return false, see above
-        //double xDistanceToBlock = Math.abs((double)from.getBlockX() + 0.5D - from.getX());
-        //double zDistanceToBlock = Math.abs((double)from.getBlockZ() + 0.5D - from.getZ());
-        //double var7 = 0.4375D + (width / 2.0F);
-        //return xDistanceToBlock + 1.0E-7D > var7 || zDistanceToBlock + 1.0E-7D > var7;
         collectBlockFlags(); // Do call here, else NPE for some places.
         if ((blockFlags & BlockFlags.F_STICKY) == 0) {
             return false;
         }
         // Finally, test for collision
+        // (This is not pure vanilla logic, but seems to be replicate it well enough.)
         return isNextToBlock(0.01, BlockFlags.F_STICKY);
     }
 
@@ -542,31 +558,24 @@ public class RichEntityLocation extends RichBoundsLocation {
      * @return True, if the moved bounding box is free from obstructions, otherwise false.
      */
     public boolean isUnobstructed(double xOffset, double yOffset, double zOffset, long flag) {
-        return isUnobstructed(AxisAlignedBBUtils.move(getAABBCopy(), xOffset, yOffset, zOffset), flag); 
+        return isUnobstructed(AxisAlignedBBUtils.move(getBoundingBox(), xOffset, yOffset, zOffset), flag); 
     }
     
     /**
-     * From Entity.java <br>
-     * Checks if the bounding box of the entity, when moved by preset offsets, is free of any obstruction (liquid or solid blocks).<br>
+     * From {@code Entity.java} <br>
+     * A replica of Minecraft's {@code isFree()} method, to check if players should be able to jump out of a liquid (the automatic jump you make when you approach a block at the surface).<br>
      * 
      * @return True, if the moved bounding box is free from obstructions, otherwise false.
      */
     public boolean isUnobstructed() {
-        final IPlayerData pData;
-        if (!(entity instanceof Player)) {
-            if (entity.getPassengers().getFirst() instanceof Player) {
-                pData = DataManager.getPlayerData((Player) entity.getPassengers().getFirst());
-            }
-            else return false;
-        }
-        else pData = DataManager.getPlayerData((Player) entity);
+        final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
         final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         // Un-comment this once x/y/zAllowedDistances is shared with vehicles too in MoveData, and we have a prediction for vehicles.
         // final VehicleMoveData vehicleMove = data.vehicleMoves.getCurrentMove();
         // final VehicleMoveData lastVehicleMove = data.vehicleMoves.getFirstPastMove();
-        return isUnobstructed(thisMove.xAllowedDistance, thisMove.yAllowedDistance + 0.6 - lastMove.to.getY() + lastMove.from.getY(), thisMove.zAllowedDistance, isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
+        return isUnobstructed(thisMove.xAllowedDistance, thisMove.yAllowedDistance+0.6-lastMove.to.getY()+lastMove.from.getY(), thisMove.zAllowedDistance, isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
     }
     
     /**
@@ -584,25 +593,27 @@ public class RichEntityLocation extends RichBoundsLocation {
 
     /**
      * Collide the given AABB with blocks.
-     * (From Entity.class -> collide()).
+     * (From {@code Entity.class} -> {@code collide()}).
      *
      * @param input    Meant to represent the collision-seeking speed. <br>
      *                 If no collision can be found within the given speed, the method will return the unmodified input Vector as a result.
      *                 Otherwise, a modified Vector containing the "obstructed" speed is returned. <br>
      *                 (Thus, if you wish to know if the player collided with something: inputXYZ != collidedXYZ)
-     * @param onGround The "on ground" status of the entity. <br> Can be NCP's or Minecraft's. <br> Do mind that if using NCP's, lost ground cases and mismatches must be taken into account.
+     * @param onGround The "on ground" status of the entity. <br> Can be NCP's or Minecraft's. <br> Do mind that if using NCP's, {@link LostGround} cases and mismatches must be taken into account.
      *                 Used to determine whether the entity will be able to step up with the given input.
      * @param AABB     The axis-aligned bounding box of the entity at the position they moved from (in other words, the last AABB of the entity).
-     *                 Only makes sense if you call this method during PlayerMoveEvents, because the NMS bounding box will already be moved to the event#getTo() Location, by the time this gets called by moving checks.
+     *                 Only makes sense if you call this method during {@link PlayerMoveEvent}, because the NMS bounding box will already be moved to the {@link PlayerMoveEvent#getTo()} {@link Location}, by the time this gets called by moving checks.
      *                 If null, a new AABB using NMS' parameters (width/height) will be created.
-     * @return A Vector containing the collision components (collisionXYZ)
+     * @return A {@link Vector} containing the collision components (collisionXYZ)
+     * 
+     * @author Lysandre
      */
     public Vector collide(Vector input, boolean onGround, double[] AABB) {
         if (input.getX() == 0.0 && input.getY() == 0.0 && input.getZ() == 0.0) { // NOTE: Do not call Vector#isZero, because the method is not available on 1.8
             return new Vector();
         }
         // Clone or create the AABB
-        double[] tAABB = AABB == null ? AxisAlignedBBUtils.createAABB(entity) : AABB.clone();
+        double[] tAABB = AABB == null ? AxisAlignedBBUtils.createBoundingBoxFor(entity) : AABB.clone();
         List<double[]> collisionBoxes = new ArrayList<>();
         // Populate the list.
         CollisionUtil.getCollisionBoxes(blockCache, entity, AxisAlignedBBUtils.expandTowards(tAABB, input.getX(), input.getY(), input.getZ()), collisionBoxes, false);
@@ -629,7 +640,7 @@ public class RichEntityLocation extends RichBoundsLocation {
                 // Then, expand the AABB upwards by the step height and by the horizontal collision
                 double[] stepUpAttemptAABB = AxisAlignedBBUtils.expandTowards(groundCollisionAABB, collisionVector.getX(), allowedStepHeight, collisionVector.getZ());
                 if (!(collideY && input.getY() < 0.0)) {
-                    // If no downward collision (and the player was already on ground), apply a very small downward offset to ensure correct collision detection after stepping up.
+                    // If no downward collision (and the player was already on ground), apply a very small downward offset (no idea as of why, ask Mojang)
                     stepUpAttemptAABB = AxisAlignedBBUtils.expandTowards(stepUpAttemptAABB, 0.0, -9.999999747378752E-6D, 0.0);
                 }
                 // Collect collision boxes around the newly expanded AABB 
@@ -876,11 +887,8 @@ public class RichEntityLocation extends RichBoundsLocation {
      * @return The modified movementVec.
      */
     public Vector doPush(Vector movementVec) {
-        final MovingData data;
-        if (entity instanceof Player) {
-            data = DataManager.getPlayerData((Player) entity).getGenericInstance(MovingData.class);
-        }
-        else data = DataManager.getPlayerData(passengerUtil.getFirstPlayerPassenger(entity)).getGenericInstance(MovingData.class);
+        final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
+        final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData lastMove = data.playerMoves.getCurrentMove();
         if (data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
             for (Location eLoc : data.lastCollidingEntitiesLocations) {
@@ -980,7 +988,7 @@ public class RichEntityLocation extends RichBoundsLocation {
             return true;
         }
         // Force legacy clients to behave with legacy mechanics.
-        if (BlockProperties.needsToBeAttachedToABlock(getTypeId())) {
+        if (BlockProperties.needsToBeAttachedToABlock(getBlockType())) {
             // Check if vine is attached to something solid
             if (BlockProperties.canBeClimbedUp(blockCache, blockX, blockY, blockZ)) {
                 return true;
@@ -1031,6 +1039,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         }
         // Step correction: see https://github.com/NoCheatPlus/NoCheatPlus/commit/f22bf88824372de2207e6dca5e1c264f3d251897
         if (stepCorrection) {
+            /* Distance for seeking obstruction, starting from the top of the player's box */
             double obstrDistance = maxY + marginAboveEyeHeight;
             obstrDistance = obstrDistance - (double) Location.locToBlock(obstrDistance) + 0.35;
             for (double bound = 1.0; bound > 0.0; bound -= 0.25) {

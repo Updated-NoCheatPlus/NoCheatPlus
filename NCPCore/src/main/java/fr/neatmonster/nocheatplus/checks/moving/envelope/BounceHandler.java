@@ -50,7 +50,7 @@ public class BounceHandler {
     private static final long FLAGS_VELOCITY_BOUNCE_BLOCK_MOVE_ASCEND = FLAGS_VELOCITY_BOUNCE_BLOCK | VelocityFlags.SPLIT_ABOVE_0_42 | VelocityFlags.SPLIT_RETAIN_ACTCOUNT | VelocityFlags.ORIGIN_BLOCK_MOVE;
 
     /**
-     * Prepare and adjust data to the future bounce effect: precondition is PlayerEnvelopes#canBounce having returned true. <br>
+     * Prepare and adjust data to the future bounce effect: precondition is {@link PhysicsEnvelope#canBounce(Player, PlayerLocation, PlayerLocation, MovingData, MovingConfig, IPlayerData)} having returned true. <br>
      * (Player has landed on ground with negative motion and will bounce up with the next move)
      * This might be a micro-move onto ground.
      * 
@@ -103,8 +103,6 @@ public class BounceHandler {
     
     /**
      * Get an estimation of the bounce's speed.
-     * This uses the fall-distance, because the actual y-distance of a move can vary wildly if you collide with anything, 
-     * including the block itself (In fact, Minecraft hides speed on the server-side when landing on the ground [see desc. of touchdown workaround in AirWorkarounds]).
      * 
      * @param player
      * @param fallDistance Not Y distance.

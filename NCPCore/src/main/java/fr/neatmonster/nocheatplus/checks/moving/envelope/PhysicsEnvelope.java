@@ -21,9 +21,9 @@ import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 
 /**
- * Various auxiliary methods for moving behaviour modeled after the client or otherwise observed on the server-side.
+ * Various auxiliary (and hard-coded) methods for moving behaviour modeled after the client or otherwise observed on the server-side.
  */
-public class PlayerEnvelopes {
+public class PhysicsEnvelope {
     
     private static final IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
     
@@ -141,13 +141,11 @@ public class PlayerEnvelopes {
     /**
      * Test if the current motion can qualify as a jump.<br>
      * Note that: 
-     * 1) This does not concern whether the player actual impulse. For that, see {@link BridgeMisc#isSpaceBarImpulseKnown(Player)}.
+     * 1) This does not concern the player actual impulse. For that, see {@link BridgeMisc#isSpaceBarImpulseKnown(Player)}.
      * 2) It also does not include upward movement through liquids. While Minecraft considers players as "jumping" if they just press the space bar, we intend jumping in its strict sense (jumping through air)<br><p>
      * For a motion to be considered a legitimate jump, the following conditions must be met:
      * <ul>
      * <li>The player must not be gliding, riptiding, levitating, or in a liquid block.</li>
-     * <li>The player's jump phase ({@link fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope#getMaxJumpPhase(double)}) 
-     *     must be very recent (no more than 1).</li>
      * <li>The vertical motion must align with Minecraft's {@code jumpFromGround()} formula 
      *     (defined in {@code EntityLiving.java}). This is the most critical check.</li>
      * <li>The player must be in a "leaving ground" state, transitioning from ground to air. 
@@ -168,19 +166,12 @@ public class PlayerEnvelopes {
             // Cannot jump for sure under these conditions
             return false;
         }
-        ////////////////////////////////
-        // 1: Jump phase condition.
-        ////////////////////////////////
-        if (data.sfJumpPhase <= 1) { // NOTE on the "<" sign and not "<="
-            // This event cannot be a jump: the player has been in air for far too long.
-            return false;
-        }
         ////////////////////////////////////
-        // 2: Motion conditions.
+        // 1: Motion conditions.
         ////////////////////////////////////
         // Validate motion and update the headObstruction flag, if the player does actually collide with something above.
         double jumpGain = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * attributeAccess.getHandle().getJumpGainMultiplier(player);
-        Vector collisionVector = from.collide(new Vector(0.0, jumpGain, 0.0), fromOnGround || thisMove.touchedGroundWorkaround, from.getAABBCopy());
+        Vector collisionVector = from.collide(new Vector(0.0, jumpGain, 0.0), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
         thisMove.headObstructed = jumpGain != collisionVector.getY() && thisMove.yDistance >= 0.0 && !toOnGround; // For setting the flag, we don't care about the correct speed.
         jumpGain = collisionVector.getY();
         if (!MathUtil.almostEqual(thisMove.yDistance, jumpGain, Magic.PREDICTION_EPSILON)) { // NOTE: This must be the current move, never the last one.
@@ -188,7 +179,7 @@ public class PlayerEnvelopes {
             return false;
         }
         //////////////////////////////////
-        // 3: Ground conditions.
+        // 2: Ground conditions.
         //////////////////////////////////
         // Finally, if this was a jumping motion and the player has very little air time, validate the ground status.
         // Demand to be in a "leaving ground" state.
@@ -263,7 +254,7 @@ public class PlayerEnvelopes {
         }
         return !lastMove.toIsValid && data.sfJumpPhase == 0 && thisMove.multiMoveCount > 0
                 && setBackYDistance > 0.0 && setBackYDistance < Magic.PAPER_DIST 
-                && thisMove.yDistance > 0.0 && thisMove.yDistance < Magic.PAPER_DIST && Magic.inAir(thisMove);
+                && thisMove.yDistance > 0.0 && thisMove.yDistance < Magic.PAPER_DIST && inAir(thisMove);
     }
 
     /**
@@ -293,7 +284,7 @@ public class PlayerEnvelopes {
                     // 1: Ordinary.
                     to.getY() - blockY <= Math.max(cc.yOnGround, cc.noFallyOnGround)
                     // 1: With carpet.
-                    || BlockProperties.isCarpet(to.getTypeId()) && to.getY() - to.getBlockY() <= 0.9
+                    || BlockProperties.isCarpet(to.getBlockType()) && to.getY() - to.getBlockY() <= 0.9
                 ) 
                 // 0: Within wobble-distance.
                 || to.getY() - blockY < 0.286 && to.getY() - from.getY() > -0.9
@@ -307,5 +298,162 @@ public class PlayerEnvelopes {
                 && to.isOnBouncyBlock() && !to.isOnSlimeBlock()
                 ;
     }
-
+    
+    /**
+     * 
+     * @param thisMove
+     *            Not strictly the latest move in MovingData.
+     * @return
+     */
+    public static boolean touchedIce(final PlayerMoveData thisMove) {
+        return thisMove.from.onIce || thisMove.from.onBlueIce || thisMove.to.onIce || thisMove.to.onBlueIce;
+    }
+    
+    /**
+     * The absolute per-tick base speed for swimming vertically.
+     * 
+     * @return
+     */
+    public static double swimBaseSpeedV(boolean isSwimming) {
+        // TODO: Does this have to be the dynamic walk speed (refactoring)?
+        return isSwimming ? Magic.WALK_SPEED * Magic.modSwim[2] + 0.1 : Magic.WALK_SPEED * Magic.modSwim[0] + 0.07; // 0.244
+    }
+    
+    /**
+     * Test for a specific move in-air -> water, then water -> in-air.
+     * 
+     * @param thisMove
+     *            Not strictly the latest move in MovingData.
+     * @param lastMove
+     *            Move before thisMove.
+     * @return
+     */
+    static boolean splashMove(final PlayerMoveData thisMove, final PlayerMoveData lastMove) {
+        // Use past move data for two moves.
+        return !thisMove.touchedGround && thisMove.from.inWater && !thisMove.to.resetCond // Out of water.
+                && !lastMove.touchedGround && !lastMove.from.resetCond && lastMove.to.inWater // Into water.
+                && excludeStaticSpeed(thisMove) && excludeStaticSpeed(lastMove)
+                ;
+    }
+    
+    /**
+     * Test for a specific move ground/in-air -> water, then water -> in-air.
+     * 
+     * @param thisMove
+     *            Not strictly the latest move in MovingData.
+     * @param lastMove
+     *            Move before thisMove.
+     * @return
+     */
+    static boolean splashMoveNonStrict(final PlayerMoveData thisMove, final PlayerMoveData lastMove) {
+        // Use past move data for two moves.
+        return !thisMove.touchedGround && thisMove.from.inWater && !thisMove.to.resetCond // Out of water.
+                && !lastMove.from.resetCond && lastMove.to.inWater // Into water.
+                && excludeStaticSpeed(thisMove) && excludeStaticSpeed(lastMove)
+                ;
+    }
+    
+    /**
+     * Fully in-air move.
+     * 
+     * @param thisMove
+     *            Not strictly the latest move in MovingData.
+     * @return
+     */
+    public static boolean inAir(final PlayerMoveData thisMove) {
+        return !thisMove.touchedGround && !thisMove.from.resetCond && !thisMove.to.resetCond;
+    }
+    
+    /**
+     * Test if the player has lifted off from the ground or is landing (not in air, not walking on ground)
+     * (Does not check for resetCond)
+     * 
+     * @return 
+     */
+    public static boolean liftingOffOrLandingOnGround(final PlayerMoveData move) {
+        return move.from.onGround ^ move.to.onGround;
+    }
+    
+    /**
+     * A liquid -> liquid move. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean inLiquid(final PlayerMoveData thisMove) {
+        return thisMove.from.inLiquid && thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * A water -> water move. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean inWater(final PlayerMoveData thisMove) {
+        return thisMove.from.inWater && thisMove.to.inWater && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * Test if either point is in reset condition (liquid, web, ladder).
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean resetCond(final PlayerMoveData thisMove) {
+        return thisMove.from.resetCond || thisMove.to.resetCond;
+    }
+    
+    /**
+     * Moving out of liquid, might move onto ground. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean leavingLiquid(final PlayerMoveData thisMove) {
+        return thisMove.from.inLiquid && !thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * Moving out of water, might move onto ground. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean leavingWater(final PlayerMoveData thisMove) {
+        return thisMove.from.inWater && !thisMove.to.inWater && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * Moving into water, might move onto ground. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean intoWater(final PlayerMoveData thisMove) {
+        return !thisMove.from.inWater && thisMove.to.inWater && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * Moving into liquid., might move onto ground. Exclude web and climbable.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean intoLiquid(final PlayerMoveData thisMove) {
+        return !thisMove.from.inLiquid && thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
+    }
+    
+    /**
+     * Exclude moving from/to blocks with static (vertical) speed, such as web, climbable, berry bushes.
+     * 
+     * @param thisMove
+     * @return
+     */
+    public static boolean excludeStaticSpeed(final PlayerMoveData thisMove) {
+        return !thisMove.from.inWeb && !thisMove.to.inWeb
+                && !thisMove.from.onClimbable && !thisMove.to.onClimbable
+                && !thisMove.from.inBerryBush && !thisMove.to.inBerryBush
+                && !thisMove.from.inPowderSnow && !thisMove.to.inPowderSnow;
+    }
 }

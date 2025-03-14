@@ -367,7 +367,7 @@ public abstract class BlockCache {
     }
 
     /**
-     * Get type id with cache access.
+     * Get material type with cache access.
      *
      * @param x
      *            the x

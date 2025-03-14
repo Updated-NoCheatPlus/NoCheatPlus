@@ -350,8 +350,8 @@ public interface IPlayerData extends IData, IBaseDataAccess, IGetGenericInstance
     /**
      * Get the client's protocol ID through ViaVersion or ProtocolSupport. <br>
      * Requires CompatNoCheatPlus (subject to change)
-     * @see https://wiki.vg/Protocol_version_numbers
-     * 
+     * @see <a href="https://wiki.vg/Protocol_version_numbers">protocol indexing</a>
+     *
      * @return -1, if it cannot be determined.
      */
     public int getClientVersionID();

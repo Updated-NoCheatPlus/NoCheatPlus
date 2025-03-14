@@ -55,21 +55,9 @@ public class Visible extends Check {
     }
     
     /**
-     * Perform a visibility check to determine whether the player can see the target entity, considering potential obstructions and ensuring the check is not dependent on the direction the player is looking. 
-     * It uses a ray tracing mechanism combined with neighbor block analysis to ascertain visibility.
-     * It involves the following steps:
-     *
-     * <ul>
-     *   <li><b>Initialization and inside-AABB check:</b> Initializes ray tracing and computes the bounding box of the target entity. Checks if the player's eye position is inside the entity's bounding box, which would imply immediate visibility.</li>
-     *   <li><b>Neighbor processing loop:</b> If the initial ray tracing detects a collision, the method iterates through neighboring blocks:
-     *     <ul>
-     *       <li>Computes neighboring blocks based on the player's eye position and the direction to the target entity.</li>
-     *       <li>Checks if the ray can pass through each neighboring block and if the block is in the correct vertical alignment, relative to the player’s eye height.</li>
-     *       <li>Maintains a set of visited blocks to avoid redundant processing.</li>
-     *       <li>Finally, it updates the ray tracing to continue from the new block, provided it is a valid candidate.</li>
-     *     </ul>
-     *   </li>
-     *   
+     * Perform a visibility check to determine whether the player can see the target entity.<br>
+     * The check uses a ray tracing mechanism combined with neighbor block analysis to ascertain visibility, in order to workaround issues with packet inversion and de-synchronization.
+     * 
      * @param player The attacking player.
      * @param loc The location of the player's eye position.
      * @param damaged The entity being attacked.
@@ -90,7 +78,7 @@ public class Visible extends Check {
         }
         
         // Determine the entity's bounding box dimensions
-        final double[] AABB = AxisAlignedBBUtils.createAABBAtWidthResolution(damaged, dLoc);
+        final double[] AABB = AxisAlignedBBUtils.createBoundingBoxAtWidthResolutionFor(damaged, dLoc);
 
         // Determine the attacker's eye position
         final double eyeX = loc.getX();

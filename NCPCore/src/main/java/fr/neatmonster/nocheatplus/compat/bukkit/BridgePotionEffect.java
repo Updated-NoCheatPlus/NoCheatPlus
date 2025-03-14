@@ -19,6 +19,13 @@ import org.bukkit.potion.PotionEffectType;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 
 public class BridgePotionEffect {
+    
+    /**
+     * Parses a potion effect type from its name.
+     *
+     * @param name The name of the potion effect.
+     * @return The corresponding PotionEffectType, or null if not found.
+     */
     @SuppressWarnings("deprecation")
     private static final PotionEffectType parsePotionEffect(final String name) {
         try {
@@ -27,7 +34,13 @@ public class BridgePotionEffect {
             return null;
         }
     }
-
+    
+    /**
+     * Retrieves the first valid PotionEffectType from a list of names.
+     *
+     * @param names The names to search for.
+     * @return The first matching PotionEffectType, or null if none are found.
+     */
     public static PotionEffectType getFirst(String... names) {
         for (String name : names) {
             final PotionEffectType type = parsePotionEffect(name);
@@ -37,7 +50,14 @@ public class BridgePotionEffect {
         }
         return null;
     }
-
+    
+    /**
+     * Retrieves the first valid PotionEffectType from a list of names, throwing an exception if none are found.
+     *
+     * @param names The names to search for.
+     * @return The first matching PotionEffectType.
+     * @throws NullPointerException if no valid PotionEffectType is found.
+     */
     public static PotionEffectType getFirstNotNull(String... names) {
         final PotionEffectType type = getFirst(names);
         if (type == null) {

@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.checks.moving.model;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
@@ -35,7 +36,6 @@ public class PlayerMoveData extends MoveData {
     //////////////////////////////////////////////////////////
     // Reset with set, could be lazily set during checking.
     //////////////////////////////////////////////////////////
-
     // Properties of the player.
     /** Whether this move has the levitation effect active */
     public boolean hasLevitation;
@@ -49,10 +49,10 @@ public class PlayerMoveData extends MoveData {
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. NOTE: this is NOT the toggle glide moment, but the entire gliding phase. */
     public boolean isGliding;
     
-    /** Represents how far the player is submerged in lava. Set with {@link BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
+    /** Represents how far the player is submerged in lava. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedLavaHeight;
     
-    /** Represents how far the player is submerged in water. Set with {@link BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
+    /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedWaterHeight;
 
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. */
@@ -142,8 +142,11 @@ public class PlayerMoveData extends MoveData {
     /** This move was a step-up. Set in SurvivalFLy */
     public boolean isStepUp;
 
-    /** This move was a jump. Set in SurvivalFly. */
+    /** This move was an actual jump, as intended in its most common sense (jumping from the ground by pressing the space bar). */
     public boolean isJump;
+    
+    /** Player-induced vertical motion by pressing the space bar. Doesn't necessarily mean that this motion is an actual jump (i.e.: pressing the space bar in liquids) */
+    public boolean isSpaceBarImpulse;
     
     /** Highly uncertain movement: player might step up with this movement; we cannot know for sure. Set with lost-ground couldstep */
     public boolean couldStepUp;
@@ -151,9 +154,11 @@ public class PlayerMoveData extends MoveData {
 
     // Meta stuff.
     /**
+     * Represent which skipped move this {@link org.bukkit.event.player.PlayerMoveEvent} was supposed to represent.<br>
      * Due to the thresholds and other subtleties with the {@link org.bukkit.event.player.PlayerMoveEvent}, there could have been other
      * (micro-) moves by the player which could not be checked, because Bukkit did not fire an event for them. One moving event
-     * is split into several other moves, with a cap.
+     * is split into several other moves, with a cap.<br>
+     * 0 = no movements were skipped.
      */
     public int multiMoveCount;
     
@@ -260,6 +265,7 @@ public class PlayerMoveData extends MoveData {
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;
         hasImpulse = AlmostBoolean.NO;
+        isSpaceBarImpulse = false;
         // Super class last, because it'll set valid to true in the end.
         super.resetBase();
     }

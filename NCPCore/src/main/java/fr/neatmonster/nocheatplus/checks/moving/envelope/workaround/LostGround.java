@@ -22,7 +22,7 @@ import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.envelope.PlayerEnvelopes;
+import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
@@ -77,14 +77,14 @@ public class LostGround {
             // Ignore levitation
             return false;
         }
-        if (PlayerEnvelopes.isVerticallyConstricted(from, to, DataManager.getPlayerData(player))) {
+        if (PhysicsEnvelope.isVerticallyConstricted(from, to, DataManager.getPlayerData(player))) {
             return false;
         }
         
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         // Very specific case with players jumping with head obstructed by lanterns or after respawning
         if (hDistance <= Magic.Minecraft_minMoveSqDistance && from.isOnGround(Magic.Minecraft_minMoveSqDistance)
-            && (MaterialUtil.LANTERNS.contains(from.getTypeId(from.getBlockX(), Location.locToBlock(from.getY() + 2.0), from.getBlockZ())) || data.joinOrRespawn)) {
+            && (MaterialUtil.LANTERNS.contains(from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() + 2.0), from.getBlockZ())) || data.joinOrRespawn)) {
             return applyLostGround(player, from, true, thisMove, data, "0.03", tags);
         }
         if (!MathUtil.inRange(0.1, hDistance, 1.5)) { 

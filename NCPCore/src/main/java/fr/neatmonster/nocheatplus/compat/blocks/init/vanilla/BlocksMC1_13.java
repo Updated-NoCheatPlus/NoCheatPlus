@@ -72,8 +72,8 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
         }
 
         // Bubble column.
-        BlockInit.setAs("BUBBLE_COLUMN", Material.WATER);
-        BlockFlags.addFlags("BUBBLE_COLUMN", BlockFlags.F_BUBBLE_COLUMN);
+        BlockInit.setAs("BUBBLE_COLUMN", Material.WATER); // TODO: not correct. Bubble columns are liquids but don't behave like water.
+        BlockFlags.addFlags("BUBBLE_COLUMN", BlockFlags.F_BUBBLE_COLUMN); 
 
         // Further melon/pumpkin stems.
 

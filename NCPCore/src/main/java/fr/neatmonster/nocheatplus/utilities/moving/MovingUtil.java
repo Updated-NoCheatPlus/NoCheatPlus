@@ -146,8 +146,8 @@ public class MovingUtil {
                     !loc.isInLiquid() 
                     // Observed with head free, but feet clearly in water:
                     // lift off from water (not 100% easy to do).
-                    || !BlockProperties.isLiquid(loc.getTypeId())
-                    || !BlockProperties.isLiquid(loc.getTypeIdAbove())
+                    || !BlockProperties.isLiquid(loc.getBlockType())
+                    || !BlockProperties.isLiquid(loc.getBlockTypeAbove())
                 )
                 // Minecraft does not allow players to toggle glide on with levitation.
                 && Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))

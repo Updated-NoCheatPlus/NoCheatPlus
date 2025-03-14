@@ -221,21 +221,6 @@ public class TrigUtil {
     }
     
     /**
-     * Compare two block Location.
-     * 
-     * @param closestBlockLoc
-     * @param bLoc
-     * @return
-     */
-    public static int compareTo(Location closestBlockLoc, Location bLoc) 
-    {
-        if (closestBlockLoc.getBlockY() == bLoc.getBlockY()) {
-            return closestBlockLoc.getBlockZ() == bLoc.getBlockZ() ? closestBlockLoc.getBlockX() - bLoc.getBlockX() : closestBlockLoc.getBlockZ() - bLoc.getBlockZ();
-        } 
-        return closestBlockLoc.getBlockY() - bLoc.getBlockY();
-    }
-    
-    /**
      * Distance from the given coordinates / position to the center of a block.
      * 
      * @param bX Block position...

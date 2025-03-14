@@ -159,7 +159,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         public PlayerMoveData call() throws Exception {
             return new PlayerMoveData();
         }
-    }, 15); 
+    }, 6); 
     /** Keep track of currently processed (if) and past moves for vehicle moving. Stored moves can be altered by modifying the int. */
     // TODO: There may be need to store such data with vehicles, or detect tandem abuse in a different way.
     public final MoveTrace <VehicleMoveData> vehicleMoves = new MoveTrace<VehicleMoveData>(new Callable<VehicleMoveData>() {
@@ -411,7 +411,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * @param player
      */
     public void adjustMediumProperties(final Location loc, final MovingConfig cc, final Player player, final PlayerMoveData thisMove) {
-        nextFrictionHorizontal = BlockProperties.getBlockFrictionFactor(player, loc, cc.yOnGround, thisMove);
+        nextFrictionHorizontal = BlockProperties.getHorizontalFrictionFactor(player, loc, cc.yOnGround, thisMove);
         nextStuckInBlockHorizontal = BlockProperties.getStuckInBlockHorizontalFactor(player, loc, cc.yOnGround, thisMove);
         nextBlockSpeedMultiplier = MathUtil.lerp(attributeAccess.getHandle().getMovementEfficiency(player), BlockProperties.getBlockSpeedFactor(player, loc, cc.yOnGround, thisMove), 1.0f);
         nextFrictionVertical = BlockProperties.getVerticalFrictionFactor(player, loc, cc.yOnGround, thisMove);
@@ -633,8 +633,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * Get the set back location with yaw and pitch set from the given
      * arguments.
      * 
-     * @param refYaw
-     * @param refPitch
+     * @param yaw
+     * @param pitch
      * @return
      */
     public Location getSetBack(final float yaw, final float pitch) {
@@ -732,7 +732,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * lenient than isTeleported, because world and yaw and pitch are all
      * ignored.
      * 
-     * @param loc
+     * @param pos
      * @return In case of either loc or teleported being null, false is
      *         returned, otherwise TrigUtil.isSamePos(pos, teleported).
      */
@@ -832,7 +832,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * Add velocity to internal book-keeping.
      * 
      * @param player
-     * @param data
      * @param cc
      * @param vx
      * @param vy
@@ -876,7 +875,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * Add velocity to internal book-keeping.
      * 
      * @param player
-     * @param data
      * @param cc
      * @param vx
      * @param vy
@@ -1001,7 +999,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * Amount is the horizontal distance that is to be covered by velocity (active has already been checked).
      * <br>
      * If the modeling changes (max instead of sum or similar), then this will be affected.
-     * @param amount The amount demanded, must be positive.
+     * @param x The amount demanded, must be positive.
+     * @param z
      * @return
      */
     public List<PairEntry> useHorizontalVelocity(final double x, final double z) {
@@ -1282,10 +1281,12 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
 
     /**
      * Convenience: Create or just reset the trace, add the current location.
-     * @param loc 
-     * @param size
-     * @param mergeDist
-     * @param traceMergeDist 
+     * @param player 
+     * @param loc
+     * @param time
+     * @param maxAge
+     * @param maxSize
+     * @param iead
      */
     public void resetTrace(final Player player, final Location loc, final long time, final int maxAge, final int maxSize, final IEntityAccessDimensions iead) {
         if (trace != null) {

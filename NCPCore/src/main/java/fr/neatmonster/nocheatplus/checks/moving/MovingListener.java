@@ -62,7 +62,7 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.inventory.Open;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.BounceHandler;
-import fr.neatmonster.nocheatplus.checks.moving.envelope.PlayerEnvelopes;
+import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.BounceType;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
@@ -1178,7 +1178,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         thisMove.isCrouching = pData.isInCrouchingPose();
         thisMove.isSwimming = Bridge1_13.isSwimming(player);
         thisMove.slowedByUsingAnItem = BridgeMisc.isUsingItem(player);
-        if (BridgeMisc.isSpaceBarImpulseKnown(player)) thisMove.isJump = player.getCurrentInput().isJump();
+        if (BridgeMisc.isSpaceBarImpulseKnown(player)) thisMove.isSpaceBarImpulse = player.getCurrentInput().isJump();
 
 
         ////////////////////////////
@@ -1310,7 +1310,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 if (thisMove.yDistance < 0.0) {
                     // Common pre-conditions.
                     pTo.collectBlockFlags(); // Must be called to avoid NPEs
-                    if (PlayerEnvelopes.canBounce(player, pFrom, pTo, data, cc, pData)) {
+                    if (PhysicsEnvelope.canBounce(player, pFrom, pTo, data, cc, pData)) {
                         // Classic static bounce.
                         if ((pTo.getBlockFlags() & BlockFlags.F_BOUNCE25) != 0L) {
                             verticalBounce = BounceType.STATIC;
@@ -2563,19 +2563,19 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             if (to.getBlockFlags() != 0) {
                 builder.append("\nTo flags: " + StringUtil.join(BlockFlags.getFlagNames(to.getBlockFlags()), " + "));
             }
-            if (!BlockProperties.isAir(from.getTypeId())) {
+            if (!BlockProperties.isAir(from.getBlockType())) {
                 DebugUtil.addBlockInfo(builder, from, "\nFrom");
             }
-            if (!BlockProperties.isAir(from.getTypeIdBelow())) {
+            if (!BlockProperties.isAir(from.getBlockTypeBelow())) {
                 DebugUtil.addBlockBelowInfo(builder, from, "\nFrom");
             }
             if (!from.isOnGround() && from.isOnGround(0.5)) {
                 builder.append(" (ground within 0.5)");
             }
-            if (!BlockProperties.isAir(to.getTypeId())) {
+            if (!BlockProperties.isAir(to.getBlockType())) {
                 DebugUtil.addBlockInfo(builder, to, "\nTo");
             }
-            if (!BlockProperties.isAir(to.getTypeIdBelow())) {
+            if (!BlockProperties.isAir(to.getBlockTypeBelow())) {
                 DebugUtil.addBlockBelowInfo(builder, to, "\nTo");
             }
             if (!to.isOnGround() && to.isOnGround(0.5)) {

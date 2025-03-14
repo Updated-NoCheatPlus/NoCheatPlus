@@ -17,7 +17,7 @@ package fr.neatmonster.nocheatplus.checks.moving.envelope.workaround;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.envelope.PlayerEnvelopes;
+import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
@@ -33,8 +33,8 @@ import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 
 /**
  * Aim of this class is to provide a quick'n'dirty way of handling movements that cannot be predicted through ordinary means (not necessarily elegance), thus resorting to hard-coded magic.<br>
- * A few things to keep in mind:<br>
- * <li> Before adding any workaround, you should attempt to handle the movement as intended by the client (or at as closely as the NCP's infrastructure will allow): falling back to a workaround should be the last resort.</li>
+ * A few things to keep in mind:
+ * <li> Before adding a workaround, you should attempt to handle the movement as intended by the client (or at as closely as NCP's infrastructure will allow): falling back to a workaround should be the last resort.</li>
  * <li> Each workaround must have proper documentation. Emphasis on "why" the workaround is needed in the first place.</li>
  * <li> Our aim is to nerf / limit what cheaters can do, not catching every single kind of cheat implementation. </li>
  * With this premise in mind then, a workaround should have limited room for exploitation: we prefer players not having to deal with false positives than catching low-level cheats in this instance.
@@ -187,7 +187,7 @@ public class MagicWorkarounds {
                 * TODO: ... Time to drop support for 1.6 and 1.7 as well?
                 *  Please Mojang, release that PvP update already so that we can finally kill off 1.8.
                 */
-                || PlayerEnvelopes.couldBeSetBackLoop(data)
+                || PhysicsEnvelope.couldBeSetBackLoop(data)
                 && data.ws.use(WRPT.W_M_SF_COULD_BE_SETBACK_LOOP)
                 /*
                  * 0: Very specific case appeared on 1.20 and above: on stepping down a bed, the first friction move has speed of -0.047607

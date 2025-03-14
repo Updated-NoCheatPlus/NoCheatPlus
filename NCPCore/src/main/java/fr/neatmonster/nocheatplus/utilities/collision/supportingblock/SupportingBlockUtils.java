@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -15,7 +16,6 @@ import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
-import fr.neatmonster.nocheatplus.utilities.location.RichEntityLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -32,22 +32,22 @@ public class SupportingBlockUtils {
     
     /**
      * From: {@code VoxelShapeSpliterator.java}<br>
-     * Partly a copy of {@link CollisionUtil#getCollisionBoxes(BlockCache, Entity, double[], List, boolean)}.<br>
+     * Mostly a copy of {@link CollisionUtil#getCollisionBoxes(BlockCache, Entity, double[], List, boolean)}.<br>
      * This one however check for intersection rather than an actual collision.
-     * Retrieves a list of block positions that intersect with the given entity AABB.
+     * Retrieves a list of block positions that intersect with the given entity playerAABB.
      *
      * @param blockCache The block cache used for retrieving block data.
-     * @param AABB The entity's bounding box represented as an array.
+     * @param eAABB The entity's bounding box represented as an array.
      * @return A list of {@link Vector} positions where collisions occur.
      */
-    public static List<Vector> getCollisionsLoc(BlockCache blockCache, double[] AABB) {
+    public static List<Vector> getCollisionsLoc(BlockCache blockCache, double[] eAABB) {
         List<Vector> collisionsLoc = new ArrayList<>();
-        int minBlockX = (int) Math.floor(AABB[0] - CollisionUtil.COLLISION_EPSILON) - 1;
-        int maxBlockX = (int) Math.floor(AABB[3] + CollisionUtil.COLLISION_EPSILON) + 1;
-        int minBlockY = (int) Math.max(Math.floor(AABB[1] - CollisionUtil.COLLISION_EPSILON) - 1, blockCache.getMinBlockY());
-        int maxBlockY = (int) Math.min(Math.floor(AABB[4] + CollisionUtil.COLLISION_EPSILON) + 1, blockCache.getMaxBlockY());
-        int minBlockZ = (int) Math.floor(AABB[2] - CollisionUtil.COLLISION_EPSILON) - 1;
-        int maxBlockZ = (int) Math.floor(AABB[5] + CollisionUtil.COLLISION_EPSILON) + 1;
+        int minBlockX = (int) Math.floor(eAABB[0] - CollisionUtil.COLLISION_EPSILON) - 1;
+        int maxBlockX = (int) Math.floor(eAABB[3] + CollisionUtil.COLLISION_EPSILON) + 1;
+        int minBlockY = (int) Math.max(Math.floor(eAABB[1] - CollisionUtil.COLLISION_EPSILON) - 1, blockCache.getMinBlockY());
+        int maxBlockY = (int) Math.min(Math.floor(eAABB[4] + CollisionUtil.COLLISION_EPSILON) + 1, blockCache.getMaxBlockY());
+        int minBlockZ = (int) Math.floor(eAABB[2] - CollisionUtil.COLLISION_EPSILON) - 1;
+        int maxBlockZ = (int) Math.floor(eAABB[5] + CollisionUtil.COLLISION_EPSILON) + 1;
         for (int y = minBlockY; y < maxBlockY; y++) {
             for (int x = minBlockX; x <= maxBlockX; x++) {
                 for (int z = minBlockZ; z <= maxBlockZ; z++) {
@@ -55,13 +55,13 @@ public class SupportingBlockUtils {
                     if (BlockProperties.isAir(mat) || BlockProperties.isPassable(mat)) {
                         continue;
                     }
-                    // how many of the current block’s coordinates (x, y, z) lie on the edges of the search region defined by the entity’s AABB
+                    // how many of the current block’s coordinates (x, y, z) lie on the edges of the search region defined by the entity’s playerAABB
                     int edgeCount = ((x == minBlockX || x == maxBlockX) ? 1 : 0) + 
                                     ((y == minBlockY || y == maxBlockY) ? 1 : 0) +  
                                     ((z == minBlockZ || z == maxBlockZ) ? 1 : 0);
-                    if (edgeCount != 3 && (edgeCount != 1 || (BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0) 
+                    if (edgeCount != 3 && (edgeCount != 1 || (BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0) // isShapeExceedsCube...
                         && (edgeCount != 2 || mat == BridgeMaterial.MOVING_PISTON)) {
-                        if (AxisAlignedBBUtils.isIntersected(blockCache.getBounds(x, y, z), AABB)) {
+                        if (AxisAlignedBBUtils.isIntersected(blockCache.getBounds(x, y, z), eAABB)) {
                             collisionsLoc.add(new Vector(x, y, z));
                         }
                     }
@@ -81,7 +81,7 @@ public class SupportingBlockUtils {
      * @param yBelow Y parameter for searching beneath the player.
      * @return A {@link Vector} containing the position of the block.
      */
-    public static Vector getOnPos(BlockCache access, RichEntityLocation eLoc, SupportingBlockData data, float yBelow) {
+    public static Vector getOnPos(BlockCache access, Location eLoc, SupportingBlockData data, float yBelow) {
         Vector supportingBlockLoc = data.getBlockPos();
         if (supportingBlockLoc != null) {
             final BlockCache.IBlockCacheNode node = access.getOrCreateBlockCacheNode(supportingBlockLoc.getX(), supportingBlockLoc.getY(), supportingBlockLoc.getZ(), false);
@@ -91,7 +91,7 @@ public class SupportingBlockUtils {
                                      && !MaterialUtil.ALL_WALLS.contains(mat)
                                      && !MaterialUtil.WOODEN_FENCE_GATES.contains(mat);
             if (isSpecialCond) {
-                return new Vector(supportingBlockLoc.getX(), MathUtil.floor(eLoc.getY()-yBelow), supportingBlockLoc.getBlockZ()); // location of the block
+                return new Vector(supportingBlockLoc.getX(), MathUtil.floor(eLoc.getY()-yBelow), supportingBlockLoc.getZ()); // location of the block
             }
             return supportingBlockLoc;
         }
@@ -154,7 +154,7 @@ public class SupportingBlockUtils {
             Vector blockLocAsVector3d = blockLocation.clone().add(new Vector(0.5, 0.5, 0.5));
             double currentDistance = correctedPlayerLoc.distanceSquared(blockLocAsVector3d);
             if (currentDistance < lastDistance 
-                || (currentDistance == lastDistance && lastBlockLocation != null && firstHasPriorityOverSecond(blockLocation, lastBlockLocation))) {
+                || (currentDistance == lastDistance && lastBlockLocation != null && compareTo(blockLocation, lastBlockLocation))) {
                 lastBlockLocation = blockLocation;
                 lastDistance = currentDistance;
             }
@@ -171,13 +171,13 @@ public class SupportingBlockUtils {
      *     <li>Lower Y-coordinate</li>
      *     <li>If Y is the same, lower X and Z-coordinates</li>
      * </ul>
-     * Credits for this method go to DefineOutside @GrimAC (!), as I couldn't figure out some things myself.
-     *
+     * From {@code Vector3i.java} -> {@code compareTo()}
+     * 
      * @param first  The first location (as a Vector) to compare.
      * @param second The second location (as a Vector) to compare.
      * @return {@code true} if the first location has priority over the second, otherwise {@code false}.
      */
-    private static boolean firstHasPriorityOverSecond(Vector first, Vector second) {
+    private static boolean compareTo(Vector first, Vector second) {
         if (first.getY() != second.getY()) {
             return first.getY() < second.getY(); // Lowest Y has priority
         }

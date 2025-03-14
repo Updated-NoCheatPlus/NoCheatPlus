@@ -579,20 +579,20 @@ public class CollisionUtil {
     /**
      * Collects all collidable entities within the AABB of the given relEntity that can exert a pushing force to it. 
      *
-     * @param relEntity The entity around which entities are to be collected.
+     * @param relEntity The entity around which other entities are to be collected.
      * @return A list of entities' locations that intersects with the relEntity's box.
      */
     public static List<Location> getCollidingEntitiesLocations(Entity relEntity) {
         List<Location> collidingEntities = new ArrayList<>();
         // NOTE: CraftWorld/CraftEntity.java -> entity.level().getEntities(entity, entity.getBoundingBox().inflate(x, y, z), Predicates.alwaysTrue());
         // The method actually employs the getEntity() one found in World.java
-        double[] relAABB = AxisAlignedBBUtils.createAABB(relEntity);
+        double[] relAABB = AxisAlignedBBUtils.createBoundingBoxFor(relEntity);
         for (Entity collidingEntity : relEntity.getNearbyEntities(0.5,0.1,0.5)) {
             if (!exertsPushingForce(collidingEntity)) {
                 // Cannot be pushed by this entity
                 continue;
             }
-            double[] collidingAABB = AxisAlignedBBUtils.createAABB(collidingEntity);
+            double[] collidingAABB = AxisAlignedBBUtils.createBoundingBoxFor(collidingEntity);
             if (!AxisAlignedBBUtils.isIntersected(relAABB, collidingAABB)) {
                 // Doesn't actually collide with the entity.
                 continue;
@@ -963,8 +963,8 @@ public class CollisionUtil {
      * Optionally includes world border collisions if the entity is near the world border.
      *
      * <p> Depending on the {@code onlyCheckCollide} flag:<br>
-     *    - If `onlyCheckCollide` is true, checks if the entity collides with any block and returns immediately if a collision is detected.<br>
-     *    - If `onlyCheckCollide` is false, collects all relevant collision boxes into the `collisionBoxes` list for further processing.
+     *    - If {@code onlyCheckCollide} is true, checks if the entity collides with any block and returns immediately if a collision is detected.<br>
+     *    - If {@code onlyCheckCollide} is false, collects all relevant collision boxes into the `collisionBoxes` list for further processing.
      *
      * @param blockCache The cache of block materials used to determine the type of blocks in the world.
      * @param entity The entity whose bounding box is being checked for collisions.
@@ -1116,7 +1116,6 @@ public class CollisionUtil {
      * @return A sorted array of valid step heights.
      */
     public static float[] collectCandidateStepUpHeights(double[] AABB, List<double[]> collisionsBoxes, float stepHeight, float collideY) {
-        // Using a set to store unique step heights
         Set<Float> stepHeights = new HashSet<>();
         // Extract the minimum Y-coordinate from the AABB
         double minY = AABB[1];
