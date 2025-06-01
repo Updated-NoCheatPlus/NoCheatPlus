@@ -62,10 +62,21 @@ public class AxisAlignedBBUtils {
     }
     
     /**
+     * Test if the given double array only contains a single bounding box.<br>
+     * Rather meant for block bounds, as entities are made up of a single bounding box, with the exception of the ender dragon.
+     * 
+     * @param array
+     * @return {@code true} If the array contains 6 doubles only. {@code false} otherwise; in which case, the block is determined to have a complex shape, meaning that it is composed by multiple bounding boxes.
+     */
+    public static boolean isSimpleShape(double[] array) {
+        return getNumberOfAABBs(array) == 1;
+    }
+    
+    /**
      * Converts a BoundingBox object (Bukkit) into a double array representing its min/max coordinates.
      *
-     * @param box The BoundingBox to be converted.
-     * @return A double array containing the minX, minY, minZ, maxX, maxY, maxZ coords of the bounding box.<br> May be null. If so, a zero array will be created.
+     * @param box The BoundingBox to be converted.<br> May be null. If so, a zero array will be created.
+     * @return A double array containing the minX, minY, minZ, maxX, maxY, maxZ coords of the bounding box.
      */
     public static double[] toArray(BoundingBox box) {
         if (box == null) {
@@ -86,11 +97,10 @@ public class AxisAlignedBBUtils {
      * minX, minY, minZ, maxX, maxY, maxZ. The length must therefore be a multiple of 6.
      *
      * @example
-     * Given a multiAABB array representing two bounding boxes:
+     * Given a double array representing two bounding boxes:
      * <pre>
      * double[] multiAABB = {0.0, 0.0, 0.0, 1.0, 1.0, 1.0,  // AABB 1
      *                       1.0, 1.0, 1.0, 2.0, 2.0, 2.0}; // AABB 2
-     *
      * double[] AABB_1st = extractBoundingBox(multiAABB, 1); // Returns {0.0, 0.0, 0.0, 1.0, 1.0, 1.0}
      * double[] AABB_2nd = extractBoundingBox(multiAABB, 2); // Returns {1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
      * </pre>
@@ -107,7 +117,7 @@ public class AxisAlignedBBUtils {
         if (boxNumber < 1 || boxNumber > numberOfAABBs) {
             throw new IllegalArgumentException("boxNumber is out of bounds. Valid indices are between 1 and " + numberOfAABBs);
         }
-        if (numberOfAABBs == 1) {
+        if (isSimpleShape(multiAABB)) {
             return multiAABB;
         }
         // Calculate the starting position for the requested bounding box
@@ -136,7 +146,7 @@ public class AxisAlignedBBUtils {
     public static List<double[]> splitIntoSingle(double[] multiAABB) {
         // If there is only one bounding box, return it in a single-item list
         int numberOfAABBs = getNumberOfAABBs(multiAABB);
-        if (numberOfAABBs == 1) {
+        if (isSimpleShape(multiAABB)) {
             // Minor performance gain: avoid creating a list if the passed array only contains a single AABB.
             // (Also makes the method more semantically correct).
             return Collections.singletonList(multiAABB);
@@ -158,13 +168,13 @@ public class AxisAlignedBBUtils {
     public static double[] createBoundingBoxFor(Entity entity) {
         double halfWidth = mcAccess.getHandle().getWidth(entity) / 2f; // from the center position to add on each horizontal side. --.--
         double height = mcAccess.getHandle().getHeight(entity);
-        final Location loc = entity.getLocation();
-        return new double[] {loc.getX() - halfWidth, // minX
-                             loc.getY(),             // minY - feet
-                             loc.getZ() - halfWidth, // minZ
-                             loc.getX() + halfWidth, // maxX
-                             loc.getY() + height,    // maxY - top of the box
-                             loc.getZ() + halfWidth};// maxZ
+        final Location center = entity.getLocation();
+        return new double[] {center.getX() - halfWidth, // minX
+                             center.getY(),             // minY - feet
+                             center.getZ() - halfWidth, // minZ
+                             center.getX() + halfWidth, // maxX
+                             center.getY() + height,    // maxY - top of the box
+                             center.getZ() + halfWidth};// maxZ
     }
     
     /**
@@ -179,17 +189,17 @@ public class AxisAlignedBBUtils {
     public static double[] createBoundingBoxAtWidthResolutionFor(Entity entity, Location refLoc) {
         double widthRes = Math.round(mcAccess.getHandle().getWidth(entity) * 500.0) / 1000.0;
         double height = mcAccess.getHandle().getHeight(entity);
-        Location loc = refLoc;
-        if (loc == null) {
-            loc = entity.getLocation();
+        Location center = refLoc;
+        if (center == null) {
+            center = entity.getLocation();
         }
         return new double[] {
-                loc.getX() - widthRes, // minX
-                loc.getY(),            // minY - feet
-                loc.getZ() - widthRes, // minZ
-                loc.getX() + widthRes, // maxX
-                loc.getY() + height,   // maxY - top of the box
-                loc.getZ() + widthRes  // maxZ
+                center.getX() - widthRes, // minX
+                center.getY(),            // minY - feet
+                center.getZ() - widthRes, // minZ
+                center.getX() + widthRes, // maxX
+                center.getY() + height,   // maxY - top of the box
+                center.getZ() + widthRes  // maxZ
         };
     }
     
@@ -380,7 +390,7 @@ public class AxisAlignedBBUtils {
     }
     
     /**
-     * Checks if a single axis-aligned bounding box (sAABB) collides with any part of a block's bounding box.
+     * Checks if a simple axis-aligned bounding box collides with any part of a block's bounding box.
      *
      * @param blockAABB A double array representing the bounding box of a block. This can be a complex shape, 
      *                meaning the array can contain multiple bounding boxes each defined by six <i>consecutive</i> elements 

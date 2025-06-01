@@ -38,7 +38,7 @@ public class Validate {
     }
     
     /**
-     * Validates that the given double array's length is a multiple of 6.
+     * Validates that the given double array's length: is a multiple of 6, does contain at least 1 bounding box and is not null.
      * 
      * <p>Currently, this is rather meant to validate double arrays containing multiple bounding boxes, each defined by six consecutive elements 
      * [minX, minY, minZ, maxX, maxY, maxZ].<br>

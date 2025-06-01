@@ -563,7 +563,7 @@ public class RichEntityLocation extends RichBoundsLocation {
     
     /**
      * From {@code Entity.java} <br>
-     * A replica of Minecraft's {@code isFree()} method, to check if players should be able to jump out of a liquid (the automatic jump you make when you approach a block at the surface).<br>
+     * A replica of Minecraft's {@code isFree()} method, to check whether players should be able to jump out of a liquid (the automatic jump you make when you approach a block at surface level).<br>
      * 
      * @return True, if the moved bounding box is free from obstructions, otherwise false.
      */
@@ -595,33 +595,33 @@ public class RichEntityLocation extends RichBoundsLocation {
      * Collide the given AABB with blocks.
      * (From {@code Entity.class} -> {@code collide()}).
      *
-     * @param input    Meant to represent the collision-seeking speed. <br>
-     *                 If no collision can be found within the given speed, the method will return the unmodified input Vector as a result.
-     *                 Otherwise, a modified Vector containing the "obstructed" speed is returned. <br>
-     *                 (Thus, if you wish to know if the player collided with something: inputXYZ != collidedXYZ)
+     * @param wantedInput Meant to represent the speed at which the entity <i>wants</i> to move. <br>
+     *                 If a collision is found within the intended input, the method will return a new {@link Vector} that reflects the actually allowed movement.
+     *                 Otherwise, the unmodified {@code wantedInput} Vector is returned, meaning no collision that could obstruct the intended movement was found.<br>
+     *                 (Thus, if you wish to know if the player collided with something: inputXYZ != allowedXYZ)
      * @param onGround The "on ground" status of the entity. <br> Can be NCP's or Minecraft's. <br> Do mind that if using NCP's, {@link LostGround} cases and mismatches must be taken into account.
      *                 Used to determine whether the entity will be able to step up with the given input.
      * @param AABB     The axis-aligned bounding box of the entity at the position they moved from (in other words, the last AABB of the entity).
-     *                 Only makes sense if you call this method during {@link PlayerMoveEvent}, because the NMS bounding box will already be moved to the {@link PlayerMoveEvent#getTo()} {@link Location}, by the time this gets called by moving checks.
+     *                 Only makes sense if you call this method during {@link PlayerMoveEvent}s, because the NMS bounding box will already be moved to the {@link PlayerMoveEvent#getTo()} {@link Location}, by the time this gets called by moving checks.
      *                 If null, a new AABB using NMS' parameters (width/height) will be created.
-     * @return A {@link Vector} containing the collision components (collisionXYZ)
-     * 
-     * @author Lysandre
+     * @return A {@link Vector} containing the collision components on the respective axis.
      */
-    public Vector collide(Vector input, boolean onGround, double[] AABB) {
-        if (input.getX() == 0.0 && input.getY() == 0.0 && input.getZ() == 0.0) { // NOTE: Do not call Vector#isZero, because the method is not available on 1.8
+    public Vector collide(Vector wantedInput, boolean onGround, double[] AABB) {
+        if (wantedInput.getX() == 0.0 && wantedInput.getY() == 0.0 && wantedInput.getZ() == 0.0) { // NOTE: Do not call Vector#isZero, because the method is not available on 1.8
+            // No movement intended, nothing to do.
             return new Vector();
         }
         // Clone or create the AABB
         double[] tAABB = AABB == null ? AxisAlignedBBUtils.createBoundingBoxFor(entity) : AABB.clone();
         List<double[]> collisionBoxes = new ArrayList<>();
         // Populate the list.
-        CollisionUtil.getCollisionBoxes(blockCache, entity, AxisAlignedBBUtils.expandTowards(tAABB, input.getX(), input.getY(), input.getZ()), collisionBoxes, false);
-        Vector collisionVector = input.lengthSquared() == 0.0 ? input : CollisionUtil.collideBoundingBox(input, tAABB, collisionBoxes);
-        boolean collideX = input.getX() != collisionVector.getX();
-        boolean collideY = input.getY() != collisionVector.getY();
-        boolean collideZ = input.getZ() != collisionVector.getZ();
-        boolean touchGround = onGround || collideY && collisionVector.getY() < 0.0; // Already on ground. Or this downward collision would result in the player touching the ground.
+        CollisionUtil.getCollisionBoxes(blockCache, entity, AxisAlignedBBUtils.expandTowards(tAABB, wantedInput.getX(), wantedInput.getY(), wantedInput.getZ()), collisionBoxes, false);
+        // Compute initial collisions
+        Vector allowedMovement = wantedInput.lengthSquared() == 0.0 ? wantedInput : CollisionUtil.collideBoundingBox(wantedInput, tAABB, collisionBoxes);
+        boolean collideX = wantedInput.getX() != allowedMovement.getX();
+        boolean collideY = wantedInput.getY() != allowedMovement.getY();
+        boolean collideZ = wantedInput.getZ() != allowedMovement.getZ();
+        boolean touchGround = onGround || collideY && allowedMovement.getY() < 0.0; // Already on ground. Or this downward movement would result in the player touching the ground.
         /* 
           Players can step blocks up to 0.6 or 0.5, depending on the client version (if older than 1.8). Boats cannot step. All other vehicles can step a whole block up.
            TODO: Make attributes accessible to entities as well.
@@ -631,16 +631,16 @@ public class RichEntityLocation extends RichBoundsLocation {
         // Entity is on ground, collided with a wall and can actually step upwards: try to make it step up.
         // Messy and quite hard on the eyes, but since we need to account for different versions, this will have to do.
         if (allowedStepHeight > 0.0 && touchGround && (collideX || collideZ)) {
-            // Modern clients have a better step up handling
+            // Modern clients have this step up handling
             boolean EntityIsAtLeast1_21 = GenericVersion.isAtLeast(entity, "1.21");
             boolean EntityIsAtLeast1_8 = GenericVersion.isAtLeast(entity, "1.8");
             if (EntityIsAtLeast1_21) {
-                // Simulate the step-up: if this downward collision resulted in touching the ground, move the current AABB downwards as well. If the entity was already on ground, leave the AABB as is.
-                double[] groundCollisionAABB = collideY && input.getY() < 0.0 ? AxisAlignedBBUtils.move(tAABB, 0.0, collisionVector.getY(), 0.0) : tAABB;
-                // Then, expand the AABB upwards by the step height and by the horizontal collision
-                double[] stepUpAttemptAABB = AxisAlignedBBUtils.expandTowards(groundCollisionAABB, collisionVector.getX(), allowedStepHeight, collisionVector.getZ());
-                if (!(collideY && input.getY() < 0.0)) {
-                    // If no downward collision (and the player was already on ground), apply a very small downward offset (no idea as of why, ask Mojang)
+                // Simulate the step-up: if this (current!) downward collision resulted in touching the ground, move the current AABB downwards as well. If the entity was already on ground, leave the AABB as is.
+                double[] groundCollisionAABB = collideY && wantedInput.getY() < 0.0 ? AxisAlignedBBUtils.move(tAABB, 0.0, allowedMovement.getY(), 0.0) : tAABB;
+                // Then, expand the AABB: vertically by the step height, and horizontally by the amount the respective collisions (XZ) would actually allow.
+                double[] stepUpAttemptAABB = AxisAlignedBBUtils.expandTowards(groundCollisionAABB, allowedMovement.getX(), allowedStepHeight, allowedMovement.getZ());
+                if (!(collideY && wantedInput.getY() < 0.0)) {
+                    // If no current downward collision (and the player was already on ground), apply a very small downward offset (no idea as of why, ask Mojang)
                     stepUpAttemptAABB = AxisAlignedBBUtils.expandTowards(stepUpAttemptAABB, 0.0, -9.999999747378752E-6D, 0.0);
                 }
                 // Collect collision boxes around the newly expanded AABB 
@@ -648,14 +648,14 @@ public class RichEntityLocation extends RichBoundsLocation {
                 List<double[]> collisionBoxes_1 = new ArrayList<>();
                 CollisionUtil.getCollisionBoxes(blockCache, entity, stepUpAttemptAABB, collisionBoxes_1, false);
                 // Collect possible step heights based on the surrounding collision boxes.
-                final float[] stepHeights = CollisionUtil.collectCandidateStepUpHeights(groundCollisionAABB, collisionBoxes_1, (float)allowedStepHeight, (float)collisionVector.getY());
+                final float[] stepHeights = CollisionUtil.collectCandidateStepUpHeights(groundCollisionAABB, collisionBoxes_1, (float)allowedStepHeight, (float) allowedMovement.getY());
                 for (float stepHeight : stepHeights) {
                     // Iterate through the possible step heights and check if stepping up is valid.
-                    Vector stepUpVector = CollisionUtil.collideBoundingBox(new Vector(input.getX(), stepHeight, input.getZ()), groundCollisionAABB, collisionBoxes_1);
-                    if (TrigUtil.distanceSquared(stepUpVector) > TrigUtil.distanceSquared(collisionVector)) {
+                    Vector stepUpVector = CollisionUtil.collideBoundingBox(new Vector(wantedInput.getX(), stepHeight, wantedInput.getZ()), groundCollisionAABB, collisionBoxes_1);
+                    if (TrigUtil.distanceSquared(stepUpVector) > TrigUtil.distanceSquared(allowedMovement)) {
                          final double diff = tAABB[1] - groundCollisionAABB[1]; // Difference in Y axis due to stepping up.
                          // Finally, adjust the movement vector (make the player step up)
-                         collisionVector = stepUpVector.add(new Vector(0.0, -diff, 0.0)); 
+                         allowedMovement = stepUpVector.add(new Vector(0.0, -diff, 0.0)); 
                          break;
                     }
                 }
@@ -663,11 +663,11 @@ public class RichEntityLocation extends RichBoundsLocation {
             else {
                 // First step-up fix iteration introduced in 1.8 (then changed in 1.21)
                 // https://www.youtube.com/watch?v=Awa9mZQwVi8
-                Vector stepUpVector = CollisionUtil.collideBoundingBox(new Vector(input.getX(), allowedStepHeight, input.getZ()), tAABB, collisionBoxes);
+                Vector stepUpVector = CollisionUtil.collideBoundingBox(new Vector(wantedInput.getX(), allowedStepHeight, wantedInput.getZ()), tAABB, collisionBoxes);
                 if (EntityIsAtLeast1_8) {
-                    Vector stepFix = CollisionUtil.collideBoundingBox(new Vector(0.0, allowedStepHeight, 0.0), AxisAlignedBBUtils.expandTowards(tAABB, input.getX(), 0.0, input.getZ()), collisionBoxes);
+                    Vector stepFix = CollisionUtil.collideBoundingBox(new Vector(0.0, allowedStepHeight, 0.0), AxisAlignedBBUtils.expandTowards(tAABB, wantedInput.getX(), 0.0, wantedInput.getZ()), collisionBoxes);
                     if (stepFix.getY() < allowedStepHeight) {
-                        Vector stepUpAttempt2 = CollisionUtil.collideBoundingBox(new Vector(input.getX(), 0.0, input.getZ()), AxisAlignedBBUtils.move(tAABB, stepFix.getX(), stepFix.getY(), stepFix.getZ()), collisionBoxes).add(stepFix);
+                        Vector stepUpAttempt2 = CollisionUtil.collideBoundingBox(new Vector(wantedInput.getX(), 0.0, wantedInput.getZ()), AxisAlignedBBUtils.move(tAABB, stepFix.getX(), stepFix.getY(), stepFix.getZ()), collisionBoxes).add(stepFix);
                         if (TrigUtil.distanceSquared(stepUpAttempt2) > TrigUtil.distanceSquared(stepUpVector)) {
                             // Did the step-up iteration yield a higher distance? If so, apply this step motion
                             stepUpVector = stepUpAttempt2;
@@ -675,12 +675,12 @@ public class RichEntityLocation extends RichBoundsLocation {
                     }
                 }
                 // Did the step-up yield a higher distance? If so, apply step motion (normal. 1.7 and below don't have the fix above)
-                if (TrigUtil.distanceSquared(stepUpVector) > TrigUtil.distanceSquared(collisionVector)) {
-                    return stepUpVector.add(CollisionUtil.collideBoundingBox(new Vector(0.0, -stepUpVector.getY() + input.getY(), 0.0), AxisAlignedBBUtils.move(tAABB, stepUpVector.getX(), stepUpVector.getY(), stepUpVector.getZ()), collisionBoxes));
+                if (TrigUtil.distanceSquared(stepUpVector) > TrigUtil.distanceSquared(allowedMovement)) {
+                    return stepUpVector.add(CollisionUtil.collideBoundingBox(new Vector(0.0, -stepUpVector.getY() + wantedInput.getY(), 0.0), AxisAlignedBBUtils.move(tAABB, stepUpVector.getX(), stepUpVector.getY(), stepUpVector.getZ()), collisionBoxes));
                 }
             }
         }
-        return collisionVector;
+        return allowedMovement;
     }
     
     /**

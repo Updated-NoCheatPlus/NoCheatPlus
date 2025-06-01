@@ -412,7 +412,7 @@ public abstract class BlockCache {
      *            the y
      * @param z
      *            the z
-     * @return Array of floats (minX, minY, minZ, maxX, maxY, maxZ), may be null
+     * @return Array of doubles (minX, minY, minZ, maxX, maxY, maxZ), may be null
      *         theoretically. Do not change these in place, because they might
      *         get cached.
      */

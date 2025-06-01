@@ -358,9 +358,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         final PlayerMoveInfo moveInfo = aux.usePlayerMoveInfo();
         final Location loc = player.getLocation(useToggleFlightLoc);
         moveInfo.set(player, loc, null, cc.yOnGround);
-        // data.isVelocityJumpPhase() might be too harsh, but prevents too easy abuse.
         if (!MovingUtil.shouldCheckSurvivalFly(player, moveInfo.from, moveInfo.to, data, cc, pData) 
-            || data.isVelocityJumpPhase() || BlockProperties.isOnGroundOrResetCond(player, loc, cc.yOnGround)) {
+            || BlockProperties.isOnGroundOrResetCond(player, loc, cc.yOnGround)) {
             useToggleFlightLoc.setWorld(null);
             aux.returnPlayerMoveInfo(moveInfo);
             return;

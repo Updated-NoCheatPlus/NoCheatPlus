@@ -694,29 +694,14 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             // Client-version checking is already contained in isInBubbleStream.
             return vector;
         }
-        // This (redundant) collision check is needed because the block above is checked during the looping done in tryCheckInsideBlock() -> checkInsideBlocks() in Entity.java
-        // TODO: Clean-up pending...
-        boolean airAbove = false;
+        boolean airAbove = BlockProperties.isAir(node.getType());
         boolean isDrag = false;
-        final int iMinX = Location.locToBlock(minX + 0.001);
-        final int iMaxX = Location.locToBlock(maxX + 0.001);
-        final int iMinY = Location.locToBlock(minY + 0.001); 
-        final int iMaxY = Math.min(Location.locToBlock(maxY - 0.001), blockCache.getMaxBlockY());
-        final int iMinZ = Location.locToBlock(minZ - 0.001);
-        final int iMaxZ = Location.locToBlock(maxZ - 0.001);
-        for (int x = iMinX; x < iMaxX; x++) {
-            for (int y = iMinY; y < iMaxY; y++) {
-                for (int z = iMinZ; z < iMaxZ; z++) {
-                    // Set if above is clear
-                    IBlockCacheNode node = blockCache.getBlockCacheNode(x, y + 1, z);
-                    airAbove = BlockProperties.isAir(node.getType());
-                    // Set whether this column can drag players.
-                    BlockData data = world.getBlockAt(x, y, z).getBlockData(); // Mh. Heavy on performance.
-                    if (data instanceof BubbleColumn) {
-                        isDrag = ((BubbleColumn)data).isDrag();
-                    }
-                }
-            }
+        // Set if above is clear
+        IBlockCacheNode node = blockCache.getBlockCacheNode(this.blockX, this.blockY + 1, this.blockZ);
+        // Set whether this column can drag players.
+        BlockData data = world.getBlockAt(this.blockX, this.blockY, this.blockZ).getBlockData(); // Mh. Heavy on performance.
+        if (data instanceof BubbleColumn) {
+            isDrag = ((BubbleColumn)data).isDrag();
         }
         double yMotion;
         if (airAbove) {

@@ -4090,7 +4090,7 @@ public class BlockProperties {
             return false;
         }
         
-        /** Coordinates of the first axis aligned bounding box in the array */
+        /* Coordinates of the first axis aligned bounding box in the array */
         double bMinX, bMinZ, bMinY, bMaxX, bMaxY, bMaxZ;
         //////////////////////////////////////////////////////////////////
         // Fill in the horizontal bounds (minX, maxX, minZ, maxZ)...    //
@@ -4213,7 +4213,7 @@ public class BlockProperties {
             return true;
         }
         // Check for multi-bounding-box double arrays (starting from the 2nd box in the array. 1st has already been checked above).
-        return AxisAlignedBBUtils.getNumberOfAABBs(blockBounds) > 1 && AxisAlignedBBUtils.isCollided(blockBounds, x, y, z, new double[]{minX, minY, minZ, maxX, maxY, maxZ}, allowEdge, 2);
+        return !AxisAlignedBBUtils.isSimpleShape(blockBounds) && AxisAlignedBBUtils.isCollided(blockBounds, x, y, z, new double[]{minX, minY, minZ, maxX, maxY, maxZ}, allowEdge, 2);
     }
 
     /**

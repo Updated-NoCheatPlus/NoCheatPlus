@@ -106,7 +106,7 @@ public class BridgeMisc {
      * @param player The player whose input is being checked.
      * @return <b>Always</b><code>true</code>, if both client and server are on a version that supports impulse sending and reading respectively (1.21.2 and above).<br>
      *         <b>Always</b><code>false</code>, if the server is unable to read inputs at all (legacy, pre 1.21.2). <br>
-     *         Don't use when the server does support input but the client doesn't. Although ViaVersion does help us get the input from the legacy client but result is unusable
+     *         <b>Note</b>: currently, we cannot rely on ViaVersion's input emulation for older clients on newer servers (1.21.2+); it seems to be way off from the actual input.
      * <hr>
      * Check {@link BridgeMisc#isSpaceBarImpulseKnown(Player)} for the vertical impulse.
      *

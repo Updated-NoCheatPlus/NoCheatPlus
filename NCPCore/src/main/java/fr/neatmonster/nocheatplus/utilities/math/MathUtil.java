@@ -208,7 +208,7 @@ public class MathUtil {
 
     /**
      * Computes the length of two segments and then subtracts the length
-     * of their overlapping region to avoid counting it twice. The result is the total
+     * of their overlapping region, to avoid counting it twice. The result is the total
      * length of the space that is covered by at least one of the segments.
      *
      * @param sA The start of the first segment.

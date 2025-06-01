@@ -102,9 +102,8 @@ public class MoveData {
     public boolean headObstructed;
 
     /**
-     * Somehow the player has touched ground with this move (including
-     * workarounds), thus the client might move up next move. This flag is only
-     * updated by from/to.onGround, if MoveData.setExtraProperties is called for
+     * Generic flag: the player is moving from/onto ground or touched ground by means of a workaround. This flag is only
+     * updated by from/to.onGround, if {@link MoveData#setExtraProperties(RichBoundsLocation, RichBoundsLocation)} is called for
      * this instance.
      */
     public boolean touchedGround;

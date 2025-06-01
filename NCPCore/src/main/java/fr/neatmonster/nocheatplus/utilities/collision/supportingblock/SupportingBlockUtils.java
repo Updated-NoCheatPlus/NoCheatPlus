@@ -31,7 +31,7 @@ import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 public class SupportingBlockUtils {
     
     /**
-     * From: {@code VoxelShapeSpliterator.java}<br>
+     * From: {@code VoxelShapeSpliterator.java / BlockCollision.java}<br>
      * Mostly a copy of {@link CollisionUtil#getCollisionBoxes(BlockCache, Entity, double[], List, boolean)}.<br>
      * This one however check for intersection rather than an actual collision.
      * Retrieves a list of block positions that intersect with the given entity playerAABB.
@@ -52,6 +52,7 @@ public class SupportingBlockUtils {
             for (int x = minBlockX; x <= maxBlockX; x++) {
                 for (int z = minBlockZ; z <= maxBlockZ; z++) {
                     Material mat = blockCache.getType(x, y, z);
+                    // The piece of code below is found in BlockCollision.java -> computeNext() using MCB reborn tool.
                     if (BlockProperties.isAir(mat) || BlockProperties.isPassable(mat)) {
                         continue;
                     }
