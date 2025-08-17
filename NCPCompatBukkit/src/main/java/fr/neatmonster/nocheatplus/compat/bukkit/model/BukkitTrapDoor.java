@@ -29,15 +29,14 @@ public class BukkitTrapDoor implements BukkitShapeModel {
     private static final double openWidth = 0.1875;
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
         if (blockData instanceof TrapDoor) {
             final TrapDoor trapDoor = (TrapDoor) blockData;
             if (trapDoor.isOpen()) {
-                switch(trapDoor.getFacing()) {
+                switch (trapDoor.getFacing()) {
                     case NORTH:
                         return new double[] {0.0, 0.0, 1.0 - openWidth, 1.0, 1.0, 1.0};
                     case SOUTH:
@@ -50,19 +49,14 @@ public class BukkitTrapDoor implements BukkitShapeModel {
                         break;
                 }
             }
-            else {
-                return trapDoor.getHalf() == Half.BOTTOM
-                        ? new double[] {0.0, 0.0, 0.0, 1.0, closedHeight, 1.0}
-                : new double[] {0.0, 1.0 - closedHeight, 0.0, 1.0, 1.0, 1.0};
-
-            }
+            return trapDoor.getHalf() == Half.BOTTOM ? new double[] {0.0, 0.0, 0.0, 1.0, closedHeight, 1.0}
+                                                     : new double[] {0.0, 1.0 - closedHeight, 0.0, 1.0, 1.0, 1.0};
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();

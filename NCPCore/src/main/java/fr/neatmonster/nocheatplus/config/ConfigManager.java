@@ -99,16 +99,6 @@ public class ConfigManager {
     }
 
     /**
-     * (Synchronized version).
-     * @return
-     * @deprecated getConfigFile() is thread-safe now.
-     */
-    @Deprecated
-    public static synchronized ConfigFile getConfigFileSync() {
-        return getConfigFile();
-    }
-
-    /**
      * Gets the configuration file. Can be called from any thread.
      * 
      * @param worldName
@@ -117,17 +107,6 @@ public class ConfigManager {
      */
     public static ConfigFile getConfigFile(final String worldName) {
         return NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().getDefaultWorldData().getRawConfiguration();
-    }
-
-    /**
-     * (Synchronized version).
-     * @param worldName
-     * @return
-     * @deprecated getConfigFile() is thread-safe now.
-     */
-    @Deprecated
-    public static synchronized ConfigFile getConfigFileSync(final String worldName) {
-        return getConfigFile(worldName);
     }
 
     /**

@@ -32,12 +32,19 @@ public class StringUtil {
 
     /** Decimal format for "#.###" */
     public static final DecimalFormat fdec3 = new DecimalFormat();
-    /** Decimal format for "#.#" */
+    /** Decimal format for "#.######" */
     public static final DecimalFormat fdec1 = new DecimalFormat();
+    public static final DecimalFormat fdec6 = new DecimalFormat();
 
     static {
+        DecimalFormatSymbols sym = fdec6.getDecimalFormatSymbols();
+        // 6 digits
+        sym.setDecimalSeparator('.');
+        fdec6.setDecimalFormatSymbols(sym);
+        fdec6.setMaximumFractionDigits(6);
+        fdec6.setMinimumIntegerDigits(1);
         // 3 digits.
-        DecimalFormatSymbols sym = fdec3.getDecimalFormatSymbols();
+        sym = fdec6.getDecimalFormatSymbols();
         sym.setDecimalSeparator('.');
         fdec3.setDecimalFormatSymbols(sym);
         fdec3.setMaximumFractionDigits(3);
@@ -401,7 +408,7 @@ public class StringUtil {
     }
 
     /**
-     * Format to maximally 3 digits after the comma, always show the sign,
+     * Format to maximally 6 digits after the comma, always show the sign,
      * unless equal.
      * 
      * @param current
@@ -409,7 +416,7 @@ public class StringUtil {
      * @return
      */
     public static String formatDiff(final double current, final double previous) {
-        return current == previous ? "0" : ((current > previous ? "+" : "-") + fdec3.format(Math.abs(current - previous)));
+        return current == previous ? "0" : ((current > previous ? "+" : "-") + fdec6.format(Math.abs(current - previous)));
     }
 
     public static boolean startsWithAnyOf(final String input, final String... startsWith) {

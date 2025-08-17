@@ -24,7 +24,7 @@
             <dependencies>
                 <dependency>
                     <groupId>fr.neatmonster</groupId>
-                    <artifactId>ncpcompatcbdev</artifactId>
+                    <artifactId>ncpcompatspigotcb1_12_r1</artifactId>
                     <version>1.1-SNAPSHOT</version>
                 </dependency>
                 <!-- ... -->
@@ -134,22 +134,11 @@
         </profile>
 
         <profile>
-            <id>cbdev</id>
-            <dependencies>
-                <dependency>
-                    <groupId>fr.neatmonster</groupId>
-                    <artifactId>ncpcompatcbdev</artifactId>
-                    <version>1.1-SNAPSHOT</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
             <id>spigot1_12_r1</id>
             <dependencies>
                 <dependency>
                     <groupId>fr.neatmonster</groupId>
-                    <artifactId>ncpcompatcbdev</artifactId>
+                    <artifactId>ncpcompatspigotcb1_12_r1</artifactId>
                     <version>1.1-SNAPSHOT</version>
                 </dependency>
             </dependencies>

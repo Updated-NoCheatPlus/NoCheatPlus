@@ -32,12 +32,10 @@ import org.bukkit.entity.Slime;
 import org.bukkit.potion.PotionEffectType;
 
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
-import fr.neatmonster.nocheatplus.compat.BridgeEntityType;
-import fr.neatmonster.nocheatplus.compat.BridgeHealth;
-import fr.neatmonster.nocheatplus.compat.BridgePotionEffect;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
-import fr.neatmonster.nocheatplus.utilities.PotionUtil;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
+import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -177,7 +175,9 @@ public class MCAccessBukkitBase implements MCAccess {
         // Values taken from 1.7.10.
         final EntityType type = entity.getType();
         Double width = BridgeEntityType.LEGACY_ENTITY_WIDTH.get(type);
-        if (width != null) return width;
+        if (width != null) {
+            return width;
+        }
         switch(type){
             // TODO: case COMPLEX_PART:
             //case ENDER_SIGNAL: // this.a(0.25F, 0.25F);
@@ -229,8 +229,8 @@ public class MCAccessBukkitBase implements MCAccess {
             case IRON_GOLEM: // this.a(1.4F, 2.9F);
             case SPIDER: // this.a(1.4F, 0.9F);
                 return 1.4f;
-            case BOAT: // this.a(1.5F, 0.6F);
-                return 1.5f;
+           // case BOAT: // this.a(1.5F, 0.6F);
+           //     return 1.5f;
             //case ENDER_CRYSTAL: // this.a(2.0F, 2.0F);
             //    return 2.0f;
             case GIANT: // this.height *= 6.0F; this.a(this.width * 6.0F, this.length * 6.0F);
@@ -246,6 +246,9 @@ public class MCAccessBukkitBase implements MCAccess {
                 }
             default:
                 break;
+        }
+        if (MaterialUtil.isBoat(entity.getType())) {
+            return ServerVersion.isHigherThan("1.8") ? 1.3964844f : 1.4f;
         }
         // Check by instance for minecarts (too many).
         if (entity instanceof Minecart) {

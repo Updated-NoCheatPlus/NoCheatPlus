@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.command.testing.stopwatch;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+
 import fr.neatmonster.nocheatplus.utilities.Misc;
 
 public abstract class StopWatch {	

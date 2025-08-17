@@ -18,14 +18,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import fr.neatmonster.nocheatplus.compat.versions.GenericVersion;
-import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import org.bukkit.Bukkit;
 
 import fr.neatmonster.nocheatplus.compat.MCAccess;
 import fr.neatmonster.nocheatplus.compat.bukkit.MCAccessBukkit;
 import fr.neatmonster.nocheatplus.compat.bukkit.MCAccessBukkitModern;
 import fr.neatmonster.nocheatplus.compat.cbreflect.MCAccessCBReflect;
+import fr.neatmonster.nocheatplus.compat.versions.GenericVersion;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 
 /**
@@ -45,7 +45,6 @@ public class MCAccessFactory {
         final List<Throwable> throwables = new ArrayList<Throwable>();
         MCAccess mcAccess = null;
         // Try to set up native access.
-        
         // CraftBukkit (dedicated).
         // Use CraftBukkit dedicated if the server version is below/equal to 1.12.2
         if (GenericVersion.compareVersions(ServerVersion.getMinecraftVersion(), "1.12.2") <= 0) {
@@ -56,12 +55,11 @@ public class MCAccessFactory {
                 }
             }
         }
-
         // Bukkit API only: 1.13 (and possibly later).
         try {
             return new MCAccessBukkitModern();
         }
-        catch(Throwable t) {
+        catch (Throwable t) {
             throwables.add(t);
         }
 
@@ -123,9 +121,11 @@ public class MCAccessFactory {
 
         final String[] classNames = new String[] {
                 // Current DEV / LATEST: CB (Spigot)
+                // (CBDev shouldn't be needed/used anymore.  1.12 was the last version before full bukkit-api)
                 "fr.neatmonster.nocheatplus.compat.cbdev.MCAccessCBDev", // latest / tests.
 
                 // Dedicated: CB (Spigot)
+                "fr.neatmonster.nocheatplus.compat.spigotcb1_12_R1.MCAccessSpigotCB1_12_R1", //1.12-1.12.2
                 "fr.neatmonster.nocheatplus.compat.spigotcb1_11_R1.MCAccessSpigotCB1_11_R1", // 1.11.2 (1_11_R1)
                 "fr.neatmonster.nocheatplus.compat.spigotcb1_10_R1.MCAccessSpigotCB1_10_R1", // 1.10-1.10.2 (1_10_R1)
                 "fr.neatmonster.nocheatplus.compat.spigotcb1_9_R2.MCAccessSpigotCB1_9_R2", // 1.9.4 (1_9_R2)

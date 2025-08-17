@@ -14,35 +14,22 @@
  */
 package fr.neatmonster.nocheatplus.players;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
-import fr.neatmonster.nocheatplus.checks.moving.util.MovingUtil;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.config.value.OverrideType;
-import fr.neatmonster.nocheatplus.components.data.ICanHandleTimeRunningBackwards;
-import fr.neatmonster.nocheatplus.components.data.IData;
-import fr.neatmonster.nocheatplus.components.data.IDataOnJoin;
-import fr.neatmonster.nocheatplus.components.data.IDataOnLeave;
-import fr.neatmonster.nocheatplus.components.data.IDataOnReload;
-import fr.neatmonster.nocheatplus.components.data.IDataOnRemoveSubCheckData;
-import fr.neatmonster.nocheatplus.components.data.IDataOnWorldChange;
-import fr.neatmonster.nocheatplus.components.data.IDataOnWorldUnload;
+import fr.neatmonster.nocheatplus.components.data.*;
 import fr.neatmonster.nocheatplus.hooks.ExemptionContext;
 import fr.neatmonster.nocheatplus.hooks.NCPExemptionManager;
 import fr.neatmonster.nocheatplus.permissions.PermissionInfo;
@@ -50,11 +37,14 @@ import fr.neatmonster.nocheatplus.permissions.PermissionNode;
 import fr.neatmonster.nocheatplus.permissions.PermissionPolicy.FetchingPolicy;
 import fr.neatmonster.nocheatplus.permissions.PermissionRegistry;
 import fr.neatmonster.nocheatplus.permissions.RegisteredPermission;
+import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
+import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockData;
 import fr.neatmonster.nocheatplus.utilities.ds.corw.DualSet;
 import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 import fr.neatmonster.nocheatplus.utilities.ds.map.HashMapLOW;
 import fr.neatmonster.nocheatplus.utilities.ds.map.InstanceMapLOW;
+import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 import fr.neatmonster.nocheatplus.worlds.IWorldData;
 import fr.neatmonster.nocheatplus.worlds.WorldDataManager;
 import fr.neatmonster.nocheatplus.worlds.WorldIdentifier;
@@ -172,9 +162,15 @@ public class PlayerData implements IPlayerData {
     /** If is Bedrock Player. This is set if CompatNoCheatPlus is present. */
     private boolean bedrockPlayer = false;
     private boolean requestUpdateInventory = false;
+    private boolean requestItemUseResync = false;
     private boolean requestPlayerSetBack = false;
     private int versionID = -1;
     private ClientVersion clientVersion = ClientVersion.UNKNOWN;
+    private boolean sneaking = false;
+    private boolean isShiftKeyPressed = false;
+    private boolean sprinting = false;
+    private Material itemInUse = null;
+    private SupportingBlockData supportingBlockData = null;
 
     private boolean frequentPlayerTaskShouldBeScheduled = false;
     /** Actually queried ones. */
@@ -199,8 +195,7 @@ public class PlayerData implements IPlayerData {
      *            Should be accurate case - TBD: ensure it's used that way,
      *            and/or update with login/join.
      */
-    public PlayerData(final UUID playerId, final String playerName, 
-            final PermissionRegistry permissionRegistry) {
+    public PlayerData(final UUID playerId, final String playerName, final PermissionRegistry permissionRegistry) {
         this.playerId = playerId;
         this.playerName = playerName;
         this.playerNameLowerCase = playerName.toLowerCase();
@@ -262,7 +257,7 @@ public class PlayerData implements IPlayerData {
     private boolean hasFrequentTasks() {
         return !updatePermissions.isEmtpyAfterMergePrimaryThread() 
                 // Should be primary thread:
-                || requestPlayerSetBack || requestUpdateInventory;
+                || requestPlayerSetBack || requestUpdateInventory || requestItemUseResync;
     }
 
     private void frequentTasks(final int tick, final long timeLast, final Player player) {
@@ -278,6 +273,10 @@ public class PlayerData implements IPlayerData {
                 if (requestUpdateInventory) {
                     requestUpdateInventory = false;
                     player.updateInventory();
+                }
+                if (requestItemUseResync) {
+                    requestItemUseResync = false;
+                    InventoryUtil.itemResyncTask(player, this);
                 }
                 // Permission updates (high priority).
                 final Collection<RegisteredPermission> updatable = updatePermissions.getMergePrimaryThreadAndClear();
@@ -312,33 +311,30 @@ public class PlayerData implements IPlayerData {
         }
         long nanos = System.nanoTime();
         taskLoad.update(tick);
-        final boolean isHeavyLoad = taskLoad.score(1f) > heavyLoad 
-                || TickTask.getLag(msMonitored, true) > 1.1f;
-                updatePermissionsLazy.mergePrimaryThread();
-                final Iterator<RegisteredPermission> it = updatePermissionsLazy.iteratorPrimaryThread();
-                // TODO: Load balancing with other tasks ?
-                while (it.hasNext()) {
-                    hasPermission(it.next(), player);
-                    it.remove();
-                    if (isHeavyLoad) {
-                        break;
-                    }
-                }
-                boolean hasWrk = it.hasNext();
-                nanos = System.nanoTime() - nanos;
-                if (nanos > 0L) {
-                    taskLoad.add(tick, nanos);
-                }
-                return !hasWrk;
+        final boolean isHeavyLoad = taskLoad.score(1f) > heavyLoad || TickTask.getLag(msMonitored, true) > 1.1f;
+        updatePermissionsLazy.mergePrimaryThread();
+        final Iterator<RegisteredPermission> it = updatePermissionsLazy.iteratorPrimaryThread();
+        // TODO: Load balancing with other tasks ?
+        while (it.hasNext()) {
+            hasPermission(it.next(), player);
+            it.remove();
+            if (isHeavyLoad) {
+                break;
+            }
+        }
+        boolean hasWrk = it.hasNext();
+        nanos = System.nanoTime() - nanos;
+        if (nanos > 0L) {
+            taskLoad.add(tick, nanos);
+        }
+        return !hasWrk;
     }
 
     private void registerFrequentPlayerTask() {
         if (Bukkit.isPrimaryThread()) {
             registerFrequentPlayerTaskPrimaryThread();
         }
-        else {
-            registerFrequentPlayerTaskAsynchronous();
-        }
+        else registerFrequentPlayerTaskAsynchronous();
     }
 
     private void registerFrequentPlayerTaskPrimaryThread() {
@@ -461,8 +457,13 @@ public class PlayerData implements IPlayerData {
         // (Somewhat reversed order of invalidation.)
         invalidateOffline();
         bedrockPlayer = false;
+        sneaking = false;
+        sprinting = false;
+        isShiftKeyPressed = false;
         versionID = -1;
+        itemInUse = null;
         clientVersion = ClientVersion.UNKNOWN;
+        supportingBlockData = null;
     }
 
     /**
@@ -472,9 +473,8 @@ public class PlayerData implements IPlayerData {
      * @param timeNow
      * @param types 
      */
-    void onPlayerJoin(final Player player, final World world, 
-            final long timeNow, final WorldDataManager worldDataManager, 
-            final Collection<Class<? extends IDataOnJoin>> types) {
+    void onPlayerJoin(final Player player, final World world, final long timeNow, final WorldDataManager worldDataManager, 
+                      final Collection<Class<? extends IDataOnJoin>> types) {
         // Only update world if the data hasn't just been created.
         updateCurrentWorld(world, worldDataManager);
         invalidateOffline();
@@ -486,10 +486,10 @@ public class PlayerData implements IPlayerData {
         }
         requestLazyPermissionUpdate(permissionRegistry.getPreferKeepUpdatedOffline());
         lastJoinTime = timeNow;
+        supportingBlockData = new SupportingBlockData(null, false);
     }
 
-    private void updateCurrentWorld(final World world, 
-            final WorldDataManager worldDataManager) {
+    private void updateCurrentWorld(final World world, final WorldDataManager worldDataManager) {
         updateCurrentWorld(worldDataManager.getWorldData(world));
     }
 
@@ -512,7 +512,7 @@ public class PlayerData implements IPlayerData {
         while (it.hasNext()) {
             final PermissionNode node = it.next().getValue();
             final PermissionInfo info = node.getPermissionInfo();
-            if (info.invalidationOffline() 
+            if (info.invalidationOffline()
                     /*
                      * TODO: world based should only be invalidated with world
                      * changing. Therefore store the last world info
@@ -533,10 +533,8 @@ public class PlayerData implements IPlayerData {
      * @param newWorld
      * @param types 
      */
-    void onPlayerChangedWorld(final Player player, 
-            final World oldWorld, final World newWorld,
-            final WorldDataManager worldDataManager, 
-            final Collection<Class<? extends IDataOnWorldChange>> types) {
+    void onPlayerChangedWorld(final Player player, final World oldWorld, final World newWorld,
+                              final WorldDataManager worldDataManager, final Collection<Class<? extends IDataOnWorldChange>> types) {
         updateCurrentWorld(newWorld, worldDataManager);
         // TODO: Double-invalidation (previous policy and target world policy)
         final Iterator<Entry<Integer, PermissionNode>> it = permissions.iterator();
@@ -600,27 +598,6 @@ public class PlayerData implements IPlayerData {
         }
     }
 
-
-    @Override
-    public void requestPermissionUpdate(final RegisteredPermission registeredPermission) {
-        if (Bukkit.isPrimaryThread()) {
-            requestPermissionUpdatePrimaryThread(registeredPermission);
-        }
-        else {
-            requestPermissionUpdateAsynchronous(registeredPermission);
-        }
-    }
-
-    @Override
-    public void requestLazyPermissionUpdate(final RegisteredPermission... registeredPermissions) {
-        if (registeredPermissions == null || registeredPermissions.length == 0) {
-            return;
-        }
-        else {
-            requestLazyPermissionsUpdateNonEmpty(registeredPermissions);
-        }
-    }
-
     /**
      * Remove extra stored data, keeping "essential" data if set so. "Essential"
      * data can't be recovered once deleted, like set-back locations for players
@@ -634,6 +611,277 @@ public class PlayerData implements IPlayerData {
         updatePermissions.clearPrimaryThread();
         updatePermissionsLazy.clearPrimaryThread();
         dataCache.clear();
+    }
+
+    /**
+     * Bypass check including exemption and permission.
+     * 
+     * @param checkType
+     * @param player
+     * @param isPrimaryThread
+     * @return
+     */
+    public boolean hasBypass(final CheckType checkType, final Player player, final IWorldData worldData) {
+        // TODO: Expose or not.
+        // Exemption check.
+        // TODO: More efficient implementation, ExemptionSettings per world in worldData.
+        if (NCPExemptionManager.isExempted(player, checkType)) {
+            return true;
+        }
+        // Check permission policy/cache regardless of the thread context.
+        final RegisteredPermission permission = checkType.getPermission();
+        if (permission != null && hasPermission(permission, player)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Test if present.
+     * 
+     * @param tag
+     * @return
+     */
+    public boolean hasTag(final String tag) {
+        return tags != null && tags.contains(tag);
+    }
+
+    /**
+     * Add the tag.
+     * 
+     * @param tag
+     */
+    public void addTag(final String tag) {
+        if (tags == null) {
+            tags = new HashSet<String>();
+        }
+        tags.add(tag);
+    }
+
+    /**
+     * Remove the tag.
+     * 
+     * @param tag
+     */
+    public void removeTag(final String tag) {
+        if (tags != null) {
+            tags.remove(tag);
+            if (tags.isEmpty()) {
+                tags = null;
+            }
+        }
+    }
+
+    /**
+     * Add tag or remove tag, based on arguments.
+     * 
+     * @param tag
+     * @param add
+     *            The tag will be added, if set to true. If set to false, the
+     *            tag will be removed.
+     */
+    public void setTag(final String tag, final boolean add) {
+        if (add) {
+            addTag(tag);
+        }
+        else removeTag(tag);
+    }
+
+    private <T> T cacheMissGenericInstance(final Class<T> registeredFor) {
+        // 2. Check for registered factory (local)
+        // TODO: Might store PlayerDataManager here.
+        T res = DataManager.getFromFactory(registeredFor, 
+                new PlayerFactoryArgument(this, getCurrentWorldDataSafe()));
+        if (res != null) {
+            return  putDataCache(registeredFor, res);
+        }
+        // 3. Check proxy registry.
+        res = getCurrentWorldDataSafe().getGenericInstance(registeredFor);
+        return res == null ? null : putDataCache(registeredFor, res);
+    }
+
+    private <T> T putDataCache(final Class<T> registeredFor, final T instance) {
+        final T previousInstance = (T) dataCache.putIfAbsent(registeredFor, instance); // Under lock.
+        return previousInstance == null ? instance : previousInstance;
+    }
+
+    /**
+     * Called with adjusting to the configuration (enable / config reload).
+     * @param changedPermissions 
+     */
+    public void adjustSettings(final Set<RegisteredPermission> changedPermissions) {
+        final Iterator<RegisteredPermission> it = changedPermissions.iterator();
+        while (it.hasNext()) {
+            final PermissionNode node = permissions.get(it.next().getId());
+            if (node != null) {
+                node.invalidate();
+            }
+        }
+    }
+
+    public void onWorldUnload(final World world, final Collection<Class<? extends IDataOnWorldUnload>> types) {
+        for (final Class<? extends IDataOnWorldUnload> type : types) {
+            final IDataOnWorldUnload instance = dataCache.get(type);
+            if (instance != null && instance.dataOnWorldUnload(world, this)) {
+                dataCache.remove(type);
+            }
+        }
+    }
+
+    public void onReload(final Collection<Class<? extends IDataOnReload>> types) {
+        for (final Class<? extends IDataOnReload> type : types) {
+            final IDataOnReload instance = dataCache.get(type);
+            if (instance != null && instance.dataOnReload(this)) {
+                dataCache.remove(type);
+            }
+        }
+    }
+
+    @Override
+    public void requestPermissionUpdate(final RegisteredPermission registeredPermission) {
+        if (Bukkit.isPrimaryThread()) {
+            requestPermissionUpdatePrimaryThread(registeredPermission);
+        }
+        else requestPermissionUpdateAsynchronous(registeredPermission);
+    }
+
+    @Override
+    public void requestLazyPermissionUpdate(final RegisteredPermission... registeredPermissions) {
+        if (registeredPermissions == null || registeredPermissions.length == 0) {
+            return;
+        }
+        else requestLazyPermissionsUpdateNonEmpty(registeredPermissions);
+    }
+
+    /**
+     * Get a data/config instance (1.local cache, 2. player related factory, 3.
+     * world registry).
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getGenericInstance(final Class<T> registeredFor) {
+        // 1. Check for cache (local).
+        final Object res = dataCache.get(registeredFor);
+        if (res == null) {
+            /*
+             * TODO: Consider storing null and check containsKey(registeredFor)
+             * here. On the other hand it's not intended to query non existent
+             * data (just yet).
+             */
+            return cacheMissGenericInstance(registeredFor);
+        }
+        else {
+            return (T) res;
+        }
+    }
+
+    @Override
+    public boolean getNotifyOff() {
+        return hasTag(TAG_NOTIFY_OFF);
+    }
+
+    @Override
+    public void setNotifyOff(final boolean notifyOff) {
+        setTag(TAG_NOTIFY_OFF, notifyOff);
+    }
+    
+    @Override
+    public void setIsShiftKeyPressed(final boolean isShiftKeyPressed) {
+        this.isShiftKeyPressed = isShiftKeyPressed;
+    }
+
+    @Override
+    public void setIsInCrouchingPoseState(final boolean sneaking) {
+        this.sneaking = sneaking;
+    }
+
+    @Override
+    public void setSprintingState(final boolean sprinting) {
+        this.sprinting = sprinting;
+    }
+
+    @Override
+    public void setItemInUse(final Material itemInUse) {
+        this.itemInUse = itemInUse;
+    }
+    
+    @Override
+    public void setBedrockPlayer(final boolean bedrockPlayer) {
+        this.bedrockPlayer = bedrockPlayer;
+    }
+    
+    @Override
+    public void setSupportingBlockData(final SupportingBlockData supportingBlockData) {
+        this.supportingBlockData = supportingBlockData;
+    }
+    
+    @Override
+    public SupportingBlockData getSupportingBlockData() {
+        return supportingBlockData;
+    }
+    
+    @Override
+    public boolean isBedrockPlayer() {
+        return bedrockPlayer;
+    }
+
+    @Override
+    public Material getItemInUse() {
+        return itemInUse;
+    }
+
+    @Override
+    public boolean isSprinting() {
+        return sprinting;
+    }
+    
+    @Override
+    public boolean isShiftKeyPressed() {
+        return isShiftKeyPressed;
+    }
+
+    @Override
+    public boolean isInCrouchingPose() {
+        return sneaking;
+    }
+
+    @Override
+    public void requestUpdateInventory() {
+        this.requestUpdateInventory = true;
+        registerFrequentPlayerTask();
+    }
+
+    @Override
+    public void requestItemUseResync() {
+        this.requestItemUseResync = true;
+        registerFrequentPlayerTask();
+    }
+
+    @Override
+    public void requestPlayerSetBack() {
+        this.requestPlayerSetBack = true;
+        registerFrequentPlayerTask();
+    }
+
+    @Override
+    public boolean isPlayerSetBackScheduled() {
+        return this.requestPlayerSetBack && (frequentPlayerTaskShouldBeScheduled || isFrequentPlayerTaskScheduled());
+    }
+
+    @Override
+    public int getClientVersionID() {
+        return versionID;
+    }
+
+    @Override
+    public ClientVersion getClientVersion() {
+        return clientVersion;
+    }
+
+    @Override
+    public void setClientVersionID(final int versionID) {
+        this.versionID = versionID;
+        this.clientVersion = ClientVersion.getById(versionID);
     }
 
     @Override
@@ -711,9 +959,7 @@ public class PlayerData implements IPlayerData {
 
     @Override
     public IWorldData getCurrentWorldDataSafe() {
-        return currentWorldData == null 
-                ? NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().getDefaultWorldData() 
-                        : currentWorldData;
+        return currentWorldData == null ? NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().getDefaultWorldData() : currentWorldData;
     }
 
     @Override
@@ -723,40 +969,14 @@ public class PlayerData implements IPlayerData {
     }
 
     @Override
-    public boolean isCheckActive(final CheckType checkType, final Player player,
-            final IWorldData worldData) {
+    public boolean isCheckActive(final CheckType checkType, final Player player, final IWorldData worldData) {
         // TODO: Move the implementation of CheckUtils here (efficiency with exemption).
-        return worldData.isCheckActive(checkType) 
-                && !hasBypass(checkType, player, worldData);
+        return worldData.isCheckActive(checkType) && !hasBypass(checkType, player, worldData);
     }
 
     @Override
     public boolean hasBypass(final CheckType checkType, final Player player) {
         return hasBypass(checkType, player, getCurrentWorldDataSafe());
-    }
-
-    /**
-     * Bypass check including exemption and permission.
-     * 
-     * @param checkType
-     * @param player
-     * @param isPrimaryThread
-     * @return
-     */
-    public boolean hasBypass(final CheckType checkType, final Player player, 
-            final IWorldData worldData) {
-        // TODO: Expose or not.
-        // Exemption check.
-        // TODO: More efficient implementation, ExemptionSettings per world in worldData.
-        if (NCPExemptionManager.isExempted(player, checkType)) {
-            return true;
-        }
-        // Check permission policy/cache regardless of the thread context.
-        final RegisteredPermission permission = checkType.getPermission();
-        if (permission != null && hasPermission(permission, player)) {
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -771,192 +991,15 @@ public class PlayerData implements IPlayerData {
 
     @Override
     public void resetDebug(final CheckType checkType) {
-        this.checkTypeTree.getNode(checkType).resetDebug(
-                currentWorldData == null ? getCurrentWorldDataSafe() : currentWorldData);
+        this.checkTypeTree.getNode(checkType).resetDebug(currentWorldData == null ? getCurrentWorldDataSafe() : currentWorldData);
     }
 
     @Override
-    public void overrideDebug(final CheckType checkType, final AlmostBoolean active, 
-            final OverrideType overrideType, final boolean overrideChildren) {
-        this.checkTypeTree.getNode(checkType).overrideDebug(
-                checkType, active, overrideType, overrideChildren);
+    public void overrideDebug(final CheckType checkType, final AlmostBoolean active, final OverrideType overrideType, final boolean overrideChildren) {
+        this.checkTypeTree.getNode(checkType).overrideDebug(checkType, active, overrideType, overrideChildren);
     }
 
-    /**
-     * Test if present.
-     * 
-     * @param tag
-     * @return
-     */
-    public boolean hasTag(final String tag) {
-        return tags != null && tags.contains(tag);
-    }
-
-    /**
-     * Add the tag.
-     * 
-     * @param tag
-     */
-    public void addTag(final String tag) {
-        if (tags == null) {
-            tags = new HashSet<String>();
-        }
-        tags.add(tag);
-    }
-
-    /**
-     * Remove the tag.
-     * 
-     * @param tag
-     */
-    public void removeTag(final String tag) {
-        if (tags != null) {
-            tags.remove(tag);
-            if (tags.isEmpty()) {
-                tags = null;
-            }
-        }
-    }
-
-    /**
-     * Add tag or remove tag, based on arguments.
-     * 
-     * @param tag
-     * @param add
-     *            The tag will be added, if set to true. If set to false, the
-     *            tag will be removed.
-     */
-    public void setTag(final String tag, final boolean add) {
-        if (add) {
-            addTag(tag);
-        }
-        else {
-            removeTag(tag);
-        }
-    }
-
-    @Override
-    public boolean getNotifyOff() {
-        return hasTag(TAG_NOTIFY_OFF);
-    }
-
-    @Override
-    public void setNotifyOff(final boolean notifyOff) {
-        setTag(TAG_NOTIFY_OFF, notifyOff);
-    }
-    
-    /**
-     * Set the state player connect through geysermc
-     * 
-     * @param bedrockPlayer
-     */
-    @Override
-    public void setBedrockPlayer(final boolean bedrockPlayer) {
-        this.bedrockPlayer = bedrockPlayer;
-    }
-    
-    /**
-     * Check if player join via geysermc
-     * 
-     * @return
-     */
-    @Override
-    public boolean isBedrockPlayer() {
-        return bedrockPlayer;
-    }
-
-    @Override
-    public void requestUpdateInventory() {
-        this.requestUpdateInventory = true;
-        registerFrequentPlayerTask();
-    }
-
-    @Override
-    public void requestPlayerSetBack() {
-        this.requestPlayerSetBack = true;
-        registerFrequentPlayerTask();
-    }
-
-    @Override
-    public boolean isPlayerSetBackScheduled() {
-        return this.requestPlayerSetBack 
-                && (frequentPlayerTaskShouldBeScheduled || isFrequentPlayerTaskScheduled());
-    }
-
-     /**
-     * Get the client's version through ViaVersion or ProtocolSupport. <br>
-     * Requires CompatNoCheatPlus (subject to change)
-     * @return
-     */
-    @Override
-    public int getClientVersionID() {
-        return versionID;
-    }
-
-    /**
-     * Get the client's version through ViaVersion or ProtocolSupport. <br>
-     * Requires CompatNoCheatPlus (subject to change)
-     * @return
-     */
-    @Override
-    public ClientVersion getClientVersion() {
-        return clientVersion;
-    }
-
-    /**
-     * Set the client's version ID as given by ProtocolSupport or ViaVersion
-     * 
-     * @param versionID
-     */
-    @Override
-    public void setClientVersionID(final int versionID) {
-        this.versionID = versionID;
-        this.clientVersion = ClientVersion.getById(versionID);
-    }
-
-    /**
-     * Get a data/config instance (1.local cache, 2. player related factory, 3.
-     * world registry).
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T getGenericInstance(final Class<T> registeredFor) {
-        // 1. Check for cache (local).
-        final Object res = dataCache.get(registeredFor);
-        if (res == null) {
-            /*
-             * TODO: Consider storing null and check containsKey(registeredFor)
-             * here. On the other hand it's not intended to query non existent
-             * data (just yet).
-             */
-            return cacheMissGenericInstance(registeredFor);
-        }
-        else {
-            return (T) res;
-        }
-    }
-
-    private <T> T cacheMissGenericInstance(final Class<T> registeredFor) {
-        // 2. Check for registered factory (local)
-        // TODO: Might store PlayerDataManager here.
-        T res = DataManager.getFromFactory(registeredFor, 
-                new PlayerFactoryArgument(this, getCurrentWorldDataSafe()));
-        if (res != null) {
-            return  putDataCache(registeredFor, res);
-        }
-        // 3. Check proxy registry.
-        res = getCurrentWorldDataSafe().getGenericInstance(registeredFor);
-        return res == null ? null : putDataCache(registeredFor, res);
-    }
-
-    private <T> T putDataCache(final Class<T> registeredFor, final T instance) {
-        final T previousInstance = (T) dataCache.putIfAbsent(registeredFor, instance); // Under lock.
-        return previousInstance == null ? instance : previousInstance;
-    }
-
-    /**
-     * Remove from cache.
-     */
+    /** Remove from cache. */
     @Override
     public <T> void removeGenericInstance(final Class<T> type) {
         dataCache.remove(type);
@@ -971,10 +1014,7 @@ public class PlayerData implements IPlayerData {
     }
 
     @Override
-    public void removeSubCheckData(
-            final Collection<Class<? extends IDataOnRemoveSubCheckData>> types,
-            final Collection<CheckType> checkTypes
-            ) {
+    public void removeSubCheckData(final Collection<Class<? extends IDataOnRemoveSubCheckData>> types,final Collection<CheckType> checkTypes) {
         final Collection<Class<?>> removeTypes = new LinkedList<Class<?>>();
         for (final Class<? extends IDataOnRemoveSubCheckData> type : types) {
             final IDataOnRemoveSubCheckData impl = (IDataOnRemoveSubCheckData) dataCache.get(type);
@@ -986,39 +1026,6 @@ public class PlayerData implements IPlayerData {
         }
         if (!removeTypes.isEmpty()) {
             dataCache.remove(removeTypes);
-        }
-    }
-
-    /**
-     * Called with adjusting to the configuration (enable / config reload).
-     * @param changedPermissions 
-     */
-    public void adjustSettings(final Set<RegisteredPermission> changedPermissions) {
-        final Iterator<RegisteredPermission> it = changedPermissions.iterator();
-        while (it.hasNext()) {
-            final PermissionNode node = permissions.get(it.next().getId());
-            if (node != null) {
-                node.invalidate();
-            }
-        }
-    }
-
-    public void onWorldUnload(final World world, 
-            final Collection<Class<? extends IDataOnWorldUnload>> types) {
-        for (final Class<? extends IDataOnWorldUnload> type : types) {
-            final IDataOnWorldUnload instance = dataCache.get(type);
-            if (instance != null && instance.dataOnWorldUnload(world, this)) {
-                dataCache.remove(type);
-            }
-        }
-    }
-
-    public void onReload(final Collection<Class<? extends IDataOnReload>> types) {
-        for (final Class<? extends IDataOnReload> type : types) {
-            final IDataOnReload instance = dataCache.get(type);
-            if (instance != null && instance.dataOnReload(this)) {
-                dataCache.remove(type);
-            }
         }
     }
 }

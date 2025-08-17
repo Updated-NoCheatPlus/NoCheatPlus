@@ -59,22 +59,16 @@
                 <module>NCPCompatSpigotCB1_9_R2</module>
                 <module>NCPCompatSpigotCB1_10_R1</module>
                 <module>NCPCompatSpigotCB1_11_R1</module>
-                <!-- Latest -->
-                <module>NCPCompatCBDev</module>
+                <!-- Last build before full BukkitAPI (1.13) -->
+                <module>NCPCompatSpigotCB1_12_R1</module>
             </modules>
         </profile>
 
-        <profile>
-            <id>cbdev</id>
-            <modules>
-                <module>NCPCompatCBDev</module>
-            </modules>
-        </profile>
 
         <profile>
             <id>spigot1_12_r1</id>
             <modules>
-                <module>NCPCompatCBDev</module>
+                <module>NCPCompatSpigotCB1_12_R1</module>
             </modules>
         </profile>
 

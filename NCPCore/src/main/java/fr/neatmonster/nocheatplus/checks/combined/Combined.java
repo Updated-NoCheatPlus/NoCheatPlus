@@ -33,7 +33,7 @@ public class Combined {
     private static float stationary = 32f;
 
     /**
-     * Check if a penalty is set by changing horizontal facing dierection too often.
+     * Check if a penalty is set by changing horizontal facing direction too often.
      * @param player
      * @param yaw
      * @param now

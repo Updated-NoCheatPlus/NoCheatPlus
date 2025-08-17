@@ -15,24 +15,17 @@
 package fr.neatmonster.nocheatplus.checks.net;
 
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
-import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.TickTask;
 
-public class KeepAliveFrequency extends Check implements Listener {
+public class KeepAliveFrequency extends Check {
 
     public KeepAliveFrequency() {
         super(CheckType.NET_KEEPALIVEFREQUENCY);
     }
     
-    long timeJoin;
-
     /**
      * Checks hasBypass on violation only.
      * @param player
@@ -44,9 +37,12 @@ public class KeepAliveFrequency extends Check implements Listener {
     public boolean check(final Player player, final long time, final NetData data, final NetConfig cc, final IPlayerData pData) {
         data.keepAliveFreq.add(time, 1f);
         final float first = data.keepAliveFreq.bucketScore(0);
-	final long now = System.currentTimeMillis();
-    	
-    	if (now - timeJoin < cc.keepAliveFrequencyStartupDelay) return false;
+        final long now = System.currentTimeMillis();
+        
+        if (now > pData.getLastJoinTime() && pData.getLastJoinTime() + cc.keepAliveFrequencyStartupDelay * 1000 < now) {
+            return false;
+        }
+        
         if (first > 1f) {
             // Trigger a violation.
             final double vl = Math.max(first - 1f, data.keepAliveFreq.score(1f) - data.keepAliveFreq.numberOfBuckets());
@@ -56,11 +52,4 @@ public class KeepAliveFrequency extends Check implements Listener {
         }
         return false;
     }
-    // Event listener probably shouldn't be used here, but I don't think it will be
-    // needed to make another class just for this.
-    @EventHandler
-    public void playerJoin(PlayerJoinEvent e) {
-    timeJoin = System.currentTimeMillis();
-    }
-
 }

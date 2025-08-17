@@ -24,26 +24,22 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitLantern implements BukkitShapeModel {
 
 	private double xz = 0.3125;
+
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
 
         final Block block = world.getBlockAt(x, y, z);
         final BlockData blockData = block.getBlockData();
         if (blockData instanceof Lantern) {
         	Lantern lantern = (Lantern) blockData;
-        	if (lantern.isHanging()) return new double[] {
-        	        xz, 0.0625, xz, 1-xz, 0.5, 1-xz,
-        	        0.375, 0.5, 0.375, 0.625, 0.625, 0.625};
+        	if (lantern.isHanging()) 
+                return new double[] {xz, 0.0625, xz, 1-xz, 0.5, 1-xz, 0.375, 0.5, 0.375, 0.625, 0.625, 0.625};
         }
-        return new double[] {xz, 0.0, xz, 1.0-xz, 0.4375, 1.0-xz,
-                             0.375, 0.4375, 0.375, 0.625, 0.5625, 0.625};
+        return new double[] {xz, 0.0, xz, 1.0-xz, 0.4375, 1.0-xz, 0.375, 0.4375, 0.375, 0.625, 0.5625, 0.625};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

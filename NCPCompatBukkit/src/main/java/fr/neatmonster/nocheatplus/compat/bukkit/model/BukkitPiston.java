@@ -28,8 +28,7 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitPiston implements BukkitShapeModel {
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
 
         final Block block = world.getBlockAt(x, y, z);
         if (Bridge1_13.hasBoundingBox()) {
@@ -41,7 +40,9 @@ public class BukkitPiston implements BukkitShapeModel {
         double[] res = new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
         if (blockData instanceof Piston) {
             final Piston piston = (Piston) blockData;
-            if (!piston.isExtended()) return res;
+            if (!piston.isExtended()) {
+                return res;
+            }
             final BlockFace face = piston.getFacing();
             switch (face) {
             case NORTH:
@@ -71,9 +72,7 @@ public class BukkitPiston implements BukkitShapeModel {
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

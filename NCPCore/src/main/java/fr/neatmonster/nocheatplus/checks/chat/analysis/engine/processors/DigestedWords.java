@@ -26,18 +26,17 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 	
 	/**
 	 * Doubling code a little for the sake of flexibility with config reading.
-	 * @author mc_dev
+	 * @author asofold
 	 *
 	 */
-	public static class DigestedWordsSettings{
+	public static class DigestedWordsSettings {
 		public boolean sort = false;
 		public boolean compress = false;
 		public boolean split = false;
 		public float weight = 1f;
 		public int minWordSize = 0;
 		public int maxWordSize = 0;
-		public DigestedWordsSettings(){	
-		}
+		public DigestedWordsSettings(){}
 		
 		/**
 		 * Returns this object.
@@ -45,7 +44,7 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 		 * @param prefix Prefix for direct addition of config path.
 		 * @return This object.
 		 */
-		public DigestedWordsSettings applyConfig(ConfigFile config, String prefix){
+		public DigestedWordsSettings applyConfig(ConfigFile config, String prefix) {
 			this.sort = config.getBoolean(prefix + "sort", this.sort);
 			this.compress = config.getBoolean(prefix + "compress", this.compress);
 			this.split = config.getBoolean(prefix + "split", this.split);
@@ -72,7 +71,7 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 	 * @param name
 	 * @param settings
 	 */
-	public DigestedWords(String name, DigestedWordsSettings settings){
+	public DigestedWords(String name, DigestedWordsSettings settings) {
 		this(name);
 		this.weight = settings.weight;
 		this.minWordSize = settings.minWordSize;
@@ -113,8 +112,12 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 		}
 		final int len = chars.size();
 		for (Character c : chars){
-			if (!split || Character.isLetter(c)) letters.add(c);
-			else if (Character.isDigit(c)) digits.add(c);
+			if (!split || Character.isLetter(c)) {
+				letters.add(c);
+			}
+			else if (Character.isDigit(c)) {
+				digits.add(c);
+			}
 			else other.add(c);
 		}
 
@@ -122,7 +125,7 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 		if (prepare(letters)) score += getScore(letters, ts) * (float) letters.size();
 		if (prepare(digits)) score += getScore(digits, ts) * (float) digits.size();
 		if (prepare(other)) score += getScore(other, ts) * (float) other.size();
-		return len == 0?0f:(score / (float) len);
+		return len == 0 ? 0f :(score / (float) len);
 	}
 	
 	protected boolean prepare(final List<Character> chars) {
@@ -142,7 +145,7 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 		super.clear(); // Just for completeness.
 	}
 	
-	public static final char[] toArray(final Collection<Character> chars){
+	public static final char[] toArray(final Collection<Character> chars) {
 		final char[] a = new char[chars.size()];
 		int i = 0;
 		for (final Character c : chars){
@@ -160,5 +163,4 @@ public abstract class DigestedWords extends AbstractWordProcessor{
 	 * @return
 	 */
 	protected abstract float getScore(final List<Character> chars, final long ts);
-
 }

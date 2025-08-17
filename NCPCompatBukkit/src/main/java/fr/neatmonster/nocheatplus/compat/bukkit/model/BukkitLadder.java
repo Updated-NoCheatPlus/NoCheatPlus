@@ -26,32 +26,30 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitLadder implements BukkitShapeModel {
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         BoundingBox box = block.getBoundingBox();
         return new double[] {box.getMinX()-x, box.getMinY()-y, box.getMinZ()-z, box.getMaxX()-x, box.getMaxY()-y, box.getMaxZ()-z};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
         if (blockData instanceof Directional) {
             final Directional ladder = (Directional) blockData;
             switch(ladder.getFacing()) {
-            case EAST: 
-                return 5;
-            case NORTH: 
-                return 6;
-            case SOUTH: 
-                return 3;
-            case WEST: 
-                return 4;
-            default:
-                break;
+                case EAST: 
+                    return 5;
+                case NORTH: 
+                    return 6;
+                case SOUTH: 
+                    return 3;
+                case WEST: 
+                    return 4;
+                default:
+                    break;
             }
         }
         return 0;

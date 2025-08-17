@@ -16,10 +16,13 @@ package fr.neatmonster.nocheatplus.compat.blocks.init.vanilla;
 
 import org.bukkit.Material;
 
-import fr.neatmonster.nocheatplus.compat.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
-import fr.neatmonster.nocheatplus.config.*;
+import fr.neatmonster.nocheatplus.config.ConfPaths;
+import fr.neatmonster.nocheatplus.config.ConfigFile;
+import fr.neatmonster.nocheatplus.config.ConfigManager;
+import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -61,7 +64,7 @@ public class BlocksMC1_8 implements BlockPropertiesSetup {
         // ---- New blocks ----
         //////////////////////////////
         BlockInit.setAs("SLIME_BLOCK", Material.TNT); // Full block, instant break.
-        BlockFlags.addFlags("SLIME_BLOCK", BlockFlags.F_BOUNCE25 | BlockFlags.F_ALLOW_LOWJUMP | BlockFlags.F_SLIME);
+        BlockFlags.addFlags("SLIME_BLOCK", BlockFlags.F_BOUNCE25 | BlockFlags.F_SLIME);
 
         BlockInit.setAs("BARRIER", Material.BEDROCK); // Full block, unbreakable.
 

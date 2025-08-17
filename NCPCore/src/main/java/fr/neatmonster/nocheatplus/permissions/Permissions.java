@@ -41,18 +41,18 @@ public class Permissions {
         }
     }
 
-    private static final String NOCHEATPLUS                  = "nocheatplus";
+    private static final String NOCHEATPLUS                                = "nocheatplus";
 
     // Access to all commands and debug info.
-    private static final String ADMINISTRATION               = NOCHEATPLUS + ".admin";
+    private static final String ADMINISTRATION                             = NOCHEATPLUS + ".admin";
     public static final RegisteredPermission  ADMINISTRATION_DEBUG         = add(ADMINISTRATION + ".debug");
 
     // Bypasses held extra from command permissions.
-    private static final String BYPASS                       = NOCHEATPLUS + ".bypass";
-    public static final RegisteredPermission BYPASS_DENY_LOGIN            = add(BYPASS + "denylogin");
+    private static final String BYPASS                                     = NOCHEATPLUS + ".bypass";
+    public static final RegisteredPermission BYPASS_DENY_LOGIN             = add(BYPASS + "denylogin");
 
     // Bypass command filter.
-    private static final String FILTER                       = NOCHEATPLUS + ".filter";
+    private static final String FILTER                                     = NOCHEATPLUS + ".filter";
     public static final RegisteredPermission  FILTER_COMMAND               = add(FILTER + ".command");
     public static final RegisteredPermission  FILTER_COMMAND_NOCHEATPLUS   = add(FILTER_COMMAND + ".nocheatplus");
 
@@ -114,7 +114,7 @@ public class Permissions {
     public static final RegisteredPermission  BLOCKPLACE_AGAINST_AIR       = add(BLOCKPLACE_AGAINST + ".air");
     public static final RegisteredPermission  BLOCKPLACE_AGAINST_LIQUIDS   = add(BLOCKPLACE_AGAINST + ".liquids");
     public static final RegisteredPermission  BLOCKPLACE_AUTOSIGN          = add(BLOCKPLACE + ".autosign");
-    public static final RegisteredPermission  BLOCKPLACE_BOATSANYWHERE     = add(BLOCKPLACE + ".boatsanywhere");
+    public static final RegisteredPermission  BLOCKPLACE_BOATSONWATERONLY  = add(BLOCKPLACE + ".boatsonwateronly");
     public static final RegisteredPermission  BLOCKPLACE_DIRECTION         = add(BLOCKPLACE + ".direction");
     public static final RegisteredPermission  BLOCKPLACE_FASTPLACE         = add(BLOCKPLACE + ".fastplace");
     public static final RegisteredPermission  BLOCKPLACE_NOSWING           = add(BLOCKPLACE + ".noswing");
@@ -131,7 +131,6 @@ public class Permissions {
     public static final RegisteredPermission  CHAT_TEXT                    = add(CHAT + ".text");
 
     public static final RegisteredPermission  COMBINED                     = add(CHECKS + ".combined");
-    public static final RegisteredPermission  COMBINED_BEDLEAVE            = add(COMBINED + ".bedleave");
     public static final RegisteredPermission  COMBINED_IMPROBABLE          = add(COMBINED + ".improbable");
     public static final RegisteredPermission  COMBINED_MUNCHHAUSEN         = add(COMBINED + ".munchhausen");
 
@@ -141,23 +140,17 @@ public class Permissions {
     public static final RegisteredPermission  FIGHT_DIRECTION              = add(FIGHT + ".direction");
     public static final RegisteredPermission  FIGHT_FASTHEAL               = add(FIGHT + ".fastheal");
     public static final RegisteredPermission  FIGHT_GODMODE                = add(FIGHT + ".godmode");
-    public static final RegisteredPermission  FIGHT_IMPOSSIBLEHIT          = add(FIGHT + ".impossiblehit");
     public static final RegisteredPermission  FIGHT_NOSWING                = add(FIGHT + ".noswing");
     public static final RegisteredPermission  FIGHT_REACH                  = add(FIGHT + ".reach");
     public static final RegisteredPermission  FIGHT_SELFHIT                = add(FIGHT + ".selfhit");
-    public static final RegisteredPermission  FIGHT_SPEED                  = add(FIGHT + ".speed");
     public static final RegisteredPermission  FIGHT_VISIBLE                = add(FIGHT + ".visible");
 
     public static final RegisteredPermission  INVENTORY                    = add(CHECKS + ".inventory");
-    public static final RegisteredPermission  INVENTORY_DROP               = add(INVENTORY + ".drop");
     public static final RegisteredPermission  INVENTORY_FASTCLICK          = add(INVENTORY + ".fastclick");
     public static final RegisteredPermission  INVENTORY_FASTCONSUME        = add(INVENTORY + ".fastconsume");
     public static final RegisteredPermission  INVENTORY_GUTENBERG          = add(INVENTORY + ".gutenberg");
     public static final RegisteredPermission  INVENTORY_INSTANTBOW         = add(INVENTORY + ".instantbow");
-    public static final RegisteredPermission  INVENTORY_INSTANTEAT         = add(INVENTORY + ".instanteat");
-    public static final RegisteredPermission  INVENTORY_INVENTORYMOVE      = add(INVENTORY + ".inventorymove");
     public static final RegisteredPermission  INVENTORY_MOREINVENTORY      = add(INVENTORY + ".moreinventory");
-    public static final RegisteredPermission  INVENTORY_ITEMS              = add(INVENTORY + ".items");
     public static final RegisteredPermission  INVENTORY_OPEN               = add(INVENTORY + ".open");
 
     public static final RegisteredPermission  NET                          = add(CHECKS + ".net");
@@ -166,6 +159,7 @@ public class Permissions {
     public static final RegisteredPermission  NET_KEEPALIVEFREQUENCY       = add(NET + ".keepalivefrequency");
     public static final RegisteredPermission  NET_MOVING                   = add(NET + ".moving");
     public static final RegisteredPermission  NET_PACKETFREQUENCY          = add(NET + ".packetfrequency");
+    public static final RegisteredPermission  NET_TOGGLEFREQUENCY          = add(NET + ".togglefrequency");
     public static final RegisteredPermission  NET_WRONGTURN                = add(NET + ".wrongturn");
 
     public static final RegisteredPermission  MOVING                       = add(CHECKS + ".moving");
@@ -174,12 +168,7 @@ public class Permissions {
     public static final RegisteredPermission  MOVING_NOFALL                = add(MOVING + ".nofall");
     public static final RegisteredPermission  MOVING_PASSABLE              = add(MOVING + ".passable");
     public static final RegisteredPermission  MOVING_SURVIVALFLY           = add(MOVING + ".survivalfly");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_BLOCKING  = add(MOVING_SURVIVALFLY + ".blocking");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_SNEAKING  = add(MOVING_SURVIVALFLY + ".sneaking");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_SPEEDING  = add(MOVING_SURVIVALFLY + ".speeding");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_SPRINTING = add(MOVING_SURVIVALFLY + ".sprinting");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_WATERWALK = add(MOVING_SURVIVALFLY + ".waterwalk");
-    public static final RegisteredPermission  MOVING_SURVIVALFLY_STEP      = add(MOVING_SURVIVALFLY + ".step");
+
     public static final RegisteredPermission  MOVING_VEHICLE               = add(MOVING + ".vehicle");
     public static final RegisteredPermission  MOVING_VEHICLE_MOREPACKETS   = add(MOVING_VEHICLE + ".morepackets");
     public static final RegisteredPermission  MOVING_VEHICLE_ENVELOPE      = add(MOVING_VEHICLE + ".envelope");

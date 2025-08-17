@@ -14,7 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.compat.bukkit;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,10 +21,44 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
-import fr.neatmonster.nocheatplus.compat.BridgeHealth;
-import fr.neatmonster.nocheatplus.compat.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.*;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitAnvil;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitBamboo;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitBell;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCake;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCauldron;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitChorusPlant;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCocoa;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDirectionalCentered;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDoor;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDripLeaf;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDripStone;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitEndPortalFrame;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFence;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFetchableBound;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFetchableBounds;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitGate;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitGrindStone;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitHopper;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLadder;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLantern;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLevelled;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPiston;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPistonHead;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPowderSnow;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitRail;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSeaPickle;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitShapeModel;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitShulkerBox;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSlab;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSnow;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitStairs;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitStatic;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitTrapDoor;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitTurtleEgg;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWall;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWallHead;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWaterPlant;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectBase;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectDamageSource;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectDamageSources;
@@ -33,8 +66,6 @@ import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectLivingEntity;
 import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
-import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
-import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 
@@ -46,7 +77,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     protected ReflectLivingEntity reflectLivingEntity = null;
     protected final Map<Material, BukkitShapeModel> shapeModels = new HashMap<Material, BukkitShapeModel>();
 
-    // Blocks that can be fetched automatically from from the Bukkit API
+    // Blocks that can be fetched automatically from the Bukkit API
     private static final BukkitShapeModel MODEL_AUTO_FETCH = new BukkitFetchableBounds();
     private static final BukkitShapeModel MODEL_AUTO_FETCH_LEGACY = new BukkitFetchableBound();
 
@@ -90,6 +121,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_SEA_PICKLE = new BukkitSeaPickle();
     private static final BukkitShapeModel MODEL_COCOA = new BukkitCocoa();
     private static final BukkitShapeModel MODEL_TURTLE_EGG = new BukkitTurtleEgg();
+    private static final BukkitShapeModel MODEL_POWDER_SNOW = new BukkitPowderSnow();
 
     // Blocks that have a different shape, based on how they have been placed.
     private static final BukkitShapeModel MODEL_CAKE = new BukkitCake();
@@ -111,6 +143,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     // Static blocks (various height and inset values).
     private static final BukkitShapeModel MODEL_CAMPFIRE = new BukkitStatic(0.0, 0.4375);
     private static final BukkitShapeModel MODEL_BAMBOO = new BukkitBamboo();
+    private static final BukkitShapeModel MODEL_POINTED_DRIPSTONE = new BukkitDripStone();
     private static final BukkitShapeModel MODEL_WATER_PLANTS = new BukkitWaterPlant();
     private static final BukkitShapeModel MODEL_LILY_PAD = new BukkitStatic(0.0625, 0.09375);
     private static final BukkitShapeModel MODEL_FLOWER_POT = new BukkitStatic(0.3125, 0.375);
@@ -150,7 +183,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
 
     @Override
     public String getMCVersion() {
-        return "1.13-1.21|?";
+        return "1.13-1.21";
     }
 
     @Override
@@ -199,11 +232,10 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             Material.CHORUS_FLOWER}) {
             processedBlocks.add(mat);
         }
-
         for (final Material mat : BridgeMaterial.getAllBlocks(
             "light", "glow_lichen", "big_dripleaf_stem",
             // TODO: Not fully tested
-            "scaffolding", "powder_snow")) {
+            "scaffolding")) {
             processedBlocks.add(mat);
         }
 
@@ -220,12 +252,13 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // new flower, and others
         for (Material mat : BridgeMaterial.getAllBlocks(
             "azalea", "flowering_azalea",
-            "sculk_sensor", "pointed_dripstone", "frogspawn",
-            "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor")) {
+            "sculk_sensor", "frogspawn",
+            "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor", "bubble_column",
+            "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump")) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
         
-        // Wall hanging signs have a collision box. Hanging signs don't, so they are treated as an ordinary sign.
+        // *WALL* hanging signs have a collision box. Simple hanging signs don't, so they are treated as an ordinary sign.
         for (Material mat : MaterialUtil.WALL_HANGING_SIGNS) {
             // Only the post has an actual collision box, the rest is all hit box. 
             addModel(mat, MODEL_AUTO_FETCH);
@@ -279,29 +312,30 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // BrewingStand
         addModel(Material.BREWING_STAND, MODEL_BREWING_STAND);
 
-        // 1/16 inset at full height.
+        // 1/16 inset at full height blocks.
         addModel(Material.DRAGON_EGG, MODEL_INSET16_1_HEIGHT100);
         addModel(Material.CACTUS, MODEL_HONEY_BLOCK);
 
-        // 1/8 height.
+        // 1/8 height blocks.
         for (Material mat : new Material[] {
             BridgeMaterial.REPEATER,
             Material.COMPARATOR }) {
             addModel(mat, MODEL_XZ100_HEIGHT8_1);
         }
 
-        // 3/8 height.
+        // 3/8 height blocks.
         for (Material mat : new Material[] {
             Material.DAYLIGHT_DETECTOR}) {
             addModel(mat, MODEL_XZ100_HEIGHT8_3);
         }
 
-        // 3/4 height.
+        // 3/4 height blocks.
         for (Material mat : new Material[] {
             BridgeMaterial.ENCHANTING_TABLE}) {
             addModel(mat, MODEL_XZ100_HEIGHT4_3);
         }
-
+        
+        // All candle cakes
         for (Material mat : MaterialUtil.ALL_CANDLE_CAKE) {
             addModel(mat, MODEL_CANDLE_CAKE);
         }
@@ -433,7 +467,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         for (Material mat : MaterialUtil.LAVA) {
             addModel(mat, MODEL_LEVELLED);
         }
-
+        
+        // All water plants
         for (Material mat : MaterialUtil.WATER_PLANTS) {
             addModel(mat, MODEL_WATER_PLANTS);
         }
@@ -453,9 +488,17 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         Material mt = BridgeMaterial.getBlock("lectern");
         if (mt != null) addModel(mt, MODEL_LECTERN);
 
+        // PowderSnow.      
+        mt = BridgeMaterial.getBlock("powder_snow");
+        if (mt != null) addModel(mt, MODEL_POWDER_SNOW);
+
         // Bamboo.      
         mt = BridgeMaterial.getBlock("bamboo");
         if (mt != null) addModel(mt, MODEL_BAMBOO);
+
+        // Dripstone.      
+        mt = BridgeMaterial.getBlock("pointed_dripstone");
+        if (mt != null) addModel(mt, MODEL_POINTED_DRIPSTONE);
 
         // Bell.
         mt = BridgeMaterial.getBlock("bell");
@@ -513,8 +556,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         if (this.reflectLivingEntity == null || this.reflectLivingEntity.obcGetHandle == null) {
             return null;
         }
-        Object handle = ReflectionUtil.invokeMethodNoArgs(this.reflectLivingEntity.obcGetHandle, player);
-        return handle;
+        return ReflectionUtil.invokeMethodNoArgs(this.reflectLivingEntity.obcGetHandle, player);
     }
 
     private boolean canDealFallDamage() {

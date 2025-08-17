@@ -25,6 +25,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.EnumWrappers.EntityUseAction;
+import com.comphenix.protocol.wrappers.WrappedEnumEntityUseAction;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
@@ -35,6 +36,9 @@ import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
 
+/**
+ * Adapter for the UseEntity NMS packet
+ */
 public class UseEntityAdapter extends BaseAdapter {
 
     private static class LegacyReflectionSet {
@@ -91,6 +95,7 @@ public class UseEntityAdapter extends BaseAdapter {
     }
 
     private static final int INTERPRETED = 0x01;
+    
     private static final int ATTACK = 0x02;
 
     private final AttackFrequency attackFrequency;
@@ -101,10 +106,8 @@ public class UseEntityAdapter extends BaseAdapter {
         super(plugin, PacketType.Play.Client.USE_ENTITY);
         this.checkType = CheckType.NET_ATTACKFREQUENCY;
         // Add feature tags for checks.
-        if (NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().isActiveAnywhere(
-                CheckType.NET_ATTACKFREQUENCY)) {
-            NCPAPIProvider.getNoCheatPlusAPI().addFeatureTags(
-                    "checks", Arrays.asList(AttackFrequency.class.getSimpleName()));
+        if (NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().isActiveAnywhere(CheckType.NET_ATTACKFREQUENCY)) {
+            NCPAPIProvider.getNoCheatPlusAPI().addFeatureTags("checks", Arrays.asList(AttackFrequency.class.getSimpleName()));
         }
         attackFrequency = new AttackFrequency();
         NCPAPIProvider.getNoCheatPlusAPI().addComponent(attackFrequency);
@@ -125,7 +128,8 @@ public class UseEntityAdapter extends BaseAdapter {
     public void onPacketReceiving(final PacketEvent event) {
         try {
             if (event.isPlayerTemporary()) return;
-        } catch(NoSuchMethodError e) {}
+        }
+        catch(NoSuchMethodError e) {}
         final long time = System.currentTimeMillis();
         final Player player = event.getPlayer();
         if (player == null) {
@@ -133,8 +137,9 @@ public class UseEntityAdapter extends BaseAdapter {
             return;
         }
         final IPlayerData pData = DataManager.getPlayerDataSafe(player);
-        if (pData == null) return;
-
+        if (pData == null) {
+            return;
+        }
         final NetData data = pData.getGenericInstance(NetData.class);
         // Always set last received time.
         data.lastKeepAliveTime = time;
@@ -163,9 +168,11 @@ public class UseEntityAdapter extends BaseAdapter {
             // Handle as if latest.
             try {
                 final StructureModifier<EntityUseAction> actions = packet.getEntityUseActions();
-                if (actions.size() == 1 && actions.read(0) == EntityUseAction.ATTACK) {
-                    isAttack = true;
+                final StructureModifier<WrappedEnumEntityUseAction> enumActions = packet.getEnumEntityUseActions();
+                if (actions.size() == 1 && actions.read(0) == EntityUseAction.ATTACK
+                    || enumActions.size() == 1 && enumActions.read(0).equals(WrappedEnumEntityUseAction.attack())) {
                     packetInterpreted = true;
+                    isAttack = true;
                 }
             }
             catch (NullPointerException e) {
@@ -176,6 +183,7 @@ public class UseEntityAdapter extends BaseAdapter {
             }
         }
         if (!packetInterpreted) {
+            // StaticLog.logWarning("Attack packet couldn't be interpreted. Skipping AttackFrequency.");
             // TODO: Log warning once, if the packet could not be interpreted.
             return;
         }
@@ -187,7 +195,7 @@ public class UseEntityAdapter extends BaseAdapter {
         if (isAttack) {
             final NetConfig cc = pData.getGenericInstance(NetConfig.class);
             if (attackFrequency.isEnabled(player, pData)
-                    && attackFrequency.check(player, time, data, cc, pData)) {
+                && attackFrequency.check(player, time, data, cc, pData)) {
                 cancel = true;
             }
         }
@@ -195,7 +203,6 @@ public class UseEntityAdapter extends BaseAdapter {
         if (cancel) {
             event.setCancelled(true);
         }
-
     }
 
     private int getAction_legacy(final PacketContainer packetContainer) {

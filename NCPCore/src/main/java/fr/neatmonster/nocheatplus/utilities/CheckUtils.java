@@ -88,7 +88,7 @@ public class CheckUtils {
      */
     public static void kickIllegalMove(final Player player, final MovingConfig cc){
         player.kickPlayer(cc.msgKickIllegalMove);
-        StaticLog.logWarning("[NCP] Disconnect " + player.getName() + " due to illegal move!");
+        StaticLog.logWarning("[NoCheatPlus] Disconnect " + player.getName() + " due to illegal move!");
     }
 
     /**
@@ -110,7 +110,6 @@ public class CheckUtils {
         long ref = Long.MIN_VALUE;
         // Estimate last fight action time (important for gode modes).
         final FightData fData = pData.getGenericInstance(FightData.class); 
-        ref = Math.max(ref, fData.speedBuckets.lastUpdate());
         ref = Math.max(ref, now - 50L * (tick - fData.lastAttackTick)); // Ignore lag.
         // Health regain (not unimportant).
         ref = Math.max(ref, fData.regainHealthTime);
@@ -119,7 +118,7 @@ public class CheckUtils {
         // Inventory.
         final InventoryData iData = pData.getGenericInstance(InventoryData.class);
         ref = Math.max(ref, iData.lastClickTime);
-        ref = Math.max(ref, iData.instantEatInteract);
+        ref = Math.max(ref, iData.fastConsumeInteract);
         // BlcokBreak/interact.
         final BlockBreakData bbData = pData.getGenericInstance(BlockBreakData.class);
         ref = Math.max(ref, bbData.frequencyBuckets.lastUpdate());

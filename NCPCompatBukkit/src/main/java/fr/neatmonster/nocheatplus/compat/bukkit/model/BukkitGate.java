@@ -40,8 +40,7 @@ public class BukkitGate implements BukkitShapeModel {
     }
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
@@ -63,17 +62,13 @@ public class BukkitGate implements BukkitShapeModel {
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
         if (blockData instanceof Openable) {
             return ((Openable) blockData).isOpen() ? 0x4 : 0;
         }
-        else {
-            return 0;
-        }
+        return 0;
     }
-
 }

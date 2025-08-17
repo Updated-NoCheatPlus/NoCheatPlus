@@ -35,7 +35,7 @@ public class Logins extends Check implements IRemoveData{
 		super(CheckType.CHAT_LOGINS);
 	}
 	
-	private ActionFrequency getActionFrequency(String worldName, int buckets, long durBucket, boolean perWorldCount){
+	private ActionFrequency getActionFrequency(String worldName, int buckets, long durBucket, boolean perWorldCount) {
 	    if (!perWorldCount) worldName = "";
 	    ActionFrequency freq = counts.get(worldName);
 	    if (freq == null) freq = new ActionFrequency(buckets, durBucket);

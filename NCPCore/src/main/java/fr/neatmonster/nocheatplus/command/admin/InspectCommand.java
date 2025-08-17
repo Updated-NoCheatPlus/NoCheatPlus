@@ -14,7 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.command.admin;
 
-import com.google.common.collect.Lists;
 import java.text.DecimalFormat;
 import java.util.Collection;
 import java.util.List;
@@ -28,16 +27,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 
-import fr.neatmonster.nocheatplus.command.BaseCommand;
-import fr.neatmonster.nocheatplus.compat.BridgeHealth;
-import fr.neatmonster.nocheatplus.permissions.Permissions;
-import fr.neatmonster.nocheatplus.players.DataManager;
+import com.google.common.collect.Lists;
+
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
-import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
-import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
+import fr.neatmonster.nocheatplus.command.BaseCommand;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
+import fr.neatmonster.nocheatplus.compat.BridgeMisc;
+import fr.neatmonster.nocheatplus.permissions.Permissions;
+import fr.neatmonster.nocheatplus.players.DataManager;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 
 public class InspectCommand extends BaseCommand {
     private static final DecimalFormat f1 = new DecimalFormat("#.#");
@@ -113,8 +115,6 @@ public class InspectCommand extends BaseCommand {
 
         builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is in " + player.getGameMode() + " gamemode.");
 
-        builder.append("\n "+ c1 + "" + c2 + "•" + c1 + (mCC.assumeSprint ? " Is assumed to be sprinting." : " Assume sprint workaround disabled."));
-
         builder.append("\n "+ c1 + "" + c2 + "•" + c1 +" FlySpeed: " + player.getFlySpeed());
 
         builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " WalkSpeed: " + player.getWalkSpeed());
@@ -139,7 +139,7 @@ public class InspectCommand extends BaseCommand {
             builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is swimming (1.13).");
         }
         
-        if (player.isSneaking()) {
+        if (pData.isInCrouchingPose()) {
             builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is sneaking.");
         }
 
@@ -147,16 +147,12 @@ public class InspectCommand extends BaseCommand {
             builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is blocking.");
         }
 
-        if (player.isSprinting()) {
-            builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is sprinting.");
+        if (pData.isSprinting()) {
+            builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is sprinting (NCP).");
         }
 
-        if (mData.isUsingItem) {
-            builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is using an item."); // TODO: Which item?
-        }
-
-        if (mData.lostSprintCount > 0) {
-            builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Their sprint status has been lost for: " + mData.lostSprintCount + " ticks.");
+        if (BridgeMisc.isUsingItem(player)) {
+            builder.append("\n "+ c1 + "" + c2 + "•" + c1 + " Is using " + BridgeMisc.getItemInUse(player) + ".");
         }
 
         if (player.isInsideVehicle()) {

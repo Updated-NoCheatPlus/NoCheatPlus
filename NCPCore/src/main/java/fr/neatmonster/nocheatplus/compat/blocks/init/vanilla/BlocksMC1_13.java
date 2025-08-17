@@ -16,16 +16,19 @@ package fr.neatmonster.nocheatplus.compat.blocks.init.vanilla;
 
 import org.bukkit.Material;
 
-import fr.neatmonster.nocheatplus.compat.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
-import fr.neatmonster.nocheatplus.config.*;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
+import fr.neatmonster.nocheatplus.config.ConfPaths;
+import fr.neatmonster.nocheatplus.config.ConfigFile;
+import fr.neatmonster.nocheatplus.config.ConfigManager;
+import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties.BlockProps;
 import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
-import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 
 
 @SuppressWarnings("deprecation")
@@ -40,8 +43,6 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
     public void setupBlockProperties(WorldConfigProvider<?> worldConfigProvider) {
         // Flag for anvil
         BlockFlags.setBlockFlags("ANVIL", BlockFlags.SOLID_GROUND);
-        // Workaround for ladder
-        // BlockFlags.addFlags(Material.LADDER, BlockFlags.F_GROUND_HEIGHT);
         // Void air.
         BlockInit.setAs("VOID_AIR", Material.AIR);
         // Cave air.
@@ -71,8 +72,8 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
         }
 
         // Bubble column.
-        BlockInit.setAs("BUBBLE_COLUMN", Material.WATER);
-        BlockFlags.addFlags("BUBBLE_COLUMN", BlockFlags.F_BUBBLECOLUMN);
+        BlockInit.setAs("BUBBLE_COLUMN", Material.WATER); // TODO: not correct. Bubble columns are liquids but don't behave like water.
+        BlockFlags.addFlags("BUBBLE_COLUMN", BlockFlags.F_BUBBLE_COLUMN); 
 
         // Further melon/pumpkin stems.
 

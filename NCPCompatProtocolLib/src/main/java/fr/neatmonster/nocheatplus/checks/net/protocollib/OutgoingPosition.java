@@ -46,17 +46,16 @@ public class OutgoingPosition extends BaseAdapter {
 
     public OutgoingPosition(Plugin plugin) {
         // PacketPlayInFlying[3, legacy: 10]
-        super(plugin, ListenerPriority.HIGHEST, new PacketType[] {
-                PacketType.Play.Server.POSITION
-                // TODO: POSITION_LOOK ??
-        });
+        super(plugin, ListenerPriority.HIGHEST, new PacketType[] {PacketType.Play.Server.POSITION});
+        // TODO: POSITION_LOOK ??
     }
 
     @Override
     public void onPacketSending(PacketEvent event) {
         try {
             if (event.isPlayerTemporary()) return;
-        } catch(NoSuchMethodError e) {}
+        } 
+        catch(NoSuchMethodError e) {}
     	if (event.isCancelled()) {
             return;
         }
@@ -71,16 +70,10 @@ public class OutgoingPosition extends BaseAdapter {
             StaticLog.logWarning("Failed to fetch player data with " + event.getPacketType() + " for: " + player.toString());
             return;
         }
-        // TODO: In future multiple checks might use this (!)
-        if (pData.isCheckActive(CheckType.NET_FLYINGFREQUENCY, player)) {
-            interpretPacket(player, event.getPacket(), time, 
-                    pData.getGenericInstance(NetData.class),
-                    pData.isDebugActive(CheckType.NET_FLYINGFREQUENCY));
-        }
+        interpretPacket(player, event.getPacket(), time, pData.getGenericInstance(NetData.class), pData.isDebugActive(CheckType.NET));
     }
 
-    private void interpretPacket(final Player player, final PacketContainer packet, 
-            final long time, final NetData data, final boolean debug) {
+    private void interpretPacket(final Player player, final PacketContainer packet, final long time, final NetData data, final boolean debug) {
         final StructureModifier<Double> doubles = packet.getDoubles();
         final StructureModifier<Float> floats = packet.getFloat();
 

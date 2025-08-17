@@ -41,7 +41,8 @@ public class NetConfig extends ACheckConfig {
             Permissions.NET_KEEPALIVEFREQUENCY,
             Permissions.NET_MOVING,
             Permissions.NET_PACKETFREQUENCY,
-			Permissions.NET_WRONGTURN
+            Permissions.NET_TOGGLEFREQUENCY,
+	    Permissions.NET_WRONGTURN
     };
 
     public static RegisteredPermission[] getPreferKeepUpdatedPermissions() {
@@ -64,9 +65,6 @@ public class NetConfig extends ACheckConfig {
     public final int flyingFrequencySeconds;
     public final double flyingFrequencyPPS;
     public final ActionList flyingFrequencyActions;
-    public final boolean flyingFrequencyRedundantActive;
-    public final int flyingFrequencyRedundantSeconds;
-    public final ActionList flyingFrequencyRedundantActions;
 
     public final ActionList keepAliveFrequencyActions;
     public final int keepAliveFrequencyStartupDelay;
@@ -77,19 +75,20 @@ public class NetConfig extends ACheckConfig {
     public final int packetFrequencySeconds;
     public final ActionList packetFrequencyActions;
 	
-	public final ActionList wrongTurnActions;
-
+    public final ActionList wrongTurnActions;
 
     /** Maximum distance for lightning effects (squared). */
     public final double soundDistanceSq;
-
     public final boolean supersededFlyingCancelWaiting;
+    
+    public final int toggleActionLimit;
+    public final int toggleActionSeconds;
+    public final ActionList toggleFrequencyActions;
 
     public NetConfig(final IWorldData worldData) {
         // TODO: These permissions should have default policies.
         super(worldData);
         final ConfigFile config = worldData.getRawConfiguration();
-
         final ConfigFile globalConfig = ConfigManager.getConfigFile();
 
         attackFrequencyLimitSecondsHalf = config.getInt(ConfPaths.NET_ATTACKFREQUENCY_SECONDS_HALF);
@@ -103,10 +102,6 @@ public class NetConfig extends ACheckConfig {
         flyingFrequencySeconds = Math.max(1, globalConfig.getInt(ConfPaths.NET_FLYINGFREQUENCY_SECONDS));
         flyingFrequencyPPS = Math.max(1.0, globalConfig.getDouble(ConfPaths.NET_FLYINGFREQUENCY_PACKETSPERSECOND));
         flyingFrequencyActions = config.getOptimizedActionList(ConfPaths.NET_FLYINGFREQUENCY_ACTIONS, Permissions.NET_FLYINGFREQUENCY);
-        flyingFrequencyRedundantActive = config.getBoolean(ConfPaths.NET_FLYINGFREQUENCY_CANCELREDUNDANT);
-        flyingFrequencyRedundantSeconds = Math.max(1, config.getInt(ConfPaths.NET_FLYINGFREQUENCY_REDUNDANT_SECONDS));
-        // Same permission for "silent".
-        flyingFrequencyRedundantActions = config.getOptimizedActionList(ConfPaths.NET_FLYINGFREQUENCY_REDUNDANT_ACTIONS, Permissions.NET_FLYINGFREQUENCY);
 
         keepAliveFrequencyActions = config.getOptimizedActionList(ConfPaths.NET_KEEPALIVEFREQUENCY_ACTIONS, Permissions.NET_KEEPALIVEFREQUENCY);
         keepAliveFrequencyStartupDelay = config.getInt(ConfPaths.NET_KEEPALIVEFREQUENCY_SECONDS) * 1000;
@@ -119,11 +114,7 @@ public class NetConfig extends ACheckConfig {
              *  Using worldData from config will only affect
              *  on world they are staying on join; And on other worlds still remain unchanged.
              */
-            NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().overrideCheckActivation(
-                    CheckType.NET_PACKETFREQUENCY, AlmostBoolean.NO, 
-                    OverrideType.PERMANENT, true);
-            //worldData.overrideCheckActivation(CheckType.NET_PACKETFREQUENCY,
-            //        AlmostBoolean.NO, OverrideType.PERMANENT, true);
+            NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().overrideCheckActivation(CheckType.NET_PACKETFREQUENCY, AlmostBoolean.NO, OverrideType.PERMANENT, true);
         }
 
         movingActions = config.getOptimizedActionList(ConfPaths.NET_MOVING_ACTIONS, Permissions.NET_MOVING);
@@ -132,13 +123,15 @@ public class NetConfig extends ACheckConfig {
         packetFrequencySeconds = config.getInt(ConfPaths.NET_PACKETFREQUENCY_SECONDS);
         packetFrequencyActions = config.getOptimizedActionList(ConfPaths.NET_PACKETFREQUENCY_ACTIONS, Permissions.NET_PACKETFREQUENCY);
 		
-		wrongTurnActions = config.getOptimizedActionList(ConfPaths.NET_WRONGTURN_ACTIONS, Permissions.NET_WRONGTURN);
+	wrongTurnActions = config.getOptimizedActionList(ConfPaths.NET_WRONGTURN_ACTIONS, Permissions.NET_WRONGTURN);
+        
+        toggleActionLimit = config.getInt(ConfPaths.NET_TOGGLEFREQUENCY_LIMIT);
+        toggleActionSeconds = config.getInt(ConfPaths.NET_TOGGLEFREQUENCY_SECONDS);
+        toggleFrequencyActions = config.getOptimizedActionList(ConfPaths.NET_TOGGLEFREQUENCY_ACTIONS, Permissions.NET_TOGGLEFREQUENCY);
 
         double dist = config.getDouble(ConfPaths.NET_SOUNDDISTANCE_MAXDISTANCE);
         soundDistanceSq = dist * dist;
-
+        
         supersededFlyingCancelWaiting = config.getBoolean(ConfPaths.NET_SUPERSEDED_FLYING_CANCELWAITING);
-
     }
-
 }

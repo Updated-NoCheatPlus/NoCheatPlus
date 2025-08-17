@@ -35,8 +35,7 @@ public abstract class AbstractBukkitCentered implements BukkitShapeModel {
     private final double length;
     protected final boolean invertFace;
 
-    public AbstractBukkitCentered(double inset, double length, 
-            boolean invertFace) {
+    public AbstractBukkitCentered(double inset, double length, boolean invertFace) {
         // TODO: Might add a signature to specify minY and maxY (attach NWSE only).
         this.minDist = inset;
         this.maxDist = 1.0 - inset;
@@ -47,47 +46,34 @@ public abstract class AbstractBukkitCentered implements BukkitShapeModel {
     protected abstract BlockFace getFacing(BlockData blockData);
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
-
-        final BlockFace facing = invertFace 
-                ? getFacing(blockData).getOppositeFace() 
-                        : getFacing(blockData);
-                // TODO: Evaluate if (some) faces need to be inverted.
-                // End rod facing: the direction it points to.
-                switch (facing) {
-                    case EAST:
-                        return new double[] {0.0, minDist, minDist, 
-                                length, maxDist, maxDist};
-                    case WEST:
-                        return new double[] {1.0 - length, minDist, minDist, 
-                                1.0, maxDist, maxDist};
-                    case SOUTH:
-                        return new double[] {minDist, minDist, 0.0, 
-                                maxDist, maxDist, length};
-                    case NORTH:
-                        return new double[] {minDist, minDist, 1.0 - length, 
-                                maxDist, maxDist, 1.0};
-                    case DOWN:
-                        return new double[] {minDist, 1.0 - length, minDist, 
-                                maxDist, 1.0, maxDist};
-                    case UP:
-                        return new double[] {minDist, 0.0, minDist, 
-                                maxDist, length, maxDist};
-                    default:
-                        break;
-                }
-
-                return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+        final BlockFace facing = invertFace ? getFacing(blockData).getOppositeFace() : getFacing(blockData);
+        // TODO: Evaluate if (some) faces need to be inverted.
+        // End rod facing: the direction it points to.
+        switch (facing) {
+            case EAST:
+                return new double[] {0.0, minDist, minDist, length, maxDist, maxDist};
+            case WEST:
+                return new double[] {1.0 - length, minDist, minDist, 1.0, maxDist, maxDist};
+            case SOUTH:
+                return new double[] {minDist, minDist, 0.0, maxDist, maxDist, length};
+            case NORTH:
+                return new double[] {minDist, minDist, 1.0 - length, maxDist, maxDist, 1.0};
+            case DOWN:
+                return new double[] {minDist, 1.0 - length, minDist, maxDist, 1.0, maxDist};
+            case UP:
+                return new double[] {minDist, 0.0, minDist, maxDist, length, maxDist};
+            default:
+                break;
+        }
+        return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

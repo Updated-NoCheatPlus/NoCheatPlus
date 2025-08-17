@@ -24,8 +24,7 @@ import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.blockinteract.BlockInteractData;
-import fr.neatmonster.nocheatplus.compat.Bridge1_9;
-import fr.neatmonster.nocheatplus.compat.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.permissions.Permissions;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -68,12 +67,16 @@ public class Against extends Check {
         
         boolean violation = false;
         final BlockInteractData bIData = pData.getGenericInstance(BlockInteractData.class); // TODO: pass as argument.
-        /** 
-         * Do not use this to check for cheating: Bukkit will return the placed material if the placement is not possible.
-         * i.e.: Attempting to place dirt against air will return DIRT, not air as against type.
+        /* 
+         * Do not use this to check for cheating: Bukkit will return the placed material if the placement is not possible (roughly since 1.13).
+         * i.e.: Attempting to place dirt against air will return DIRT, not air as the against type.
          */
         final Material bukkitAgainst = blockAgainst.getType();
-        /** NoCheatPlus' tracked block last interacted with. */
+        /*
+        * The block last interacted with tracked by NCP. This is what must be used to check for actual cheating.
+         * Essentially, the Against check relies on the assumption that BlockInteractEvents are always (logically) fired before BlockPlaceEvents,
+         * thus, getLastType() should always return a Material type. If not, the player tried to place a block without having to interact with something previously.
+         */
         final Material ncpAgainst = bIData.getLastType();
 
         if (pData.isDebugActive(this.type)) {
@@ -105,7 +108,7 @@ public class Against extends Check {
                      && placedMat != BridgeMaterial.LILY_PAD
                      && placedMat != BridgeMaterial.FROGSPAWN) {
                 violation = true;
-                // Attempted to place a block against a null one (air)
+                // Attempted to place a block without having interacted in the past with the placed against block (null)
             }
         }
         else if (BlockProperties.isLiquid(ncpAgainst)) {

@@ -24,25 +24,22 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.ITraceEntry;
 import fr.neatmonster.nocheatplus.permissions.Permissions;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
-import fr.neatmonster.nocheatplus.actions.ParameterName;
-import fr.neatmonster.nocheatplus.checks.ViolationData;
-
-
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
 /**
  * The Reach check will find out if a player interacts with something that's too far away.
  */
 public class Reach extends Check {
-
 
     /** The maximum distance allowed to interact with an entity in creative mode. */
     public static final double CREATIVE_DISTANCE = 6D;
@@ -92,17 +89,24 @@ public class Reach extends Check {
         final double distanceMin = (distanceLimit - DYNAMIC_RANGE) / distanceLimit;
         final double height = damagedIsFake ? (damaged instanceof LivingEntity ? ((LivingEntity) damaged).getEyeHeight() : 1.75) : mcAccess.getHandle().getHeight(damaged);
         final double width = damagedIsFake ? 0.6 : mcAccess.getHandle().getWidth(damaged);
-
         double centertoedge = 0.0;
-        if (cc.reachPrecision) centertoedge = getinset(pLoc, dRef, width / 2, 0.0);
+        
+        if (cc.reachPrecision) {
+            centertoedge = getinset(pLoc, dRef, width / 2, 0.0);
+        }
 
         // Refine y position.
-        // TODO: Make a little more accurate by counting in the actual bounding box.
         final double pY = pLoc.getY() + player.getEyeHeight();
         final double dY = dRef.getY();
-        if (pY <= dY); // Keep the foot level y.
-        else if (pY >= dY + height) dRef.setY(dY + height); // Highest ref y.
-        else dRef.setY(pY); // Level with damaged.
+        if (pY <= dY) {
+            // Keep the foot level y.
+        } 
+        // Highest ref y
+        else if (pY >= dY + height) {
+             dRef.setY(dY + height);
+        }
+        // Level with damaged.
+        else dRef.setY(pY);
 
         final Vector pRel = dRef.toVector().subtract(pLoc.toVector().setY(pY)); // TODO: Run calculations on numbers only :p.
         // Distance is calculated from eye location to center of targeted. If the player is further away from their target
@@ -148,9 +152,7 @@ public class Reach extends Check {
         else if (lenpRel > distanceLimit - DYNAMIC_RANGE){
             data.reachMod = Math.max(distanceMin, data.reachMod - DYNAMIC_STEP);
         }
-        else { 
-            data.reachMod = Math.min(1.0, data.reachMod + DYNAMIC_STEP);
-        }
+        else data.reachMod = Math.min(1.0, data.reachMod + DYNAMIC_STEP);
 
         if (pData.isDebugActive(type) && pData.hasPermission(Permissions.ADMINISTRATION_DEBUG, player)){
             player.sendMessage("NC+: Attack/reach " + damaged.getType()+ " height="+ StringUtil.fdec3.format(height) + " dist=" + StringUtil.fdec3.format(lenpRel) +" @" + StringUtil.fdec3.format(reachMod));

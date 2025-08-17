@@ -31,42 +31,37 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 public class BlockBreakData extends ACheckData implements IDataOnReload {
 
     // Violation levels.
-    public double  directionVL;
-    public double  fastBreakVL;
-    public double  frequencyVL;
-    public double  noSwingVL;
-    public double  reachVL;
-    public final ActionFrequency  wrongBlockVL;
+    public double directionVL;
+    public double fastBreakVL;
+    public double frequencyVL;
+    public double noSwingVL;
+    public double reachVL;
+    public final ActionFrequency wrongBlockVL;
 
     // Shared data.
-    public int     clickedX = Integer.MAX_VALUE;
-    public int     clickedY;
-    public int     clickedZ;
-    public int     clickedTick;
+    public int clickedX = Integer.MAX_VALUE;
+    public int clickedY;
+    public int clickedZ;
+    public int clickedTick;
     /** Tool that the block was clicked with, null for the case of air. */
     public Material clickedTool = null;
-
     // TODO: use tick here too  ?
-    public long    wasInstaBreak;
-
+    public long wasInstaBreak;
     public Timings stats;
 
     // Data of the fast break check.
     public final ActionFrequency fastBreakPenalties;
-    public long    fastBreakBreakTime  = System.currentTimeMillis() - 1000L;
+    public long  fastBreakBreakTime  = System.currentTimeMillis() - 1000L;
     /** First time interaction with a block. */
-    public long    fastBreakfirstDamage = System.currentTimeMillis();
-
+    public long fastBreakfirstDamage = System.currentTimeMillis();
+    
+    // Data of the frequency check
     public final ActionFrequency frequencyBuckets;
-    public int     frequencyShortTermCount;
-    public int     frequencyShortTermTick;
+    public int frequencyShortTermCount;
+    public int frequencyShortTermTick;
 
     // Data of the no swing check.
-    public int noSwingCount     = 0;
-
-    // Data of the reach check.
-    public double  reachDistance;
-
+    public int noSwingCount = 0;
 
     public BlockBreakData(final BlockBreakConfig cc) {
         setStats();
@@ -115,9 +110,8 @@ public class BlockBreakData extends ACheckData implements IDataOnReload {
     public boolean toolChanged(Material mat) {
         if (BlockProperties.isAir(mat)) {
             return !BlockProperties.isAir(clickedTool);
-        } else {
-            return clickedTool != mat;
         }
+        return clickedTool != mat;
     }
 
     @Override
@@ -125,5 +119,4 @@ public class BlockBreakData extends ACheckData implements IDataOnReload {
         // Remove on reload for now.
         return true;
     }
-
 }

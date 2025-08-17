@@ -42,5 +42,4 @@ public class BukkitCauldron implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
-
 }

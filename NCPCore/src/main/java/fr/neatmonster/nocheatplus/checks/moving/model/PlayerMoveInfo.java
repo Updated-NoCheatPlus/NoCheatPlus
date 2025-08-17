@@ -22,7 +22,7 @@ import fr.neatmonster.nocheatplus.components.registry.event.IHandle;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 
 /**
- * Player specific MoveInfo.
+ * Player-specific MoveInfo.
  * 
  * @author asofold
  *

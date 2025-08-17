@@ -17,8 +17,8 @@ package fr.neatmonster.nocheatplus.compat;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.potion.PotionEffectType;
 
-import fr.neatmonster.nocheatplus.utilities.PotionUtil;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
+import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
 
 public class Bridge1_13 {
     private static final PotionEffectType SLOWFALLING = PotionEffectType.getByName("SLOW_FALLING");
@@ -27,6 +27,9 @@ public class Bridge1_13 {
     private static final boolean hasIsRiptiding = ReflectionUtil.getMethodNoArgs(LivingEntity.class, "isRiptiding", boolean.class) != null;
     private static final boolean hasIsSwimming = ReflectionUtil.getMethodNoArgs(LivingEntity.class, "isSwimming", boolean.class) != null;
     private static final boolean hasBoundingBox = ReflectionUtil.getClass("org.bukkit.util.BoundingBox") != null;
+    private static final boolean hasPlayerRiptideEvent = ReflectionUtil.getClass("org.bukkit.event.player.PlayerRiptideEvent") != null;
+    // Bukkit introduced a built-in ray-tracing system in 1.13.2
+    private static final boolean hasBuiltInRayTracing = ReflectionUtil.getClass("org.bukkit.util.RayTraceResult") != null;
 
     public static boolean hasSlowfalling() {
         return SLOWFALLING != null;
@@ -50,6 +53,14 @@ public class Bridge1_13 {
 
     public static boolean hasBoundingBox() {
         return hasBoundingBox;
+    }
+
+    public static boolean hasPlayerRiptideEvent() {
+        return hasPlayerRiptideEvent;
+    }
+
+    public static boolean hasBuiltInRayTracing() {
+        return hasBuiltInRayTracing;
     }
 
     /**

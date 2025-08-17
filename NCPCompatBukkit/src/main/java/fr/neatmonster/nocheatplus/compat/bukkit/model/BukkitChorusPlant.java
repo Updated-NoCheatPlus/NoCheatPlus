@@ -27,51 +27,47 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitChorusPlant implements BukkitShapeModel {
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
-
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         if (Bridge1_13.hasBoundingBox()) {
             BoundingBox bd = block.getBoundingBox();
             return new double[] {bd.getMinX()-x, 0.1875, bd.getMinZ()-z, bd.getMaxX()-x, bd.getMaxY()-y, bd.getMaxZ()-z};
         }
+
         final BlockData blockData = block.getBlockData();
         double[] res = new double[] {0.187, 0.188, 0.187, 1.0 - 0.187, 0.8125, 1.0 - 0.187};
         if (blockData instanceof MultipleFacing) {
         	final MultipleFacing chorusplant = (MultipleFacing) blockData;
         	for (final BlockFace face : chorusplant.getFaces()) {
         		switch (face) {
-        		//case DOWN:
-        		//	res[1]=0.0;
-        		//	break;
-        		case UP:
-        			res[4]=1.0;
-        			break;
-        		case SOUTH:
-        			res[5]=1.0;
-        			break;
-        		case NORTH:
-        			res[2]=0.0;
-        			break;
-        		case WEST:
-        			res[0]=0.0;
-        			break;
-        		case EAST:
-        			res[3]=1.0;
-        			break;
-				default:
-					break;
+        		    //case DOWN:
+        		    //	res[1]=0.0;
+        		    //	break;
+        		    case UP:
+        			    res[4]=1.0;
+        			    break;
+        		    case SOUTH:
+        			    res[5]=1.0;
+        			    break;
+        		    case NORTH:
+        			    res[2]=0.0;
+        			    break;
+        		    case WEST:
+        			    res[0]=0.0;
+        			    break;
+        		    case EAST:
+        			    res[3]=1.0;
+        			    break;
+				    default:
+					    break;
         		}
         	}
         }
-        
         return res;
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

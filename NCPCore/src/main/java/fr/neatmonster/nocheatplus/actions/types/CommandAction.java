@@ -22,7 +22,7 @@ import org.bukkit.plugin.Plugin;
 import fr.neatmonster.nocheatplus.actions.AbstractActionList;
 import fr.neatmonster.nocheatplus.actions.ParameterHolder;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
-import fr.neatmonster.nocheatplus.compat.Folia;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.config.ConfPaths;
 import fr.neatmonster.nocheatplus.config.ConfigManager;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
@@ -63,7 +63,7 @@ public class CommandAction<D extends ParameterHolder, L extends AbstractActionLi
     @Override
     public void execute(final D violationData) {
         final String command = getMessage(violationData);
-        Folia.runSyncTask(plugin, (arg) -> {
+        SchedulerHelper.runSyncTask(plugin, (arg) -> {
         	try {
                 Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
                 if (logDebug) {

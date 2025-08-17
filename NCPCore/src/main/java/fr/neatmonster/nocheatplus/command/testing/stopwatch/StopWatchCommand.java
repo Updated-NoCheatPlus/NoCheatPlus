@@ -14,7 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.command.testing.stopwatch;
 
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -25,7 +24,7 @@ import fr.neatmonster.nocheatplus.command.testing.stopwatch.distance.DistanceCom
 import fr.neatmonster.nocheatplus.command.testing.stopwatch.returnmargin.ReturnCommand;
 import fr.neatmonster.nocheatplus.command.testing.stopwatch.start.StartCommand;
 import fr.neatmonster.nocheatplus.command.testing.stopwatch.stop.StopCommand;
-import fr.neatmonster.nocheatplus.compat.Folia;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.permissions.Permissions;
 
 
@@ -43,7 +42,7 @@ public class StopWatchCommand extends BaseCommand {
     public StopWatchCommand(final JavaPlugin access) {
         super(access, "stopwatch", Permissions.COMMAND_STOPWATCH, new String[]{"sw"});
 
-        Folia.runSyncTask(access, (arg) -> registry.setup(access));
+        SchedulerHelper.runSyncTask(access, (arg) -> registry.setup(access));
 
         // Register sub commands.
         addSubCommands(

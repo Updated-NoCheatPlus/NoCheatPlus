@@ -44,11 +44,6 @@ public class ModelFlying {
     private double horizontalModSprint = 1.92;
     /** Modifier for vertical flying speed in per cent, for ascending. */
     private double verticalAscendModSpeed = 100.0;
-    /**
-     * Apply special mechanics for allowing some vertical ascension with
-     * gliding.
-     */
-    private boolean verticalAscendGliding = false;
     /** Maximum flying height above the maximum building height of the map. */
     private double maxHeight = 128;
     /** Apply modifiers like sprint, flyspeed, walkspeed, potions. */
@@ -57,23 +52,6 @@ public class ModelFlying {
     private boolean gravity = true;
     /** Default ground moving mechanics (jump, lost ground). */
     private boolean ground = true;
-    /**
-     * Allow an extra amount to ascend speed, scaling with the levitation effect
-     * level.
-     */
-    private boolean scaleLevitationEffect = false;
-    
-    /**
-     * Allow an extra amount to ascend speed, scaling with the slowfalling effect
-     * level.
-     */
-    private boolean scaleSlowfallingEffect = false;
-
-     /**
-     * Allow an extra amount to ascend speed, scaling with the riptiding effect
-     * level.
-     */
-    private boolean scaleRiptidingEffect = false;
 
     // TODO: vertical ascend/descend, limit gain a/d/v, limit abs. distance a/d/v
     // TODO: possibly other friction based envelope constraints.
@@ -110,14 +88,10 @@ public class ModelFlying {
         horizontalModSpeed(config.getDouble(prefix + ConfPaths.SUB_HORIZONTAL_SPEED, defaults.getHorizontalModSpeed()));
         horizontalModSprint(config.getDouble(prefix + ConfPaths.SUB_HORIZONTAL_MODSPRINT, defaults.getHorizontalModSprint()));
         verticalAscendModSpeed(config.getDouble(prefix + ConfPaths.SUB_VERTICAL_ASCEND_SPEED, defaults.getVerticalAscendModSpeed()));
-        verticalAscendGliding(defaults.getVerticalAscendGliding()); // Config ?
         maxHeight(config.getDouble(prefix + ConfPaths.SUB_VERTICAL_MAXHEIGHT, defaults.getMaxHeight()));
         applyModifiers(config.getBoolean(prefix + ConfPaths.SUB_MODIFIERS, defaults.getApplyModifiers()));
         gravity(config.getBoolean(prefix + ConfPaths.SUB_VERTICAL_GRAVITY, defaults.getGravity()));
         ground(config.getBoolean(prefix + ConfPaths.SUB_GROUND, defaults.getGround()));
-        scaleLevitationEffect(defaults.getScaleLevitationEffect()); // Config?
-        scaleSlowfallingEffect(defaults.getScaleSlowfallingEffect());
-        scaleRiptidingEffect(defaults.getScaleRiptidingEffect());
     }
 
     /**
@@ -132,14 +106,10 @@ public class ModelFlying {
         horizontalModSpeed(defaults.getHorizontalModSpeed());
         horizontalModSprint(defaults.getHorizontalModSprint());
         verticalAscendModSpeed(defaults.getVerticalAscendModSpeed());
-        verticalAscendGliding(defaults.getVerticalAscendGliding());
         maxHeight(defaults.getMaxHeight());
         applyModifiers(defaults.getApplyModifiers());
         gravity(defaults.getGravity());
         ground(defaults.getGround());
-        scaleLevitationEffect(defaults.getScaleLevitationEffect());
-        scaleSlowfallingEffect(defaults.getScaleSlowfallingEffect());
-        scaleRiptidingEffect(defaults.getScaleRiptidingEffect());
     }
 
     /**
@@ -184,10 +154,6 @@ public class ModelFlying {
         return verticalAscendModSpeed;
     }
 
-    public boolean getVerticalAscendGliding() {
-        return verticalAscendGliding;
-    }
-
     public double getMaxHeight() {
         return maxHeight;
     }
@@ -202,18 +168,6 @@ public class ModelFlying {
 
     public boolean getGround() {
         return ground;
-    }
-
-    public boolean getScaleLevitationEffect() {
-        return scaleLevitationEffect;
-    }
-    
-    public boolean getScaleSlowfallingEffect() {
-        return scaleSlowfallingEffect;
-    }
-
-    public boolean getScaleRiptidingEffect() {
-        return scaleRiptidingEffect;
     }
 
 
@@ -232,12 +186,6 @@ public class ModelFlying {
     public ModelFlying verticalAscendModSpeed(double verticalAscendModSpeed) {
         checkLocked();
         this.verticalAscendModSpeed = verticalAscendModSpeed;
-        return this;
-    }
-
-    public ModelFlying verticalAscendGliding(boolean verticalAscendGliding) {
-        checkLocked();
-        this.verticalAscendGliding = verticalAscendGliding;
         return this;
     }
 
@@ -262,24 +210,6 @@ public class ModelFlying {
     public ModelFlying ground(boolean ground) {
         checkLocked();
         this.ground = ground;
-        return this;
-    }
-
-    public ModelFlying scaleLevitationEffect(boolean scaleLevitationEffect) {
-        checkLocked();
-        this.scaleLevitationEffect = scaleLevitationEffect;
-        return this;
-    }
-
-    public ModelFlying scaleSlowfallingEffect(final boolean scaleSlowfallingEffect) {
-        checkLocked();
-        this.scaleSlowfallingEffect = scaleSlowfallingEffect;
-        return this;
-    }
-
-    public ModelFlying scaleRiptidingEffect(final boolean scaleRiptidingEffect) {
-        checkLocked();
-        this.scaleRiptidingEffect = scaleRiptidingEffect;
         return this;
     }
 }

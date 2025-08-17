@@ -32,8 +32,8 @@ public class BukkitHopper implements BukkitShapeModel {
             Directional b = (Directional) blockData;
             BlockFace face = b.getFacing();
             switch (face) {
-            case NORTH:
-                return new double[] {
+                case NORTH:
+                    return new double[] {
                         // Standing inside
                         0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
@@ -48,8 +48,8 @@ public class BukkitHopper implements BukkitShapeModel {
                         //0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
                         //0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         };
-            case SOUTH:
-                return new double[] {
+                case SOUTH:
+                    return new double[] {
                         // Standing inside
                         0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
@@ -64,8 +64,8 @@ public class BukkitHopper implements BukkitShapeModel {
                         //0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
                         //0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         };
-            case WEST:
-                return new double[] {
+                case WEST:
+                    return new double[] {
                         // Standing inside
                         0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
@@ -80,8 +80,8 @@ public class BukkitHopper implements BukkitShapeModel {
                         //0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
                         //0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         };
-            case EAST:
-                return new double[] {
+                case EAST:
+                    return new double[] {
                         // Standing inside
                         0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
@@ -96,8 +96,8 @@ public class BukkitHopper implements BukkitShapeModel {
                         //0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
                         //0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         };
-            case DOWN:
-                return new double[] {
+                case DOWN:
+                    return new double[] {
                         // Standing inside
                         0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
@@ -112,8 +112,8 @@ public class BukkitHopper implements BukkitShapeModel {
                         //0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
                         //0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         };
-            default:
-                break;
+                default:
+                    break;
             }
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
@@ -123,5 +123,4 @@ public class BukkitHopper implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
-
 }

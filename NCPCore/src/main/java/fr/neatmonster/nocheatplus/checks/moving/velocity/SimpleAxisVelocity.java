@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.checks.moving.velocity;
 
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 
@@ -39,7 +40,7 @@ public class SimpleAxisVelocity {
     private static final double marginAcceptZero = 0.005;
 
     /** Size of queued for which to force cleanup on add. */
-    private static final double thresholdCleanup = 20;
+    private static final double thresholdCleanup = 40;
 
     private final LinkedList<SimpleEntry> queued = new LinkedList<SimpleEntry>();
 
@@ -68,7 +69,7 @@ public class SimpleAxisVelocity {
      * Add to the end of the queue.
      * @param entry
      */
-    public void add(SimpleEntry entry) {
+    public void add(SimpleEntry entry) { 
         queued.add(entry);
         if (queued.size() > thresholdCleanup) {
             removeInvalid(TickTask.getTick());
@@ -90,36 +91,90 @@ public class SimpleAxisVelocity {
      *         This will directly invalidate leading entries with the wrong
      *         sign.
      */
-    public SimpleEntry use(final double amount, final double tolerance) {
+    public List<SimpleEntry> use(final double amount, final double tolerance) {
         final Iterator<SimpleEntry> it = queued.iterator();
         SimpleEntry entry = null;
+        final List<SimpleEntry> result = new LinkedList<>();
+        double totalAmount = 0;
+        int lastTick = 0;
+        boolean hasVel = false;
         while (it.hasNext()) {
             entry = it.next();
             it.remove();
-            if (matchesEntry(entry, amount, tolerance)) {
-                // Success.
-                break;
-            }
-            else {
-                // Track unused velocity.
-                if (unusedActive) {
-                    addUnused(entry);
+            if ((entry.flags & VelocityFlags.ADDITIVE) != 0 && lastTick == entry.tick) {
+                totalAmount += entry.value;
+                result.add(entry);
+                hasVel = true;
+            } else {
+                if (hasVel && Math.abs(totalAmount - amount) < tolerance) {
+                    // Success
+                    break;
                 }
-                entry = null;
+                if (unusedActive) {
+                    for (SimpleEntry unused : result) {
+                        addUnused(unused);
+                    }
+                }
+                result.clear();
+                totalAmount = entry.value;
+                lastTick = entry.tick;
+                result.add(entry);
+                hasVel = true;
+            }
+            if (!hasVel && Math.abs(totalAmount - amount) >= tolerance) result.clear();
+        }
+        return result;
+//        if (entry == null) {
+//            // None found.
+//            return null;
+//        }
+//        else {
+//            if ((entry.flags & FILTER_POST_USE) != 0L) {
+//                return processFlagsPostUse(entry, amount);
+//            }
+//            else {
+//                return entry;
+//            }
+//        }
+    }
+    
+    /**
+     * Use the matching tick entry.
+     * 
+     * @param tick
+     * @return The first matching entry. Returns null if no entry is available.
+     *         This will directly invalidate leading entries with the wrong
+     *         sign.
+     */
+    public List<SimpleEntry> use(final int tick) {
+        final Iterator<SimpleEntry> it = queued.iterator();
+        SimpleEntry entry = null;
+        final List<SimpleEntry> result = new LinkedList<>();
+        int lastTick = 0;
+        boolean hasVel = false;
+        while (it.hasNext()) {
+            entry = it.next();
+            it.remove();
+            if ((entry.flags & VelocityFlags.ADDITIVE) != 0 && lastTick == entry.tick) {
+                result.add(entry);
+                hasVel = true;
+            } else {
+                if (hasVel && tick == result.get(0).tick) {
+                    // Success
+                    break;
+                }
+                if (unusedActive) {
+                    for (SimpleEntry unused : result) {
+                        addUnused(unused);
+                    }
+                }
+                result.clear();
+                lastTick = entry.tick;
+                result.add(entry);
+                hasVel = true;
             }
         }
-        if (entry == null) {
-            // None found.
-            return null;
-        }
-        else {
-            if ((entry.flags & FILTER_POST_USE) != 0L) {
-                return processFlagsPostUse(entry, amount);
-            }
-            else {
-                return entry;
-            }
-        }
+        return result;
     }
 
     private SimpleEntry processFlagsPostUse(SimpleEntry entry, double amount) {
@@ -152,18 +207,65 @@ public class SimpleAxisVelocity {
      * @param tolerance
      * @return
      */
-    public SimpleEntry peek(final double amount, final int minActCount, final int maxActCount, 
+    public List<SimpleEntry> peek(final double amount, final int minActCount, final int maxActCount, 
             final double tolerance) {
+        final List<SimpleEntry> result = new LinkedList<>();
+        double totalAmount = 0;
+        int lastTick = 0;
+        boolean hasVel = false;
         final Iterator<SimpleEntry> it = queued.iterator();
         while (it.hasNext()) {
             final SimpleEntry entry = it.next();
-            if (entry.actCount >= minActCount && entry.actCount <= maxActCount 
-                    && matchesEntry(entry, amount, tolerance)) {
-                return entry;
+            if (entry.actCount >= minActCount && entry.actCount <= maxActCount) {
+                if ((entry.flags & VelocityFlags.ADDITIVE) != 0 && lastTick == entry.tick) {
+                    totalAmount += entry.value;
+                    result.add(entry);
+                    hasVel = true;
+                } else {
+                    if (hasVel && Math.abs(totalAmount - amount) < tolerance) return result;
+                    result.clear();
+                    totalAmount = entry.value;
+                    lastTick = entry.tick;
+                    result.add(entry);
+                    hasVel = true;
+                }
             }
         }
-        // None found.
-        return null;
+        if (Math.abs(totalAmount - amount) >= tolerance) result.clear();
+        return result;
+    }
+    
+    /**
+     * Without checking for invalidation, test if there is a matching entry with
+     * same or less the activation count.
+     * 
+     * @param amount
+     * @param maxActCount
+     * @param tolerance
+     * @return
+     */
+    public List<SimpleEntry> peek(final int tick, final int minActCount, final int maxActCount, 
+            final double tolerance) {
+        final List<SimpleEntry> result = new LinkedList<>();
+        int lastTick = 0;
+        boolean hasVel = false;
+        final Iterator<SimpleEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            final SimpleEntry entry = it.next();
+            if (entry.actCount >= minActCount && entry.actCount <= maxActCount) {
+                if ((entry.flags & VelocityFlags.ADDITIVE) != 0 && lastTick == entry.tick) {
+                    result.add(entry);
+                    hasVel = true;
+                } else {
+                    if (hasVel && tick == result.get(0).tick) return result;
+                    result.clear();
+                    lastTick = entry.tick;
+                    result.add(entry);
+                    hasVel = true;
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -267,7 +369,7 @@ public class SimpleAxisVelocity {
 
     /**
      * Remove from start while the flag is present.
-     * @param originBlockBounce
+     * @param flag
      */
     public void removeLeadingQueuedVerticalVelocityByFlag(final long flag) {
         if (queued.isEmpty()) {

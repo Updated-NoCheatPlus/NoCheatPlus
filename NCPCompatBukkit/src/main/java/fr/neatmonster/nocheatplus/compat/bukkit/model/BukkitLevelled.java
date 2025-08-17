@@ -30,8 +30,8 @@ public class BukkitLevelled implements BukkitShapeModel {
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
         final Block blockAbove = world.getBlockAt(x, y + 1, z);
         final BlockData blockDataAbove = blockAbove.getBlockData();
-        if ((BlockFlags.getBlockFlags(world.getBlockAt(x, y, z).getType()) & BlockFlags.F_WATER) !=0 
-        && (blockDataAbove instanceof Waterlogged && ((Waterlogged)blockDataAbove).isWaterlogged())) {
+        if ((BlockFlags.getBlockFlags(world.getBlockAt(x, y, z).getType()) & BlockFlags.F_WATER) != 0 
+            && (blockDataAbove instanceof Waterlogged && ((Waterlogged)blockDataAbove).isWaterlogged())) {
             return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 8 / 9f, 1.0};
@@ -47,5 +47,4 @@ public class BukkitLevelled implements BukkitShapeModel {
         }
         return 0;
     }
-
 }

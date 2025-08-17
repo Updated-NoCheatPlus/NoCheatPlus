@@ -30,9 +30,6 @@ public class BukkitDirectionalCentered extends AbstractBukkitCentered {
         if (blockData instanceof Directional) {
             return ((Directional) blockData).getFacing();
         }
-        else {
-            return BlockFace.SELF;
-        }
+        return BlockFace.SELF;
     }
-
 }

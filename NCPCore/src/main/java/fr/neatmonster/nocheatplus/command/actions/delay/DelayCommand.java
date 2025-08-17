@@ -21,8 +21,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import fr.neatmonster.nocheatplus.command.AbstractCommand;
-import fr.neatmonster.nocheatplus.permissions.Permissions;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
+import fr.neatmonster.nocheatplus.permissions.Permissions;
 
 /**
  * Delay an arbitrary command, the command is always delayed, unless for bad delay input.

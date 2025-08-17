@@ -40,13 +40,10 @@ public class BukkitFence implements BukkitShapeModel {
     }
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
-
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         // 13749998807909
         // 86250001192093
         // 0.1375, 0.8625
-
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
@@ -77,15 +74,11 @@ public class BukkitFence implements BukkitShapeModel {
             }
             return res;
         }
-
-
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

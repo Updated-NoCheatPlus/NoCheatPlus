@@ -29,10 +29,7 @@ import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockFormEvent;
-import org.bukkit.event.block.BlockPistonExtendEvent;
-import org.bukkit.event.block.BlockPistonRetractEvent;
-import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.event.block.*;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.material.Directional;
@@ -40,15 +37,15 @@ import org.bukkit.material.Door;
 import org.bukkit.material.MaterialData;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
-import fr.neatmonster.nocheatplus.compat.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.registry.order.RegistrationOrder.RegisterMethodWithOrder;
 import fr.neatmonster.nocheatplus.event.mini.MiniListener;
 import fr.neatmonster.nocheatplus.logging.Streams;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
-import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
+import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties.ToolProps;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties.ToolType;
 
@@ -168,7 +165,6 @@ public class BlockChangeListener implements Listener {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private Map<Material, ToolType> init() {
         Map<Material, ToolType> blocks = new HashMap<Material, ToolType>();
         blocks.put(BridgeMaterial.GRASS_BLOCK, ToolType.HOE);
@@ -338,15 +334,15 @@ public class BlockChangeListener implements Listener {
                 if (blocktool != null) {
                     final ToolProps tool = BlockProperties.getToolProps(event.getItem());
                     if (is1_13) {
-                        if (tool.toolType == ToolType.SPADE ||
-                            blocktool == tool.toolType) {
+                        if (tool.toolType == ToolType.SPADE 
+                            || blocktool == tool.toolType) {
                             tracker.addBlocks(block);
                         }
                     } 
                     else {
                         final boolean defdata = block.getData() == 0;
-                        if (is1_9 && type == BridgeMaterial.GRASS_BLOCK && tool.toolType == ToolType.SPADE ||
-                            defdata && tool.toolType == ToolType.HOE) {
+                        if (is1_9 && type == BridgeMaterial.GRASS_BLOCK && tool.toolType == ToolType.SPADE 
+                            || defdata && tool.toolType == ToolType.HOE) {
                             tracker.addBlocks(block);
                         }
                     }
@@ -386,8 +382,7 @@ public class BlockChangeListener implements Listener {
                  * (TickListener...). Hinge corner... possibilities?
                  */
                 if (otherBlock != null // Top of the map / special case.
-                    && (BlockFlags.getBlockFlags(otherBlock.getType()) 
-                        & relevantFlags) != 0) {
+                    && (BlockFlags.getBlockFlags(otherBlock.getType()) & relevantFlags) != 0) {
                     tracker.addBlocks(block, otherBlock);
                     return;
                 }
@@ -405,8 +400,7 @@ public class BlockChangeListener implements Listener {
                  * (TickListener...). Hinge corner... possibilities?
                  */
                 if (otherBlock != null // Top of the map / special case.
-                    && (BlockFlags.getBlockFlags(otherBlock.getType()) 
-                        & relevantFlags) != 0) {
+                    && (BlockFlags.getBlockFlags(otherBlock.getType()) & relevantFlags) != 0) {
                     tracker.addBlocks(block, otherBlock);
                     return;
                 }

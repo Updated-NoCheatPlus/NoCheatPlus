@@ -34,9 +34,7 @@ public class BukkitDoor implements BukkitShapeModel {
      * @return The block face of the block the door is standing on, indicating
      *         where the door is.
      */
-    private static final BlockFace getWhereTheDoorIsFace(
-            final BlockFace facing, final Hinge hinge,
-            final boolean isOpen) {
+    private static final BlockFace getWhereTheDoorIsFace(final BlockFace facing, final Hinge hinge, final boolean isOpen) {
         // For idiots:
         /*
          * Facing: Door is closing the opposite side of the block, so the
@@ -45,9 +43,6 @@ public class BukkitDoor implements BukkitShapeModel {
         /*
          * Hinge: Looking into the facing direction, hinge is left or right.
          */
-        //        Bukkit.getServer().broadcastMessage("hinge=" + hinge 
-        //                + " / facing=" + facing
-        //                + " / open=" + isOpen);
         // Let's play north and south: 
         switch (facing) {
             case NORTH:
@@ -55,49 +50,33 @@ public class BukkitDoor implements BukkitShapeModel {
                     if (hinge == Hinge.LEFT) {
                         return BlockFace.WEST;
                     }
-                    else {
-                        return BlockFace.EAST;
-                    }
+                    return BlockFace.EAST;
                 }
-                else {
-                    return BlockFace.SOUTH;
-                }
+                return BlockFace.SOUTH;
             case SOUTH:
                 if (isOpen) {
                     if (hinge == Hinge.LEFT) {
                         return BlockFace.EAST;
                     }
-                    else {
-                        return BlockFace.WEST;
-                    }
+                    return BlockFace.WEST;
                 }
-                else {
-                    return BlockFace.NORTH;
-                }
+                return BlockFace.NORTH;
             case EAST:
                 if (isOpen) {
                     if (hinge == Hinge.LEFT) {
                         return BlockFace.NORTH;
                     }
-                    else {
-                        return BlockFace.SOUTH;
-                    }
+                    return BlockFace.SOUTH;
                 }
-                else {
-                    return BlockFace.WEST;
-                }
+                return BlockFace.WEST;
             case WEST:
                 if (isOpen) {
                     if (hinge == Hinge.LEFT) {
                         return BlockFace.SOUTH;
                     }
-                    else {
-                        return BlockFace.NORTH;
-                    }
+                    return BlockFace.NORTH;
                 }
-                else {
-                    return BlockFace.EAST;
-                }
+                return BlockFace.EAST;
             default:
                 // Invalid
                 return BlockFace.SELF;
@@ -108,8 +87,7 @@ public class BukkitDoor implements BukkitShapeModel {
     private static final double doorWidthOpen = 0.1875;
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
         final BlockData blockData = state.getBlockData();
@@ -117,28 +95,24 @@ public class BukkitDoor implements BukkitShapeModel {
             final Door door = (Door) blockData;
             final boolean isOpen = door.isOpen();
             final double doorWidth = doorWidthOpen; // isOpen ? doorWidthOpen : doorWidthClosed;
-            switch(getWhereTheDoorIsFace(door.getFacing(),
-                    door.getHinge(), isOpen)) {
-                        case NORTH:
-                            return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, doorWidth};
-                        case SOUTH:
-                            return new double[] {0.0, 0.0, 1.0 - doorWidth, 1.0, 1.0, 1.0};
-                        case EAST:
-                            return new double[] {1.0 - doorWidth, 0.0, 0.0, 1.0, 1.0, 1.0};
-                        case WEST:
-                            return new double[] {0.0, 0.0, 0.0, doorWidth, 1.0, 1.0};
-                        default:
-                            break;
+            switch (getWhereTheDoorIsFace(door.getFacing(), door.getHinge(), isOpen)) {
+                case NORTH:
+                    return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, doorWidth};
+                case SOUTH:
+                    return new double[] {0.0, 0.0, 1.0 - doorWidth, 1.0, 1.0, 1.0};
+                case EAST:
+                    return new double[] {1.0 - doorWidth, 0.0, 0.0, 1.0, 1.0, 1.0};
+                case WEST:
+                    return new double[] {0.0, 0.0, 0.0, doorWidth, 1.0, 1.0};
+                default:
+                    break;
             }
-
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

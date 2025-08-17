@@ -1041,10 +1041,10 @@ public class PlayerDataManager  implements IPlayerDataManager, ComponentWithName
     /**
      * Used by checks to register the history for external access.<br>
      * NOTE: This method is not really meant to be used from outside NCP.
+     * Do note that this method was meant to be deprecated due to a new implementation pending by the original developer.
      * 
      * @param type
      * @param histories
-     * @deprecated New implementation pending.
      */
     public void registerExecutionHistory(CheckType type, Map<String, ExecutionHistory> histories) {
         executionHistories.put(type, histories);
@@ -1052,12 +1052,12 @@ public class PlayerDataManager  implements IPlayerDataManager, ComponentWithName
 
     /**
      * Access method to the the execution history for check type for a player.
+     * Do note that this method was meant to be deprecated due to a new iteration pending by the original developer
      * 
      * @param type
      * @param playerName
      *            Exact case for player name.
      * @return null if not present.
-     * @deprecated New implementation pending.
      */
     public ExecutionHistory getExecutionHistory(final CheckType type, final String playerName) {
         final Map<String, ExecutionHistory> map = executionHistories.get(type);
@@ -1069,11 +1069,11 @@ public class PlayerDataManager  implements IPlayerDataManager, ComponentWithName
 
     /**
      * Remove the execution history for a player for the given check type.
+     * Do note that this method was meant to be deprecated due to a new iteration pending by the original developer
      * 
      * @param type
      * @param playerName
      * @return
-     * @deprecated New implementation pending.
      */
     public boolean removeExecutionHistory(final CheckType type, final String playerName) {
         boolean removed = false;

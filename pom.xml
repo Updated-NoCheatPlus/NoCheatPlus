@@ -22,7 +22,7 @@
 
         TODO: Better place for descriptions like this?
     </description>
-    <url>https://dev.bukkit.org/projects/nocheatplus</url>
+    <url>https://github.com/Updated-NoCheatPlus/NoCheatPlus</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -33,6 +33,7 @@
     <modules>
         <module>NCPBuildBase</module>
         <module>NCPCommons</module>
+        <module>NCPLegacy</module>
         <module>NCPCore</module>
         <module>NCPCompatBukkit</module>
         <module>NCPCompatProtocolLib</module>
@@ -55,8 +56,11 @@
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots</url>
         </repository>
+        <repository>
+            <id>codemc-releases</id>
+            <url>https://repo.codemc.io/repository/nms-local/</url>
+        </repository>
     </repositories>
-
     <build>
         <pluginManagement>
             <plugins>

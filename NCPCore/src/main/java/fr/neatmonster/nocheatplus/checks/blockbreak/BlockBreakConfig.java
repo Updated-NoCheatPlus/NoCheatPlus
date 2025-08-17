@@ -29,35 +29,31 @@ public class BlockBreakConfig extends ACheckConfig {
 
     public final ActionList directionActions;
 
-    public final boolean    fastBreakStrict;
-    public final int        fastBreakBuckets;
-    public final long       fastBreakBucketDur;
-    public final float      fastBreakBucketFactor;
-    public final long       fastBreakGrace;
-    public final long       fastBreakDelay;	
-    public final int        fastBreakModSurvival;
+    public final boolean fastBreakStrict;
+    public final int fastBreakBuckets;
+    public final long fastBreakBucketDur;
+    public final float fastBreakBucketFactor;
+    public final long fastBreakGrace;
+    public final long fastBreakDelay;	
+    public final int fastBreakModSurvival;
     public final ActionList fastBreakActions;
 
-
-    public final int        frequencyBuckets;
-    public final long       frequencyBucketDur;
-    public final float      frequencyBucketFactor;  
-    public final int        frequencyIntervalCreative;
-    public final int        frequencyIntervalSurvival;
-
-    public final int        frequencyShortTermLimit;
-    public final int        frequencyShortTermTicks;
+    public final int frequencyBuckets;
+    public final long frequencyBucketDur;
+    public final float frequencyBucketFactor;  
+    public final int frequencyIntervalCreative;
+    public final int frequencyIntervalSurvival;
+    public final int frequencyShortTermLimit;
+    public final int frequencyShortTermTicks;
     public final ActionList frequencyActions;
-
-    public boolean          improbableFastBreakCheck;
 
     public final ActionList noSwingActions;
 
     public final ActionList reachActions;
 
-    public final float      wrongBLockLevel;
-    public final boolean    wrongBlockImprobableFeedOnly;
-    public final float      wrongBlockImprobableWeight;
+    public final float wrongBLockLevel;
+    public final boolean wrongBlockImprobableFeedOnly;
+    public final float wrongBlockImprobableWeight;
     public final ActionList wrongBlockActions;
 
     /**
@@ -74,8 +70,7 @@ public class BlockBreakConfig extends ACheckConfig {
         // Fastbreak.
         fastBreakStrict = config.getBoolean(ConfPaths.BLOCKBREAK_FASTBREAK_STRICT);
         fastBreakDelay = config.getLong(ConfPaths.BLOCKBREAK_FASTBREAK_DELAY);
-        fastBreakGrace = config.getLong(ConfPaths.BLOCKBREAK_FASTBREAK_BUCKETS_CONTENTION, 
-                config.getLong(ConfPaths.BLOCKBREAK_FASTBREAK_GRACE, 2000));
+        fastBreakGrace = config.getLong(ConfPaths.BLOCKBREAK_FASTBREAK_BUCKETS_CONTENTION, config.getLong(ConfPaths.BLOCKBREAK_FASTBREAK_GRACE, 2000));
         fastBreakBucketDur = config.getInt(ConfPaths.BLOCKBREAK_FASTBREAK_BUCKETS_DUR, 4000);
         fastBreakBucketFactor = (float) config.getDouble(ConfPaths.BLOCKBREAK_FASTBREAK_BUCKETS_FACTOR, 0.99);
         fastBreakBuckets = config.getInt(ConfPaths.BLOCKBREAK_FASTBREAK_BUCKETS_N, 30);
@@ -101,5 +96,4 @@ public class BlockBreakConfig extends ACheckConfig {
         wrongBLockLevel = config.getInt(ConfPaths.BLOCKBREAK_WRONGBLOCK_LEVEL);
         wrongBlockActions = config.getOptimizedActionList(ConfPaths.BLOCKBREAK_WRONGBLOCK_ACTIONS, Permissions.BLOCKBREAK_WRONGBLOCK);
     }
-
 }

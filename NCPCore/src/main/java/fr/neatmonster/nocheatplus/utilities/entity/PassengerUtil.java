@@ -19,29 +19,27 @@ import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.World;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveData;
-import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
-import fr.neatmonster.nocheatplus.checks.moving.util.AuxMoving;
 import fr.neatmonster.nocheatplus.checks.moving.vehicle.VehicleSetPassengerTask;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.Folia;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.components.entity.IEntityAccessVehicle;
 import fr.neatmonster.nocheatplus.components.registry.event.IHandle;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.moving.AuxMoving;
 
 /**
  * Vehicle/passenger related static utility. Registered as generic instance for
@@ -74,8 +72,8 @@ public class PassengerUtil {
 
     /**
      * Check getPassenger recursively until a player is found, return that one
-     * or null. This is intended to be the player in charge of steering the
-     * vehicle.
+     * or null. <b>This is intended to be the player in charge of steering the
+     * vehicle.</b>
      *
      * @param entity
      *            The vehicle.
@@ -274,7 +272,7 @@ public class PassengerUtil {
                 vehicle.eject(); // NOTE: VehicleExit fires, unknown TP fires.
                 // TODO: Confirm eject worked, handle if not.
                 //vehicleTeleported = vehicle.teleport(LocUtil.clone(location), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
-                vehicleTeleported = Folia.teleportEntity(vehicle, LocUtil.clone(location), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
+                vehicleTeleported = SchedulerHelper.teleportEntity(vehicle, LocUtil.clone(location), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
             }
         }
 
@@ -301,7 +299,7 @@ public class PassengerUtil {
                         }
                     }
                     else {
-                        if (Folia.teleportEntity(passenger, location, BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION)
+                        if (SchedulerHelper.teleportEntity(passenger, location, BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION)
                             && vehicleTeleported && TrigUtil.distance(passenger.getLocation(useLoc2), vehicle.getLocation(useLoc)) < 1.5) {
                             if (!handleVehicle.getHandle().addPassenger(passenger, vehicle)) {
                                 // TODO: What?
@@ -342,7 +340,7 @@ public class PassengerUtil {
             final MovingConfig cc = DataManager.getGenericInstance(player, MovingConfig.class);
             // Mask player teleport as a set back.
             data.prepareSetBack(location);
-            playerTeleported = Folia.teleportEntity(player, LocUtil.clone(location), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
+            playerTeleported = SchedulerHelper.teleportEntity(player, LocUtil.clone(location), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
             data.resetTeleported(); // Cleanup, just in case.
             // Workarounds.
             // Allow re-use of certain workarounds. Hack/shouldbedoneelsewhere?
@@ -355,7 +353,7 @@ public class PassengerUtil {
                 boolean scheduledelay = cc.schedulevehicleSetPassenger;
                 if (data.vehicleSetPassengerTaskId == null) {
                     // TODO: Check which version fixed this?
-                    if (vehicle.getType() == EntityType.BOAT) {
+                    if (MaterialUtil.isBoat(vehicle.getType())) {
                         if (!handleVehicle.getHandle().addPassenger(player, vehicle)) {
                             // Not schedule set passenger for boat due to location async
                             // Re-add to vehicle then reject. Fix boat teleported but player didn't
@@ -364,7 +362,7 @@ public class PassengerUtil {
                     } 
                     else if (scheduledelay) {
 
-                        data.vehicleSetPassengerTaskId = Folia.runSyncDelayedTaskForEntity(player, plugin, (arg) -> new VehicleSetPassengerTask(handleVehicle, vehicle, player).run(), null, 2L);
+                        data.vehicleSetPassengerTaskId = SchedulerHelper.runSyncDelayedTaskForEntity(player, plugin, (arg) -> new VehicleSetPassengerTask(handleVehicle, vehicle, player).run(), null, 2L);
                         if (data.vehicleSetPassengerTaskId == null) {
 
                             if (debug) CheckUtils.debug(player, CheckType.MOVING_VEHICLE, "Failed to schedule set passenger!");

@@ -23,7 +23,6 @@ import fr.neatmonster.nocheatplus.components.registry.event.IHandle;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
 
 /**
  * Task for scheduling a passenger set back. Resets the vehicleSetPassengerTaskId in

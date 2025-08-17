@@ -19,7 +19,7 @@ import org.bukkit.World;
 
 import fr.neatmonster.nocheatplus.components.location.IGetLocationWithLook;
 import fr.neatmonster.nocheatplus.time.monotonic.Monotonic;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
 /**
  * Represent a set back location storage, allowing for more or less efficient

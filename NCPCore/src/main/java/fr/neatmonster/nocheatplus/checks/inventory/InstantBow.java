@@ -25,7 +25,8 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 
 /**
- * The InstantBow check will find out if a player pulled the string of their bow too fast.
+ * Legacy check. It will find out if a player pulled the string of their bow too fast. <br>
+ * Will be disabled on 1.8 and later.
  */
 public class InstantBow extends Check {
 
@@ -45,30 +46,22 @@ public class InstantBow extends Check {
      *            the player
      * @param force
      *            the force
+     * @param now
      * @return true, if successful
      */
     public boolean check(final Player player, final float force, final long now) {
-
         final IPlayerData pData = DataManager.getPlayerData(player);
         final InventoryData data = pData.getGenericInstance(InventoryData.class);
         final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
-
         boolean cancel = false;
-
-        // Rough estimation of how long pulling the string should've taken.
+        /** Rough estimation of how long pulling the string should've taken */
         final long expectedPullDuration = (long) (maxTime - maxTime * (1f - force) * (1f - force)) - cc.instantBowDelay;
-
-        // Time taken to pull the string.
+        /** Time taken to pull the string */
         final long pullDuration;
         final boolean valid;
-        if (cc.instantBowStrict) {
-            // The interact time is invalid, if set to 0.
-            valid = data.instantBowInteract != 0; 
-            pullDuration = valid ? (now - data.instantBowInteract) : 0L;
-        } else {
-            valid = true;
-            pullDuration = now - data.instantBowShoot;
-        }
+        // The interact time is invalid, if set to 0.
+        valid = cc.instantBowStrict ? data.instantBowInteract != 0 : true;
+        pullDuration = cc.instantBowStrict ? (valid ? (now - data.instantBowInteract) : 0L) : (now - data.instantBowShoot);
 
         if (valid && (!cc.instantBowStrict || data.instantBowInteract > 0L) && pullDuration >= expectedPullDuration) {
             // The player was slow enough, reward them by lowering their violation level.
@@ -82,18 +75,14 @@ public class InstantBow extends Check {
             // Account for server side lag.
             // (Do not apply correction to invalid pulling.)
             final long correctedPullduration = valid ? 
-                    (pData.getCurrentWorldData().shouldAdjustToLag(type)
-                            ? (long) (TickTask.getLag(expectedPullDuration, true) * pullDuration) 
-                            : pullDuration) : 0;
+                                               (pData.getCurrentWorldData().shouldAdjustToLag(type) ? (long) (TickTask.getLag(expectedPullDuration, true) * pullDuration) : pullDuration) 
+                                                : 0;
             if (correctedPullduration < expectedPullDuration) {
                 // TODO: Consider: Allow one time but set yawrate penalty time ?
                 final double difference = (expectedPullDuration - pullDuration) / 100D;
-
                 // Player was too fast, increase their violation level.
                 data.instantBowVL += difference;
-
-                // Execute whatever actions are associated with this check and the
-                // violation level and find out if we should cancel the event
+                // Execute whatever actions are associated with this check and the violation level and find out if we should cancel the event
                 cancel = executeActions(player, data.instantBowVL, difference, cc.instantBowActions).willCancel();
             }
         }

@@ -24,25 +24,33 @@ import fr.neatmonster.nocheatplus.utilities.TickTask;
 
 /**
  * Check only for commands
- * @author mc_dev
+ * @author asofold
  *
  */
 public class Commands extends Check {
+
     public Commands() {
         super(CheckType.CHAT_COMMANDS);
     }
-
+    
+    /**
+     * Checks a player for command spam
+     * 
+     * @param player
+     * @param message
+     * @param cc
+     * @param pData
+     * @param captcha
+     * @return true if successful.
+     */
     public boolean check(final Player player, final String message, 
-            final ChatConfig cc, final IPlayerData pData, 
-            final ICaptcha captcha) {
+                         final ChatConfig cc, final IPlayerData pData, 
+                         final ICaptcha captcha) {
 
         final long now = System.currentTimeMillis();
         final int tick = TickTask.getTick();
-
         final ChatData data = pData.getGenericInstance(ChatData.class);
-
-        final boolean captchaEnabled = !cc.captchaSkipCommands 
-                && pData.isCheckActive(CheckType.CHAT_CAPTCHA, player); 
+        final boolean captchaEnabled = !cc.captchaSkipCommands && pData.isCheckActive(CheckType.CHAT_CAPTCHA, player); 
         if (captchaEnabled){
             synchronized (data) {
                 if (captcha.shouldCheckCaptcha(player, cc, data, pData)){
@@ -53,23 +61,21 @@ public class Commands extends Check {
         }
 
         // Rest of the check is done without sync, because the data is only used by this check.
-
         // Weight might later be read from some prefix tree (also known / unknown).
         final float weight = 1f;
-
         data.commandsWeights.add(now, weight);
-        if (tick < data.commandsShortTermTick){
+        if (tick < data.commandsShortTermTick) {
             // TickTask got reset.
             data.commandsShortTermTick = tick;
             data.commandsShortTermWeight = 1.0;
         }
-        else if (tick - data.commandsShortTermTick < cc.commandsShortTermTicks){
+        else if (tick - data.commandsShortTermTick < cc.commandsShortTermTicks) {
             if (!pData.getCurrentWorldData().shouldAdjustToLag(type) 
-                    || TickTask.getLag(50L * (tick - data.commandsShortTermTick), true) < 1.3f){
+                || TickTask.getLag(50L * (tick - data.commandsShortTermTick), true) < 1.3f) {
                 // Add up.
                 data.commandsShortTermWeight += weight;
             }
-            else{
+            else {
                 // Reset, too much lag.
                 data.commandsShortTermTick = tick;
                 data.commandsShortTermWeight = 1.0;
@@ -84,23 +90,24 @@ public class Commands extends Check {
         final float nw = data.commandsWeights.score(1f);
         final double violation = Math.max(nw - cc.commandsLevel, data.commandsShortTermWeight - cc.commandsShortTermLevel);
 
-        if (violation > 0.0){
+        if (violation > 0.0) {
             data.commandsVL += violation;
             // TODO: Evaluate if sync(data) is necessary or better for executeActions.
-            if (captchaEnabled){
+            if (captchaEnabled) {
                 synchronized (data) {
                     captcha.sendNewCaptcha(player, cc, data);
                 }
                 return true;
             }
-            else if (executeActions(player, data.commandsVL, violation, cc.commandsActions).willCancel())
+            else if (executeActions(player, data.commandsVL, violation, cc.commandsActions).willCancel()) {
                 return true;
+            }
         }
         else if (cc.chatWarningCheck && now - data.chatWarningTime > cc.chatWarningTimeout && (100f * nw / cc.commandsLevel > cc.chatWarningLevel || 100f * data.commandsShortTermWeight / cc.commandsShortTermLevel > cc.chatWarningLevel)){
             player.sendMessage(ColorUtil.replaceColors(cc.chatWarningMessage));
             data.chatWarningTime = now;
         }
-        else{
+        else {
             // TODO: This might need invalidation with time.
             data.commandsVL *= 0.99;
         }

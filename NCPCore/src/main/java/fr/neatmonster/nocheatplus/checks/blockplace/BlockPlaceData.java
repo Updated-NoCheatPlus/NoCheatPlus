@@ -26,17 +26,17 @@ import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 public class BlockPlaceData extends ACheckData {
 
     // Violation levels.
-    public double againstVL = 0;
-    public double autoSignVL = 0;
-    public double directionVL = 0;
-    public double fastPlaceVL = 0;
-    public double noSwingVL = 0;
-    public double reachVL = 0;
-    public double scaffoldVL = 0;
-    public double speedVL = 0;
+    public double againstVL;
+    public double autoSignVL;
+    public double directionVL;
+    public double fastPlaceVL;
+    public double noSwingVL;
+    public double reachVL;
+    public double scaffoldVL;
+    public double speedVL;
 
     // AutoSign.
-    public long autoSignPlacedTime = 0;
+    public long signOpenTime = 0;
     /** Using Material.SIGN . */
     public long autoSignPlacedHash = 0;
 
@@ -50,18 +50,14 @@ public class BlockPlaceData extends ACheckData {
 	public boolean cancelNextPlace = false;
 
     // Data of the fast place check.
-    public final ActionFrequency fastPlaceBuckets	= new ActionFrequency(2, 1000);
-    public int fastPlaceShortTermTick				= 0;
-    public int fastPlaceShortTermCount				= 0;
+    public final ActionFrequency fastPlaceBuckets = new ActionFrequency(2, 1000);
+    public int fastPlaceShortTermTick = 0;
+    public int fastPlaceShortTermCount = 0;
 
     // Data of the no swing check.
     public int noSwingCount = 0;
 
-    // Data of the reach check.
-    public double  reachDistance;
-
     // Data of the speed check;
     public boolean speedLastRefused;
-    public long    speedLastTime;
-
+    public long speedLastTime;
 }

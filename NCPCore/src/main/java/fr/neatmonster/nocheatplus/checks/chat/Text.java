@@ -38,7 +38,7 @@ import fr.neatmonster.nocheatplus.utilities.StringUtil;
 
 /**
  * Some alternative more or less advanced analysis methods.
- * @author mc_dev
+ * @author asofold
  *
  */
 public class Text extends Check implements INotifyReload {
@@ -60,19 +60,18 @@ public class Text extends Check implements INotifyReload {
     /**
      * Start analysis.
      * @param player
-     *   		The player who issued the message.
+     *          The player who issued the message.
      * @param message
-     * 			The message to check.
+     *          The message to check.
      * @param captcha 
-     * 			Used for starting captcha on failure, if configured so.
+     *          Used for starting captcha on failure, if configured so.
      * @param alreadyCancelled 
      * @return
      */
     public boolean check(final Player player, final String message, 
-            final ChatConfig cc, final IPlayerData pData,
-            final ICaptcha captcha, boolean isMainThread, final boolean alreadyCancelled) {
+                         final ChatConfig cc, final IPlayerData pData,
+                         final ICaptcha captcha, boolean isMainThread, final boolean alreadyCancelled) {
         final ChatData data = pData.getGenericInstance(ChatData.class);
-
         synchronized (data) {
             return unsafeCheck(player, message, captcha, cc, data, pData, isMainThread, alreadyCancelled);
         }
@@ -110,28 +109,23 @@ public class Text extends Check implements INotifyReload {
      * @return
      */
     private boolean unsafeCheck(final Player player, final String message, final ICaptcha captcha,
-            final ChatConfig cc, final ChatData data, final IPlayerData pData,
-            boolean isMainThread, final boolean alreadyCancelled) {
+                                final ChatConfig cc, final ChatData data, final IPlayerData pData,
+                                boolean isMainThread, final boolean alreadyCancelled) {
 
         // Test captcha.
-        // TODO: Skip captcha for "handleaschat" commands? [controversial potential]
         if (captcha.shouldCheckCaptcha(player, cc, data, pData)) {
             captcha.checkCaptcha(player, message, cc, data, isMainThread);
             return true;
-        } else if (alreadyCancelled) {
+        } 
+        else if (alreadyCancelled) {
             // Skip checking.
             return true;
         }
 
-        // Take time once:
         final long time = System.currentTimeMillis();
-
         final String lcMessage = message.trim().toLowerCase();
-
         boolean cancel = false;
-
         final boolean debug = pData.isDebugActive(type);
-
         final List<String> debugParts;
         if (debug) {
             debugParts = new LinkedList<String>();
@@ -144,17 +138,14 @@ public class Text extends Check implements INotifyReload {
 
         // Score for this message (violation score).
         float score = 0;
-
         final MessageLetterCount letterCounts = new MessageLetterCount(message);
-
         final int msgLen = message.length();
 
+
+
         // (Following: random/made up criteria.)
-
         // TODO: Create tests for all methods with wordlists, fake chat (refactor for that).
-
         // Full message processing. ------------
-
         // Upper case.
         if (letterCounts.fullCount.upperCase > msgLen / 3) {
             // TODO: Regard chunks of 48 or so letters of the message for this?
@@ -166,10 +157,7 @@ public class Text extends Check implements INotifyReload {
         if (msgLen > 4) {
             final float fullRep = letterCounts.fullCount.getLetterCountRatio();
             // Long messages: very small and very big are bad !
-            /*
-             * TODO: 128 is a quick attempt to make one long message possible on
-             * 1.11.
-             */
+            // 128 is a quick attempt to make one long message possible on 1.11.
             final float wRepetition = (float) Math.min(msgLen, 128) / 15.0f * Math.abs(0.5f - fullRep);
             score += wRepetition * cc.textMessageLetterCount;
 
@@ -213,10 +201,12 @@ public class Text extends Check implements INotifyReload {
             score += cc.textMsgNoMoving;
         }
 
+
+
         // Per word checks. -------------------
         float wWords = 0.0f;
         final float avwLen = (float) msgLen / (float) letterCounts.words.length; 
-        for (final WordLetterCount word: letterCounts.words) {
+        for (final WordLetterCount word : letterCounts.words) {
             float wWord = 0.0f;
             final int wLen = word.word.length();
             // TODO: ? used letters vs. word length.
@@ -252,16 +242,15 @@ public class Text extends Check implements INotifyReload {
             engMap = engine.process(letterCounts, player.getName(), cc, data);
             // TODO: more fine grained sync !s
             // TODO: different methods (add or max or add+max or something else).
-            for (final  Float res : engMap.values()) {
+            for (final Float res : engMap.values()) {
                 if (cc.textEngineMaximum) {
                     wEngine = Math.max(wEngine, res.floatValue());
                 }
-                else {
-                    wEngine += res.floatValue();
-                }
+                else wEngine += res.floatValue();
             }
         }
         score += wEngine;
+
 
         // Wrapping it up. --------------------
         // Add weight to frequency counts.
@@ -269,7 +258,6 @@ public class Text extends Check implements INotifyReload {
         data.chatFrequency.add(time, normalScore);
         final float accumulated = cc.textFreqNormWeight * data.chatFrequency.score(cc.textFreqNormFactor);
         final boolean normalViolation = accumulated > cc.textFreqNormLevel;
-
         final float shortTermScore = Math.max(cc.textFreqShortTermMin, score);
         data.chatShortTermFrequency.add(time, shortTermScore);
         // TODO: very short term (1st bucket) or do it indirectly.
@@ -283,16 +271,15 @@ public class Text extends Check implements INotifyReload {
             final double added;
             if (shortTermViolation) {
                 added = (shortTermAccumulated - cc.textFreqShortTermLevel)/ 3.0;
-            } else {
-                added = (accumulated - cc.textFreqNormLevel) / 10.0; 
-            }
+            } 
+            else added = (accumulated - cc.textFreqNormLevel) / 10.0; 
             data.textVL += added;
 
             if (captcha.shouldStartCaptcha(player, cc, data, pData)) {
                 captcha.sendNewCaptcha(player, cc, data);
                 cancel = true;
             }
-            else{
+            else {
                 if (shortTermViolation) {
                     if (executeActions(player, data.textVL, added, cc.textFreqShortTermActions).willCancel()) {
                         cancel = true;
@@ -313,7 +300,7 @@ public class Text extends Check implements INotifyReload {
             data.textVL *= 0.95;
             if (cc.textAllowVLReset && normalScore < 2.0f * cc.textFreqNormWeight && shortTermScore < 2.0f * cc.textFreqShortTermWeight) {
                 // Reset the VL.
-                // TODO: maybe elaborate on resetting conditions (after some timeout just divide by two or so?).
+                // Maybe elaborate on resetting conditions (after some timeout just divide by two or so?).
                 data.textVL = 0.0;
             }
         }
@@ -339,8 +326,6 @@ public class Text extends Check implements INotifyReload {
 
         lastGlobalMessage = data.chatLastMessage = lcMessage;
         lastGlobalTime = data.chatLastTime = time;
-
         return cancel;
     }
-
 }

@@ -38,12 +38,12 @@ public class Speed extends Check {
      * @param player
      *            the player
      * @param cc 
+     * @param pData
      * @return true, if successful
      */
-    public boolean check(final Player player, 
-            final BlockPlaceConfig cc, final IPlayerData pData) {
-        final BlockPlaceData data = pData.getGenericInstance(BlockPlaceData.class);
+    public boolean check(final Player player, final BlockPlaceConfig cc, final IPlayerData pData) {
 
+        final BlockPlaceData data = pData.getGenericInstance(BlockPlaceData.class);
         boolean cancel = false;
 
         // Has the player thrown items too quickly?
@@ -53,22 +53,18 @@ public class Speed extends Check {
 
                 // They failed, increase this violation level.
                 data.speedVL += difference;
-
                 // Execute whatever actions are associated with this check and the violation level and find out if we
                 // should cancel the event.
                 cancel = executeActions(player, data.speedVL, difference, cc.speedActions).willCancel();
             }
-
             data.speedLastRefused = true;
-        } else {
+        } 
+        else {
             // Reward them by lowering their violation level.
             data.speedVL *= 0.9D;
-
             data.speedLastRefused = false;
         }
-
         data.speedLastTime = System.currentTimeMillis();
-
         return cancel;
     }
 }

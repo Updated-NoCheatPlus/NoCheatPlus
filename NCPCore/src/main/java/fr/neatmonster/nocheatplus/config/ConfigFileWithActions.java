@@ -25,13 +25,6 @@ public abstract class ConfigFileWithActions<D extends ActionData, L extends Abst
     /** The factory. */
     protected AbstractActionFactory<D, L> factory = null;
 
-    //	/**
-    //	 * @deprecated Use resetActionFactory.
-    //	 */
-    //	public void regenerateActionLists(){
-    //		resetActionFactory();
-    //	}
-
     /**
      * This should set (override if necessary) a default ActionFactory. NCP will use ConfigManager.getActionsFactoryFactory. <br>
      * Do this after reading new data or changing the AbstractActionFactory instance.<br>

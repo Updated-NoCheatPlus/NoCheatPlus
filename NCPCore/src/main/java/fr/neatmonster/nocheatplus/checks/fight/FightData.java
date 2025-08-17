@@ -34,93 +34,68 @@ import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 public class FightData extends ACheckData implements IDataOnRemoveSubCheckData, IDataOnWorldChange {
 
     // Violation levels.
-    public double                  angleVL;
-    public double                  criticalVL;
-    public double                  directionVL;
-    public double                  fastHealVL;
-    public double                  godModeVL;
-    public double                  noSwingVL;
-    public double                  reachVL;
-    public double                  speedVL;
-    public double                  impossibleHitVL;
-    public double                  visibleVL;
+    public double angleVL;
+    public double criticalVL;
+    public double directionVL;
+    public double fastHealVL;
+    public double godModeVL;
+    public double noSwingVL;
+    public double reachVL;
+    public double visibleVL;
 
-    // Shared
-    public String lastWorld			= "";
-    public int lastAttackTick		= 0;
-    public double lastAttackedX		= Double.MAX_VALUE;
+    // Shared data between checks
+    public String lastWorld = "";
+    public int lastAttackTick = 0;
+    public double lastAttackedX = Double.MAX_VALUE;
     public double lastAttackedY;
     public double lastAttackedZ;
-
     /** Attack penalty (close combat, ENTITY_ATTACK). */
     public final PenaltyTime attackPenalty = new PenaltyTime();
-
-    /** The entity id  which might get counter-attacked. */
+    /** The entity id which might get counter-attacked. */
     public int thornsId = Integer.MIN_VALUE;
-
-    // 1.9: Sweep attack.
-    /**
-     * The tick of an attack that might lead to further sweep damage to other
-     * nearby entities.
-     */
+    /** 1.9: The tick of an attack that might lead to further sweep damage to other nearby entities. */
     public int sweepTick = 0;
     /** Hash code of the location of last sweep attack. */
     public int sweepLocationHashCode = 0;
-
-    /** Any kind of health regeneration. */
-    public long regainHealthTime    = 0;
-    //    public double lastAttackedDist = 0.0;
     public long damageTakenByEntityTick;
+    // TNT workaround: Allow ENTITY_ATTACK if these attributes match.
+    // Discussion at: https://github.com/NoCheatPlus/NoCheatPlus/pull/17 (@Iceee)
+    /** Tick the last explosion damage was dealt at. */
+    public int lastExplosionDamageTick = -1;
+    /** Last explosion damaged entity (id). */
+    public int lastExplosionEntityId = Integer.MAX_VALUE;
 
     // Data of the angle check.
     public LinkedList<Angle.AttackLocation> angleHits = new LinkedList<Angle.AttackLocation>();
 
-    // FastHeal
-    public long					   fastHealRefTime = 0;
+    // Data of the FastHeal check.
+    public long fastHealRefTime = 0;
     /** Buffer has to be initialized in constructor. */
-    public long					   fastHealBuffer = 0;
+    public long fastHealBuffer = 0;
+    /** Any kind of health regeneration. */
+    public long regainHealthTime = 0;
 
-    // Old god mode check.
-    public int                     godModeBuffer;
-    public int                     godModeLastAge;
-    public long                    godModeLastTime;
-
-    // New god mode check [in progress].
-    public int					   godModeHealthDecreaseTick 	= 0;
-    public double                  godModeHealth       			= 0.0;
-    public int                     lastDamageTick 				= 0;
-    public int                     lastNoDamageTicks 			= 0;
-    /** Accumulator. */
-    public int					   godModeAcc 					= 0;
+    // Data of the god mode check.
+    public int godModeHealthDecreaseTick = 0;
+    public double godModeHealth = 0.0;
+    public int lastDamageTick = 0;
+    public int lastNoDamageTicks = 0;
+    public int godModeAcc = 0;
+    public int godModeLastAge;
+    public long godModeLastTime;
+    public int godModeBuffer;
 
     // Data of the no swing check.
-    public int                     noSwingCount = 0;
-    public boolean                 exemptArmSwing = false;
+    public int noSwingCount = 0;
+    public boolean exemptArmSwing = false;
 
     // Data of the reach check.
-    public double                  reachMod = 1.0;
+    public double reachMod = 1.0;
 
     // Data of the SelfHit check.
     public ActionFrequency selfHitVL = new ActionFrequency(6, 5000);
 
-    // Data of the frequency check.
-    public final ActionFrequency   speedBuckets;
-    public int                     speedShortTermCount;
-    public int                     speedShortTermTick;
-
-    // Data of the ImpossibleHit check
-    public int lookFight = -1;
-
-    // TNT workaround: Allow ENTITY_ATTACK if these attributes match.
-    // Discussion at: https://github.com/NoCheatPlus/NoCheatPlus/pull/17 (@Iceee)
-    /** Tick the last explosion damage was dealt at. */
-    public int						lastExplosionDamageTick	= -1 ;
-    /** Last explosion damaged entity (id). */
-    public int						lastExplosionEntityId	= Integer.MAX_VALUE;
-
-
     public FightData(final FightConfig config){
-        speedBuckets = new ActionFrequency(config.speedBuckets, config.speedBucketDur);
         // Start with full fast-heal buffer.
         fastHealBuffer = config.fastHealBuffer; 
     }
@@ -141,12 +116,6 @@ public class FightData extends ACheckData implements IDataOnRemoveSubCheckData, 
                     angleVL = 0;
                     angleHits.clear();
                     break;
-                case FIGHT_SPEED:
-                    speedVL = 0;
-                    speedBuckets.clear(System.currentTimeMillis());
-                    speedShortTermCount = 0;
-                    speedShortTermTick = 0;
-                    break;
                 case FIGHT_FASTHEAL:
                     fastHealVL = 0;
                     fastHealRefTime = 0;
@@ -164,10 +133,6 @@ public class FightData extends ACheckData implements IDataOnRemoveSubCheckData, 
                     break;
                 case FIGHT_CRITICAL:
                     criticalVL = 0;
-                    break;
-                case FIGHT_IMPOSSIBLEHIT:
-                    impossibleHitVL = 0;
-                    lookFight = -1;
                     break;
                 case FIGHT_NOSWING:
                     noSwingVL = 0;
@@ -189,13 +154,11 @@ public class FightData extends ACheckData implements IDataOnRemoveSubCheckData, 
     }
 
     @Override
-    public boolean dataOnWorldChange(Player player, IPlayerData pData,
-            World previousWorld, World newWorld) {
+    public boolean dataOnWorldChange(Player player, IPlayerData pData, World previousWorld, World newWorld) {
         angleHits.clear();
         lastAttackedX = Double.MAX_VALUE;
         lastAttackTick = 0;
         lastWorld = "";
         return false;
     }
-
 }

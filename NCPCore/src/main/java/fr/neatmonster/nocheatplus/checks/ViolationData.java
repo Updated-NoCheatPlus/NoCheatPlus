@@ -26,7 +26,7 @@ import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.actions.types.GenericLogAction;
 import fr.neatmonster.nocheatplus.actions.types.PenaltyAction;
 import fr.neatmonster.nocheatplus.checks.access.IViolationInfo;
-import fr.neatmonster.nocheatplus.compat.BridgeHealth;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.logging.StreamID;
 import fr.neatmonster.nocheatplus.penalties.DefaultPenaltyList;
@@ -233,12 +233,6 @@ public class ViolationData implements IViolationInfo, ActionData {
             // On exceptions cancel events.
             willCancel = true;
         }
-    }
-
-    @Override
-    @Deprecated
-    public boolean hasCancel() {
-        return willCancel();
     }
 
     @Override

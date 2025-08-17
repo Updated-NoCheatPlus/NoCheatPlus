@@ -15,7 +15,6 @@
 package fr.neatmonster.nocheatplus.checks.generic.block;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.bukkit.Location;
@@ -33,10 +32,9 @@ import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.components.config.ICheckConfig;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.collision.CollideRayVsAABB;
-import fr.neatmonster.nocheatplus.utilities.collision.ICollideRayVsAABB;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.CollideRayVsAABB;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.ICollideRayVsAABB;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
-import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 
 /**

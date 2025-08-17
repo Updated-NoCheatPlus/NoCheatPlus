@@ -35,8 +35,6 @@ import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.blockinteract.BlockInteractData;
 import fr.neatmonster.nocheatplus.checks.blockinteract.BlockInteractListener;
-import fr.neatmonster.nocheatplus.checks.inventory.Items;
-import fr.neatmonster.nocheatplus.checks.moving.util.MovingUtil;
 import fr.neatmonster.nocheatplus.checks.net.FlyingQueueHandle;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
@@ -53,6 +51,7 @@ import fr.neatmonster.nocheatplus.players.PlayerFactoryArgument;
 import fr.neatmonster.nocheatplus.stats.Counters;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 import fr.neatmonster.nocheatplus.worlds.WorldFactoryArgument;
 
 /**
@@ -72,10 +71,10 @@ public class BlockBreakListener extends CheckListener {
     private final Frequency frequency = addCheck(new Frequency());
 
     /** The no swing check. */
-    private final NoSwing   noSwing   = addCheck(new NoSwing());
+    private final NoSwing noSwing = addCheck(new NoSwing());
 
     /** The reach check. */
-    private final Reach     reach     = addCheck(new Reach());
+    private final Reach reach = addCheck(new Reach());
 
     /** The wrong block check. */
     private final WrongBlock wrongBlock = addCheck(new WrongBlock());
@@ -83,7 +82,6 @@ public class BlockBreakListener extends CheckListener {
     private AlmostBoolean isInstaBreak = AlmostBoolean.NO;
 
     private final Counters counters = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstance(Counters.class);
-    private final int idCancelDIllegalItem = counters.registerKey("illegalitem");
 
     /** For temporary use: LocUtil.clone before passing deeply, call setWorld(null) after use. */
     private final Location useLoc = new Location(null, 0, 0, 0);
@@ -120,88 +118,69 @@ public class BlockBreakListener extends CheckListener {
                 );
     }
 
-    /**
-     * We listen to BlockBreak events for obvious reasons.
-     * 
-     * @param event
-     *            the event
-     */
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
     public void onBlockBreak(final BlockBreakEvent event) {
         final long now = System.currentTimeMillis();
         final Player player = event.getPlayer();
         final IPlayerData pData = DataManager.getPlayerData(player);
-
-        if (!pData.isCheckActive(CheckType.BLOCKBREAK, player)) return;
-
-        // Illegal enchantments hotfix check.
-        // TODO: Legacy / encapsulate fully there.
-        if (Items.checkIllegalEnchantmentsAllHands(player, pData)) {
-            event.setCancelled(true);
-            counters.addPrimaryThread(idCancelDIllegalItem, 1);
-        }
-        else if (MovingUtil.hasScheduledPlayerSetBack(player)) {
+        final BlockBreakConfig cc = pData.getGenericInstance(BlockBreakConfig.class);
+        final BlockBreakData data = pData.getGenericInstance(BlockBreakData.class);
+        final BlockInteractData bdata = pData.getGenericInstance(BlockInteractData.class);
+        boolean cancelled = false;
+    
+        if (MovingUtil.hasScheduledPlayerSetBack(player)) {
             event.setCancelled(true);
         }
-
         // Cancelled events only leads to resetting insta break.
         if (event.isCancelled()) {
             isInstaBreak = AlmostBoolean.NO;
             return;
         }
-
         // TODO: maybe invalidate instaBreak on some occasions.
-
-
         final Block block = event.getBlock();
-        boolean cancelled = false;
-        if (BlockProperties.isScaffolding(block.getType())) return;
-        // Do the actual checks, if still needed. It's a good idea to make computationally cheap checks first, because
-        // it may save us from doing the computationally expensive checks.
+        if (BlockProperties.isScaffolding(block.getType())) {
+            return;
+        }
 
-        final BlockBreakConfig cc = pData.getGenericInstance(BlockBreakConfig.class);
-        final BlockBreakData data = pData.getGenericInstance(BlockBreakData.class);
-        final BlockInteractData bdata = pData.getGenericInstance(BlockInteractData.class);
-        /*
-         * Re-check if this is a block interacted with before. With instantly
-         * broken blocks, this may be off by one orthogonally.
-         */
+        // Re-check if this is a block interacted with before. With instantly broken blocks, this may be off by one orthogonally.
         final int tick = TickTask.getTick();
         final boolean isInteractBlock = !bdata.getLastIsCancelled() && bdata.matchesLastBlock(tick, block);
-        int skippedRedundantChecks = 0;
-
-
         final GameMode gameMode = player.getGameMode();
+        int skippedRedundantChecks = 0;
+        // Did the player try to destroy a liquid block? (Not possible)
+        if (BlockProperties.isLiquid(block.getType()) && !BlockProperties.isWaterPlant(block.getType())
+            && !pData.hasPermission(Permissions.BLOCKBREAK_BREAK_LIQUID, player) 
+            && !NCPExemptionManager.isExempted(player, CheckType.BLOCKBREAK_BREAK)){
+            cancelled = true;
+        }
 
         // Has the player broken a block that was not damaged before?
-        final boolean wrongBlockEnabled = wrongBlock.isEnabled(player, pData);
-        if (wrongBlockEnabled && wrongBlock.check(player, block, cc, data, pData, isInstaBreak)) {
+        if (!cancelled && wrongBlock.isEnabled(player, pData) 
+            && wrongBlock.check(player, block, cc, data, pData, isInstaBreak)) {
             cancelled = true;
         }
 
         // Has the player broken more blocks per second than allowed?
         if (!cancelled && frequency.isEnabled(player, pData) 
-                && frequency.check(player, tick, cc, data, pData)) {
+            && frequency.check(player, tick, cc, data, pData)) {
             cancelled = true;
         }
 
-        // Has the player broken blocks faster than possible?
+        // Has the player broken single blocks faster than possible?
         if (!cancelled && gameMode != GameMode.CREATIVE
-                && fastBreak.isEnabled(player, pData) 
-                && fastBreak.check(player, block, isInstaBreak, cc, data, pData)) {
+            && fastBreak.isEnabled(player, pData) 
+            && fastBreak.check(player, block, isInstaBreak, cc, data, pData)) {
             cancelled = true;
         }
 
         // Did the arm of the player move before breaking this block?
         if (!cancelled && noSwing.isEnabled(player, pData) 
-                && noSwing.check(player, data, pData)) {
+            && noSwing.check(player, data, pData)) {
             cancelled = true;
         }
 
         final FlyingQueueHandle flyingHandle;
-        final boolean reachEnabled = reach.isEnabled(player, pData);
-        final boolean directionEnabled = direction.isEnabled(player, pData);
-        if (reachEnabled || directionEnabled) {
+        if (reach.isEnabled(player, pData) || direction.isEnabled(player, pData)) {
             flyingHandle = new FlyingQueueHandle(pData);
             final Location loc = player.getLocation(useLoc);
             final double eyeHeight = MovingUtil.getEyeHeight(player);
@@ -210,7 +189,7 @@ public class BlockBreakListener extends CheckListener {
                 if (isInteractBlock && bdata.isPassedCheck(CheckType.BLOCKINTERACT_REACH)) {
                     skippedRedundantChecks ++;
                 }
-                else if (reachEnabled && reach.check(player, eyeHeight, block, data, cc)) {
+                else if (reach.isEnabled(player, pData) && reach.check(player, eyeHeight, block, data, cc)) {
                     cancelled = true;
                 }
             }
@@ -219,26 +198,17 @@ public class BlockBreakListener extends CheckListener {
             // TODO: Skip if checks were run on this block (all sorts of hashes/conditions).
             if (!cancelled) {
                 if (isInteractBlock && (bdata.isPassedCheck(CheckType.BLOCKINTERACT_DIRECTION)
-                        || bdata.isPassedCheck(CheckType.BLOCKINTERACT_VISIBLE))) {
+                    || bdata.isPassedCheck(CheckType.BLOCKINTERACT_VISIBLE))) {
                     skippedRedundantChecks ++;
                 }
-                else if (directionEnabled && direction.check(player, loc, eyeHeight, block, null,
-                        flyingHandle, data, cc, pData)) {
+                else if (direction.isEnabled(player, pData) 
+                        && direction.check(player, loc, eyeHeight, block, null, flyingHandle, data, cc, pData)) {
                     cancelled = true;
                 }
             }
             useLoc.setWorld(null);
         }
-        else {
-            flyingHandle = null;
-        }
-
-        // Destroying liquid blocks.
-        if (!cancelled && BlockProperties.isLiquid(block.getType()) && !BlockProperties.isWaterPlant(block.getType())
-                && !pData.hasPermission(Permissions.BLOCKBREAK_BREAK_LIQUID, player) 
-                && !NCPExemptionManager.isExempted(player, CheckType.BLOCKBREAK_BREAK)){
-            cancelled = true;
-        }
+        else flyingHandle = null;
 
         // On cancel...
         if (cancelled) {
@@ -254,29 +224,20 @@ public class BlockBreakListener extends CheckListener {
             //        	data.clickedX = Integer.MAX_VALUE;
             // Debug log (only if not cancelled, to avoid spam).
             if (pData.isDebugActive(CheckType.BLOCKBREAK)) {
-                debugBlockBreakResult(player, block, skippedRedundantChecks, 
-                        flyingHandle, pData);
+                debugBlockBreakResult(player, block, skippedRedundantChecks, flyingHandle, pData);
             }
         }
-
-        if (isInstaBreak.decideOptimistically()) {
-            data.wasInstaBreak = now;
-        }
-        else {
-            data.wasInstaBreak = 0;
-        }
-
+        
         // Adjust data.
+        data.wasInstaBreak = isInstaBreak.decideOptimistically() ? now : 0;
         data.fastBreakBreakTime = now;
-        //        data.fastBreakfirstDamage = now;
         isInstaBreak = AlmostBoolean.NO;
     }
 
     private void debugBlockBreakResult(final Player player, final Block block, final int skippedRedundantChecks, 
-            final FlyingQueueHandle flyingHandle, final IPlayerData pData) {
+                                       final FlyingQueueHandle flyingHandle, final IPlayerData pData) {
         debug(player, "Block break(" + block.getType() + "): " + block.getX() + ", " + block.getY() + ", " + block.getZ());
-        BlockInteractListener.debugBlockVSBlockInteract(player, checkType, block, "onBlockBreak", 
-                Action.LEFT_CLICK_BLOCK, pData);
+        BlockInteractListener.debugBlockVSBlockInteract(player, checkType, block, "onBlockBreak", Action.LEFT_CLICK_BLOCK, pData);
         if (skippedRedundantChecks > 0) {
             debug(player, "Skipped redundant checks: " + skippedRedundantChecks);
         }
@@ -290,40 +251,20 @@ public class BlockBreakListener extends CheckListener {
         }
     }
 
-    /**
-     * We listen to PlayerAnimation events because it is (currently) equivalent to "player swings arm" and we want to
-     * check if they did that between block breaks.
-     * 
-     * @param event
-     *            the event
-     */
-    @EventHandler(
-            priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerAnimation(final PlayerAnimationEvent event) {
-        // Just set a flag to true when the arm was swung.
-        // debug(player, "Animation");
         final BlockBreakData data = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(BlockBreakData.class);
         data.noSwingCount = Math.max(data.noSwingCount - 1, 0);
     }
 
-    /**
-     * We listen to BlockInteract events to be (at least in many cases) able to distinguish between block break events
-     * that were triggered by players actually digging and events that were artificially created by plugins.
-     * 
-     * @param event
-     *            the event
-     */
-    @EventHandler(
-            ignoreCancelled = false, priority = EventPriority.LOWEST)
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
     public void onPlayerInteract(final PlayerInteractEvent event) {
+        // We listen to BlockInteract events to be (at least in many cases) able to distinguish between block break events
+        //  that were triggered by players actually digging and events that were artificially created by plugins.
         // debug(player, "Interact("+event.isCancelled()+"): " + event.getClickedBlock());
         // The following is to set the "first damage time" for a block.
-
         // Return if it is not left clicking a block. 
         // (Allows right click to be ignored.)
-
-        if (!DataManager.getPlayerData(event.getPlayer()).isCheckActive(CheckType.BLOCKBREAK, event.getPlayer())) return;
-
         isInstaBreak = AlmostBoolean.NO;
         if (event.getAction() != Action.LEFT_CLICK_BLOCK) {
             return;
@@ -349,18 +290,13 @@ public class BlockBreakListener extends CheckListener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.MONITOR)
     public void onBlockDamage(final BlockDamageEvent event) {
-
-        if (!DataManager.getPlayerData(event.getPlayer()).isCheckActive(CheckType.BLOCKBREAK, event.getPlayer())) return;
-
         if (!event.isCancelled() && event.getInstaBreak()) {
             // Keep MAYBE.
             if (isInstaBreak != AlmostBoolean.MAYBE) {
                 isInstaBreak = AlmostBoolean.YES;
             }
         }
-        else {
-            isInstaBreak = AlmostBoolean.NO;
-        }
+        else isInstaBreak = AlmostBoolean.NO;
         checkBlockDamage(event.getPlayer(), event.getBlock(), event);
     }
 
@@ -384,14 +320,16 @@ public class BlockBreakListener extends CheckListener {
         final int tick = TickTask.getTick();
         // Skip if already set to the same block without breaking within one tick difference.
         final ItemStack stack = Bridge1_9.getItemInMainHand(player);
-        final Material tool = stack == null ? null: stack.getType();
+        final Material tool = stack == null ? null : stack.getType();
 
         if (data.toolChanged(tool)) {
             // Update.
-        } else if (tick < data.clickedTick || now < data.fastBreakfirstDamage || now < data.fastBreakBreakTime) {
+        } 
+        else if (tick < data.clickedTick || now < data.fastBreakfirstDamage || now < data.fastBreakBreakTime) {
             // Time/tick ran backwards: Update.
             // Tick running backwards should not happen in the main thread unless for reload. A plugin could reset it (not intended).
-        } else if (data.fastBreakBreakTime < data.fastBreakfirstDamage && data.clickedX == block.getX() &&  data.clickedZ == block.getZ() &&  data.clickedY == block.getY()){
+        } 
+        else if (data.fastBreakBreakTime < data.fastBreakfirstDamage && data.clickedX == block.getX() &&  data.clickedZ == block.getZ() &&  data.clickedY == block.getY()){
             // Preserve first damage time.
             if (tick - data.clickedTick <= 1 ) {
                 return;
@@ -402,23 +340,17 @@ public class BlockBreakListener extends CheckListener {
         data.setClickedBlock(block, tick, now, tool);
         // Compare with BlockInteract data (debug first).
         if (pData.isDebugActive(CheckType.BLOCKBREAK)) {
-            BlockInteractListener.debugBlockVSBlockInteract(player, this.checkType, 
-                    block, "checkBlockDamage", Action.LEFT_CLICK_BLOCK, pData);
+            BlockInteractListener.debugBlockVSBlockInteract(player, this.checkType, block, "checkBlockDamage", Action.LEFT_CLICK_BLOCK, pData);
         }
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.MONITOR)
     public void onItemHeld(final PlayerItemHeldEvent event) {
-
-        if (!DataManager.getPlayerData(event.getPlayer()).isCheckActive(CheckType.BLOCKBREAK, event.getPlayer())) return;
-
         // Reset clicked block.
-        // TODO: Not for 1.5.2 and before?
         final Player player = event.getPlayer();
         final BlockBreakData data = DataManager.getPlayerData(player).getGenericInstance(BlockBreakData.class);
         if (data.toolChanged(player.getInventory().getItem(event.getNewSlot()))) {
             data.resetClickedBlock();
         }
     }
-
 }

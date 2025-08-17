@@ -58,21 +58,19 @@ import fr.neatmonster.nocheatplus.checks.blockinteract.BlockInteractListener;
 import fr.neatmonster.nocheatplus.checks.blockplace.BlockPlaceListener;
 import fr.neatmonster.nocheatplus.checks.chat.ChatConfig;
 import fr.neatmonster.nocheatplus.checks.chat.ChatListener;
-import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.CombinedListener;
 import fr.neatmonster.nocheatplus.checks.fight.FightListener;
 import fr.neatmonster.nocheatplus.checks.inventory.InventoryListener;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingListener;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.TraceEntryPool;
-import fr.neatmonster.nocheatplus.checks.moving.util.AuxMoving;
 import fr.neatmonster.nocheatplus.checks.net.NetConfig;
 import fr.neatmonster.nocheatplus.checks.net.NetStatic;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.command.NoCheatPlusCommand;
 import fr.neatmonster.nocheatplus.command.admin.VersionCommand;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.Folia;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeListener;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
@@ -142,6 +140,7 @@ import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.entity.PassengerUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.moving.AuxMoving;
 import fr.neatmonster.nocheatplus.worlds.IWorldData;
 import fr.neatmonster.nocheatplus.worlds.IWorldDataManager;
 import fr.neatmonster.nocheatplus.worlds.WorldDataManager;
@@ -152,37 +151,18 @@ import fr.neatmonster.nocheatplus.worlds.WorldDataManager;
 public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
 
     private static final Object lockableAPIsecret = new Object();
-    private static final ILockable lockableAPI = new BasicLockable(lockableAPIsecret, 
-            true, true, true);
-
-    private static final String MSG_NOTIFY_OFF = ChatColor.RED + "NCP: " + ChatColor.WHITE + "Notifications are turned " + ChatColor.RED + "OFF" + ChatColor.WHITE + ".";
-
-    // Static API
-
-    /**
-     * Convenience method.
-     * @deprecated Use fr.neatmonster.nocheatplus.utilities.NCPAPIProvider.getNoCheatPlusAPI() instead, this method might get removed.
-     * @return
-     */
-    public static NoCheatPlusAPI getAPI() {
-        return NCPAPIProvider.getNoCheatPlusAPI();
-    }
+    private static final ILockable lockableAPI = new BasicLockable(lockableAPIsecret, true, true, true);
+    private static final String MSG_NOTIFY_OFF = ChatColor.GRAY +""+ ChatColor.BOLD + "[" + ChatColor.RED + "NC+" + ChatColor.GRAY +""+ ChatColor.BOLD + "] " + ChatColor.GRAY;
 
     // Not static.
-
     /** Central logging access point. */
     private BukkitLogManager logManager = null; // Not final, but intended to stay, once set [change to init=syso?].
-
     /** Lower case player name to milliseconds point of time of release */
     private final Map<String, Long> denyLoginNames = Collections.synchronizedMap(new HashMap<String, Long>());
-
     /** Configuration problems (send to chat). */
     private String configProblemsChat = null;
     /** Configuration problems (send to log files). */
     private String configProblemsFile = null;
-
-    //    /** Is a new update available? */
-    //    private boolean              updateAvailable = false;
 
     // TODO: per world permission registry (!).
     private final PermissionRegistry permissionRegistry = new PermissionRegistry(10000);
@@ -655,8 +635,8 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         eventRegistry.clear();
 
         // Stop data-man task.
-        if (Folia.isTaskScheduled(dataManTaskId)) {
-            Folia.cancelTask(dataManTaskId);
+        if (SchedulerHelper.isTaskScheduled(dataManTaskId)) {
+            SchedulerHelper.cancelTask(dataManTaskId);
             dataManTaskId = null;
         }
 
@@ -671,8 +651,8 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         // (Keep the tick task locked!)
 
         // Stop consistency checking task.
-        if (Folia.isTaskScheduled(consistencyCheckerTaskId)) {
-            Folia.cancelTask(consistencyCheckerTaskId);
+        if (SchedulerHelper.isTaskScheduled(consistencyCheckerTaskId)) {
+            SchedulerHelper.cancelTask(consistencyCheckerTaskId);
             consistencyCheckerTaskId = null;
         }
 
@@ -680,7 +660,7 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         if (verbose) {
             logManager.info(Streams.INIT, "Stop all remaining tasks...");
         }
-        Folia.cancelTasks(this);
+        SchedulerHelper.cancelTasks(this);
 
         // DisableListener.onDisable (includes DataManager cleanup.)
         if (verbose) {
@@ -1027,7 +1007,7 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         TickTask.start(this);
 
         // dataMan expiration checking.
-        this.dataManTaskId = Folia.runSyncRepatingTask(this, (arg) -> pDataMan.checkExpiration(), 1207, 1207);
+        this.dataManTaskId = SchedulerHelper.runSyncRepeatingTask(this, (arg) -> pDataMan.checkExpiration(), 1207, 1207);
 
         // Ensure dataMan is first on disableListeners.
         // TODO: Why first ?
@@ -1069,10 +1049,10 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         // TODO: re-map ExemptionManager !
         // TODO: Disable all checks for these players for one tick ?
         // TODO: Prepare check data for players [problem: permissions]?
-        Folia.runSyncTask(this, (arg) -> new PostEnableTask(onlinePlayers).run());
+        SchedulerHelper.runSyncTask(this, (arg) -> new PostEnableTask(onlinePlayers).run());
 
         // Mid-term cleanup (seconds range).
-        Folia.runSyncRepatingTask(this, (arg) -> midTermCleanup(), 83, 83);
+        SchedulerHelper.runSyncRepeatingTask(this, (arg) -> midTermCleanup(), 83, 83);
 
         // Set StaticLog to more efficient output.
         StaticLog.setStreamID(Streams.STATUS);
@@ -1247,7 +1227,7 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         BlockProperties.init(mcAccess, ConfigManager.getWorldConfigProvider());
         BlockProperties.applyConfig(config, ConfPaths.COMPATIBILITY_BLOCKS);
         // Schedule dumping the blocks properties (to let other plugins override).
-        Folia.runSyncTask(this, (arg) -> {
+        SchedulerHelper.runSyncTask(this, (arg) -> {
             // Debug information about unknown blocks.
             // (Probably removed later.)
             ConfigFile cf = ConfigManager.getConfigFile();
@@ -1372,8 +1352,8 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
     }
 
     private void scheduleConsistencyCheckers() {
-        if (Folia.isTaskScheduled(consistencyCheckerTaskId)) {
-            Folia.cancelTask(consistencyCheckerTaskId);
+        if (SchedulerHelper.isTaskScheduled(consistencyCheckerTaskId)) {
+            SchedulerHelper.cancelTask(consistencyCheckerTaskId);
         }
         ConfigFile config = ConfigManager.getConfigFile();
         if (!config.getBoolean(ConfPaths.DATA_CONSISTENCYCHECKS_CHECK, true)) {
@@ -1381,7 +1361,7 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
         }
         // Schedule task in seconds.
         final long delay = 20L * config.getInt(ConfPaths.DATA_CONSISTENCYCHECKS_INTERVAL, 1, 3600, 10);
-        consistencyCheckerTaskId = Folia.runSyncRepatingTask(this, (arg) -> runConsistencyChecks(), delay, delay);
+        consistencyCheckerTaskId = SchedulerHelper.runSyncRepeatingTask(this, (arg) -> runConsistencyChecks(), delay, delay);
     }
 
     /**
@@ -1426,7 +1406,7 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
 
         // If not finished, schedule further checks.
         if (consistencyCheckerIndex < consistencyCheckers.size()) {
-            Folia.runSyncTask(this, (arg) -> runConsistencyChecks());
+            SchedulerHelper.runSyncTask(this, (arg) -> runConsistencyChecks());
             if (config.getBoolean(ConfPaths.LOGGING_EXTENDED_STATUS)) {
                 logManager.info(Streams.STATUS, "Interrupted consistency checking until next tick.");
             }

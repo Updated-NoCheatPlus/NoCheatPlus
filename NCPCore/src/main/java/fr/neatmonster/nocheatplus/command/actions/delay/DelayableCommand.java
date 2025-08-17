@@ -21,9 +21,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import fr.neatmonster.nocheatplus.command.BaseCommand;
-import fr.neatmonster.nocheatplus.compat.Folia;
-import fr.neatmonster.nocheatplus.permissions.RegisteredPermission;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
+import fr.neatmonster.nocheatplus.permissions.RegisteredPermission;
 
 /**
  * A command that allows to specify a delay for running.
@@ -175,9 +175,9 @@ public abstract class DelayableCommand extends BaseCommand {
         if (delay < 0) 
             runnable.run();
         else if (delay == 0)
-            Folia.runSyncTask(access, (arg) -> runnable.run());
+            SchedulerHelper.runSyncTask(access, (arg) -> runnable.run());
         else 
-            Folia.runSyncDelayedTask(access, (arg) -> runnable.run(), delay);
+            SchedulerHelper.runSyncDelayedTask(access, (arg) -> runnable.run(), delay);
     }
 
     /* (non-Javadoc)

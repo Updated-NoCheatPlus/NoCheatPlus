@@ -23,14 +23,14 @@ import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 public class ChatData extends AsyncCheckData {  
 
     // Violation levels.
-    public double  captchaVL;
-    public double  commandsVL;
-    public double  textVL;
-    public double  relogVL;
+    public double captchaVL;
+    public double commandsVL;
+    public double textVL;
+    public double relogVL;
 
     // Captcha data.
-    public int     captchTries;
-    public String  captchaGenerated;
+    public int captchTries;
+    public String captchaGenerated;
     public boolean captchaStarted;
 
     /// Commands data.
@@ -42,20 +42,18 @@ public class ChatData extends AsyncCheckData {
     public final ActionFrequency chatFrequency = new ActionFrequency(10, 3000);
     public final ActionFrequency chatShortTermFrequency = new ActionFrequency(6, 500);
 
-
-    // Data of the no pwnage check.     
-    public String  chatLastMessage;
-    public long    chatLastTime;
-    public long    chatWarningTime;
-
-
-
-    public int     relogWarnings;
-    public long    relogWarningTime;
+    // Misc. Data of the chat checks.     
+    public String chatLastMessage;
+    public long chatLastTime;
+    public long chatWarningTime;
+    
+    // Relog check
+    public int relogWarnings;
+    public long relogWarningTime;
 
 
     /**
-     * Clear the data of the no pwnage check.
+     * Clear the data of the chat checks.
      */
     public synchronized void reset() {
         captchTries = relogWarnings = 0;
@@ -71,5 +69,4 @@ public class ChatData extends AsyncCheckData {
         commandsShortTermTick = 0;
         commandsWeights.clear(now);
     }
-
 }

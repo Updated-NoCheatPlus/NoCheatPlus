@@ -23,10 +23,11 @@ import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.StringUtil;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
 /**
- * The Reach check will find out if a player interacts with something that's too far away.
+ * The Reach check will find out if a player breaks a block that's too far away.
  */
 public class Reach extends Check {
 
@@ -50,44 +51,33 @@ public class Reach extends Check {
      * Checks a player.
      * 
      * @param player
-     *            the player
-     * @param cc 
-     * @param location
-     *            the location
+     * @param eyeHeight 
+     * @param block
+     * @param data
+     * @param cc
      * @return true, if successful
      */
-    public boolean check(final Player player, final double eyeHeight, final Block block, 
-            final BlockBreakData data, final BlockBreakConfig cc) {
-
+    public boolean check(final Player player, final double eyeHeight, final Block block, final BlockBreakData data, final BlockBreakConfig cc) {
+    	// TODO: Ray tracing-based?
         boolean cancel = false;
-
-        final double distanceLimit = player.getGameMode() == GameMode.CREATIVE ? CREATIVE_DISTANCE : SURVIVAL_DISTANCE;
-
-        // Distance is calculated from eye location to center of targeted block. If the player is further away from their
-        // target than allowed, the difference will be assigned to "distance".
+        final double distanceLimit = player.getGameMode() == GameMode.CREATIVE ? CREATIVE_DISTANCE : SURVIVAL_DISTANCE; 
         final Location loc = player.getLocation(useLoc);
         loc.setY(loc.getY() + eyeHeight);
+         // Distance is calculated from eye location to center of targeted block.
         final double distance = TrigUtil.distance(loc, block) - distanceLimit;
         useLoc.setWorld(null);
 
-        if (distance > 0) {
+        if (distance > distanceLimit) {
             // They failed, increment violation level.
-            data.reachVL += distance;
-
-            // Remember how much further than allowed he tried to reach for logging, if necessary.
-            data.reachDistance = distance;
-
+            data.reachVL += distance - distanceLimit;
             // Execute whatever actions are associated with this check and the violation level and find out if we should
             // cancel the event.
             final ViolationData vd = new ViolationData(this, player, data.reachVL, distance, cc.reachActions);
-            vd.setParameter(ParameterName.REACH_DISTANCE, String.valueOf(Math.round(data.reachDistance)));
+            vd.setParameter(ParameterName.REACH_DISTANCE, StringUtil.fdec3.format(distance));
             cancel = executeActions(vd).willCancel();
-        } else{
-            // Player passed the check, reward them.
-            data.reachVL *= 0.9D;
-        }
-
+        } 
+        // Player passed the check, reward them.
+        else data.reachVL *= 0.9D;
         return cancel;
     }
-
 }

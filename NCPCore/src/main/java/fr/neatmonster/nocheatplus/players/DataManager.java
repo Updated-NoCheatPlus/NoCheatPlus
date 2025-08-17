@@ -17,10 +17,12 @@ package fr.neatmonster.nocheatplus.players;
 import java.util.Map;
 import java.util.UUID;
 
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.utilities.entity.PassengerUtil;
 
 
 /**
@@ -38,7 +40,6 @@ public class DataManager {
      * API... NCPStatic or so will be the "direct" static API, if at all.
      */
     // TODO: Should/can some data structures share the same lock?
-
     static PlayerDataManager instance = null;
 
     /**
@@ -52,10 +53,10 @@ public class DataManager {
     /**
      * Used by checks to register the history for external access.<br>
      * NOTE: This method is not really meant ot be used from outside NCP.
+     * Do note that this method was meant to be deprecated due to a new implementation pending by the original developer.
      * 
      * @param type
      * @param histories
-     * @deprecated New implementation pending.
      */
     public static void registerExecutionHistory(CheckType type, Map<String, ExecutionHistory> histories) {
         instance.registerExecutionHistory(type, histories);
@@ -63,12 +64,12 @@ public class DataManager {
 
     /**
      * Access method to the the execution history for check type for a player.
+     * Do note that this method was meant to be deprecated due to a new implementation pending by the original developer.
      * 
      * @param type
      * @param playerName
      *            Exact case for player name.
      * @return null if not present.
-     * @deprecated New implementation pending.
      */
     public static ExecutionHistory getExecutionHistory(final CheckType type, final String playerName) {
         return instance.getExecutionHistory(type, playerName);
@@ -76,11 +77,11 @@ public class DataManager {
 
     /**
      * Remove the execution history for a player for the given check type.
+     * Do note that this method was meant to be deprecated due to a new implementation pending by the original developer.
      * 
      * @param type
      * @param playerName
      * @return
-     * @deprecated New implementation pending.
      */
     public static boolean removeExecutionHistory(final CheckType type, final String playerName) {
         return instance.removeExecutionHistory(type, playerName);
@@ -202,6 +203,21 @@ public class DataManager {
      */
     public static IPlayerData getPlayerData(final Player player) {
         return instance.getPlayerData(player, true);
+    }
+    
+    /**
+     * Wrapper around {@link #getPlayerData(Player)}.<br>
+     * If the given entity is not a player, data will be retrieved for the first player passenger 
+     * 
+     * @param entity
+     * @param passengerUtil Utilities for passenger handling 
+     * @return
+     */
+    public static IPlayerData getPlayerDataForEntity(final Entity entity, PassengerUtil passengerUtil) {
+        if (entity instanceof Player) {
+            return getPlayerData((Player) entity);
+        }
+        return getPlayerData(passengerUtil.getFirstPlayerPassenger(entity));
     }
 
     /**

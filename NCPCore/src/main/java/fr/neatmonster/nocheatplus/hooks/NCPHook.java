@@ -22,7 +22,7 @@ import fr.neatmonster.nocheatplus.checks.access.IViolationInfo;
 /**
  * Compatibility hooks have to implement this.<br>
  * NOTES: 
- * Some checks run asynchronously, the hooks using these also have to support processing in an extra thread, check with APIUtils.needsSynchronization(CheckType).
+ * Some checks run asynchronously, the hooks using these also have to support processing in an extra thread, check with fr.neatmonster.utilities.CheckTypeUtil.needsSynchronization(CheckType).
  * Hooks that can be called asynchronously must not register new hooks that might run asynchronously during processing (...).
  * 
  * @author asofold

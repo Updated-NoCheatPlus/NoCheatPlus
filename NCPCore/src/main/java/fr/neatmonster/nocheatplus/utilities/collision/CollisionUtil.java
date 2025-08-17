@@ -15,34 +15,84 @@
 package fr.neatmonster.nocheatplus.utilities.collision;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
-import fr.neatmonster.nocheatplus.checks.moving.util.MovingUtil;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
+import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker.Direction;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.versions.GenericVersion;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.InteractAxisTracing;
 import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
+import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.moving.Magic;
+import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
+
 
 /**
  * Collision related static utility.
- * 
+ *
  * @author asofold
  *
  */
 public class CollisionUtil {
-
+    
+    /** Margin of error used by Minecraft/NMS within collision-specific contexts */
+    public static final double COLLISION_EPSILON = 1.0E-7;
+    private final static boolean ServerIsAtLeast1_8 = ServerVersion.isAtLeast("1.8");
     /** Temporary use, setWorld(null) once finished. */
     private static final Location useLoc = new Location(null, 0, 0, 0);
+
+
+    /**
+     * A function taken from NMS (LocalPlayer#aiStep()) to judge if the horizontal collision is to be considered as negligible. <br>
+     * Used to determine whether the sprinting status needs to be reset on colliding with a wall (if this returns true, sprinting won't be reset then).
+     *
+     * @param collisionVector
+     * @param to The location where the player has moved to. You must specifically use the "to" location, as it contains the most recent rotation. Using the "from" location would mean using the last rotation of the player.
+     * @param strafeImpulse The player's sideways input force, represented as a double (see {@link InputDirection})
+     * @param forwardImpulse The player's forward input force, represented as a double (see {@link InputDirection})
+     * @return True, if the collision's angle is less than 0.13962633907794952.
+     */
+    public static boolean isHorizontalCollisionNegligible(Vector collisionVector, final PlayerLocation to, double strafeImpulse, double forwardImpulse) {
+        float radYaw = to.getYaw() * TrigUtil.toRadians;
+        double sinYaw = (double)TrigUtil.sin(radYaw);
+        double cosYaw = (double)TrigUtil.cos(radYaw);
+        // NOTE: xxa = strafe, zza = forward
+        double var7 = (double)strafeImpulse * cosYaw - (double)forwardImpulse * sinYaw;
+        double var9 = (double)forwardImpulse * cosYaw + (double)strafeImpulse * sinYaw;
+        double var11 = MathUtil.square(var7) + MathUtil.square(var9);
+        double var13 = MathUtil.square(collisionVector.getX()) + MathUtil.square(collisionVector.getZ());
+        if (!(var11 < 9.999999747378752E-6D) && !(var13 < 9.999999747378752E-6D)) {
+            double var15 = var7 * collisionVector.getX() + var9 * collisionVector.getZ();
+            double collisionAngle = Math.acos(var15 / Math.sqrt(var11 * var13));
+            return collisionAngle < 0.13962633907794952D; // MINOR_COLLISION_ANGLE_THRESHOLD_RADIAN
+        }
+        return false;
+    }
 
     /**
      * Check if a player looks at a target of a specific size, with a specific
@@ -150,16 +200,16 @@ public class CollisionUtil {
      *            the precision
      * @return Some offset.
      */
-    public static double directionCheck(final double sourceX, final double sourceY, final double sourceZ, final double dirX, final double dirY, final double dirZ, final double targetX, final double targetY, final double targetZ, final double targetWidth, final double targetHeight, final double precision)
-    {
-
-        //        // TODO: Here we have 0.x vs. 2.x, sometimes !
-        //        NCPAPIProvider.getNoCheatPlusAPI().getLogManager().debug(Streams.TRACE_FILE, "COMBINED: " + combinedDirectionCheck(sourceX, sourceY, sourceZ, dirX, dirY, dirZ, targetX, targetY, targetZ, targetWidth, targetHeight, precision, 60));
-
+    public static double directionCheck(final double sourceX, final double sourceY, final double sourceZ, final double dirX,
+                                        final double dirY, final double dirZ, final double targetX, final double targetY, final double targetZ,
+                                        final double targetWidth, final double targetHeight, final double precision) {
+        //      // TODO: Here we have 0.x vs. 2.x, sometimes !
+        //      NCPAPIProvider.getNoCheatPlusAPI().getLogManager().debug(Streams.TRACE_FILE, "COMBINED: " + combinedDirectionCheck(sourceX, sourceY, sourceZ, dirX, dirY, dirZ, targetX, targetY, targetZ, targetWidth, targetHeight, precision, 60));
         // TODO: rework / standardize.
-
         double dirLength = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-        if (dirLength == 0.0) dirLength = 1.0; // ...
+        if (dirLength == 0.0) {
+            dirLength = 1.0; // ...
+        }
 
         final double dX = targetX - sourceX;
         final double dY = targetY - sourceY;
@@ -172,13 +222,12 @@ public class CollisionUtil {
         final double zPrediction = targetDist * dirZ / dirLength;
 
         double off = 0.0D;
-
         off += Math.max(Math.abs(dX - xPrediction) - (targetWidth / 2 + precision), 0.0D);
         off += Math.max(Math.abs(dZ - zPrediction) - (targetWidth / 2 + precision), 0.0D);
         off += Math.max(Math.abs(dY - yPrediction) - (targetHeight / 2 + precision), 0.0D);
-
-        if (off > 1) off = Math.sqrt(off);
-
+        if (off > 1) {
+            off = Math.sqrt(off);
+        }
         return off;
     }
 
@@ -266,8 +315,9 @@ public class CollisionUtil {
      *            Precision in grad.
      * @return the double
      */
-    public static double combinedDirectionCheck(final double sourceX, final double sourceY, final double sourceZ, final double dirX, final double dirY, final double dirZ, final double targetX, final double targetY, final double targetZ, final double targetWidth, final double targetHeight, final double blockPrecision, final double anglePrecision, final boolean isPlayer)
-    {
+    public static double combinedDirectionCheck(final double sourceX, final double sourceY, final double sourceZ, final double dirX, final double dirY, final double dirZ, final double targetX,
+                                                final double targetY, final double targetZ, final double targetWidth, final double targetHeight, final double blockPrecision,
+                                                final double anglePrecision, final boolean isPlayer) {
         double dirLength = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
         if (dirLength == 0.0) dirLength = 1.0; // ...
 
@@ -314,34 +364,11 @@ public class CollisionUtil {
         final double db = (double) block;
         return db + 1.0 > min && db < max;
     }
-
-    /**
-     * Test if a point is inside an AABB, including the edges.
-     * 
-     * @param x
-     *            Position of the point.
-     * @param y
-     * @param z
-     * @param minX
-     *            Minimum coordinates of the AABB.
-     * @param minY
-     * @param minZ
-     * @param maxX
-     *            Maximum coordinates of the AABB.
-     * @param maxY
-     * @param maxZ
-     * @return
-     */
-    public static boolean isInsideAABBIncludeEdges(final double x, final double y, final double z,
-            final double minX, final double minY, final double minZ,
-            final double maxX, final double maxY, final double maxZ) {
-        return !(x < minX || x > maxX || z < minZ || z > maxZ || y < minY || y > maxY);
-    }
-
+    
     /**
      * Get the earliest time a collision with the min-max coordinates can occur,
      * in multiples of dir, including edges.
-     * 
+     *
      * @param pos
      * @param dir
      * @param minPos
@@ -349,8 +376,7 @@ public class CollisionUtil {
      * @return The multiple of dir to hit the min-max coordinates, or
      *         Double.POSITIVE_INFINITY if not possible to hit.
      */
-    public static double getMinTimeIncludeEdges(final double pos, final double dir, 
-            final double minPos, final double maxPos) {
+    public static double getMinTimeIncludeEdges(final double pos, final double dir, final double minPos, final double maxPos) {
         if (pos >= minPos && pos <= maxPos) {
             return 0.0;
         }
@@ -368,7 +394,7 @@ public class CollisionUtil {
 
     /**
      * Get the maximum time for which the min-max coordinates still are hit.
-     * 
+     *
      * @param pos
      * @param dir
      * @param minPos
@@ -382,8 +408,7 @@ public class CollisionUtil {
      *         Double.POSITIVE_INFINITY may be returned, if coordinates are
      *         colliding always.
      */
-    public static double getMaxTimeIncludeEdges(final double pos, final double dir, 
-            final double minPos, final double maxPos, final double minTime) {
+    public static double getMaxTimeIncludeEdges(final double pos, final double dir, final double minPos, final double maxPos, final double minTime) {
         if (Double.isInfinite(minTime)) {
             return Double.NaN;
         }
@@ -402,7 +427,7 @@ public class CollisionUtil {
     /**
      * Get the maximum (closest) distance from the given position towards the
      * AABB regarding axes independently.
-     * 
+     *
      * @param x
      *            Position of the point.
      * @param y
@@ -418,15 +443,15 @@ public class CollisionUtil {
      * @return
      */
     public static double getMaxAxisDistAABB(final double x, final double y, final double z,
-            final double minX, final double minY, final double minZ,
-            final double maxX, final double maxY, final double maxZ) {
+                                            final double minX, final double minY, final double minZ,
+                                            final double maxX, final double maxY, final double maxZ) {
         return Math.max(axisDistance(x,  minX, maxX), Math.max(axisDistance(y, minY, maxY), axisDistance(z, minZ, maxZ)));
     }
 
     /**
      * Get the maximum (closest) 'Manhattan' distance from the given position
      * towards the AABB regarding axes independently.
-     * 
+     *
      * @param x
      *            Position of the point.
      * @param y
@@ -442,15 +467,15 @@ public class CollisionUtil {
      * @return
      */
     public static double getManhattanDistAABB(final double x, final double y, final double z,
-            final double minX, final double minY, final double minZ,
-            final double maxX, final double maxY, final double maxZ) {
+                                              final double minX, final double minY, final double minZ,
+                                              final double maxX, final double maxY, final double maxZ) {
         return axisDistance(x,  minX, maxX)+ axisDistance(y, minY, maxY) + axisDistance(z, minZ, maxZ);
     }
 
     /**
      * Get the squared (closest) distance from the given position towards the
      * AABB regarding axes independently.
-     * 
+     *
      * @param x
      *            Position of the point.
      * @param y
@@ -465,9 +490,8 @@ public class CollisionUtil {
      * @param maxZ
      * @return
      */
-    public static double getSquaredDistAABB(final double x, final double y, final double z,
-            final double minX, final double minY, final double minZ,
-            final double maxX, final double maxY, final double maxZ) {
+    public static double getSquaredDistAABB(final double x, final double y, final double z, final double minX, final double minY, final double minZ,
+                                            final double maxX, final double maxY, final double maxZ) {
         final double dX = axisDistance(x,  minX, maxX);
         final double dY = axisDistance(y, minY, maxY);
         final double dZ = axisDistance(z, minZ, maxZ);
@@ -477,7 +501,7 @@ public class CollisionUtil {
     /**
      * Get the distance towards a min-max interval (inside and edge count as 0.0
      * distance).
-     * 
+     *
      * @param pos
      * @param minPos
      * @param maxPos
@@ -487,73 +511,159 @@ public class CollisionUtil {
         return pos < minPos ? Math.abs(pos - minPos) : (pos > maxPos ? Math.abs(pos - maxPos) : 0.0);
     }
 
-    public static boolean isCollidingWithEntities(final Player p, final boolean onlyLivingEntities) {
-        double xzRange = 0.15;
-        double yRange = onlyLivingEntities ? 0.2 : 0.15;
-
-        // Directly iterate over entities and check conditions to avoid unnecessary collection creation.
-        for (Entity entity : p.getWorld().getNearbyEntities(p.getLocation(), xzRange, yRange, xzRange)) {
-            if (!onlyLivingEntities || entity instanceof LivingEntity) {
-                return true; // Collision detected, return early
-            }
-        }
-
-        return false; // No collision detected
-    }
-
     /**
-     * Simple check to see if neighbor block is nearly same direction with block trying to interact.<br>
-     * For example if block interacting below or equal eye block, neighbor must be below or equal eye block.<br>
-     * 
-     * @param neighbor coord to check
-     * @param block coord that trying to interact
-     * @param eyeBlock
+     * Test if the player is colliding with entities. <br>
+     *
+     * @param shouldFilter Whether the check should filter out entities that cannot push players (boats, armor stands, dead and invalid entities)
+     * @return True, if the player is colliding with entities, within the given margins.
+     */
+    public static boolean isCollidingWithEntities(final Player p, double xMargin, double yMargin, double zMargin, final boolean shouldFilter) {
+        if (shouldFilter) {
+            List<Entity> entities = p.getNearbyEntities(xMargin, yMargin, zMargin);
+            // Minecarts, boats, armor stands, dead entities cannot push the player
+            entities.removeIf(e -> e.getType() == EntityType.MINECART || e.getType() == EntityType.ARMOR_STAND || !e.isValid() || MaterialUtil.isBoat(e.getType()) || !(e instanceof LivingEntity)); //|| !((LivingEntity) e).isCollidable() || ((LivingEntity) e).isSleeping());
+            return !entities.isEmpty();
+        }
+        return !p.getNearbyEntities(xMargin, yMargin, zMargin).isEmpty();
+    }
+    
+    /**
+     * Test if the given entity is capable of pushing other entities that may collide with its bounding box.
+     *
+     * @return True if the entity is collidable, false otherwise (e.g., it's a minecart, armor stand, boat; is dead, invalid, or not living; or is not collidable).
+     */
+    public static boolean exertsPushingForce(final Entity e) {
+        if (!GenericVersion.isAtLeast(e, "1.9")) {
+            // Entity push was added in 1.9
+            return false;
+        }
+        if (!e.isValid()) {
+            // No need to proceed further if the entity is not valid.
+            return false;
+        }
+        // Players always push other players, unless there are teams in place that say otherwise.
+        /* We use Teams+Scoreboard API instead of {@link LivingEntity#isCollidable()}, as suggested by its javadoc */
+        if (e instanceof Player) {
+            if (((Player) e).isSleeping() || !((Player) e).isOnline()) {
+                // From EntityLiving.java -> push() @Override.
+                return false;
+            }
+            if (((Player) e).getGameMode() == BridgeMisc.GAME_MODE_SPECTATOR) {
+                return false;
+            }
+            // Get the player's assigned scoreboard
+            Scoreboard playerScoreboard = ((Player)e).getScoreboard();
+            Team team = playerScoreboard.getEntryTeam(((Player)e).getName());
+            // If the player has no team on their assigned scoreboard, check the main one.
+            if (team == null) {
+                Scoreboard mainScoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+                team = mainScoreboard.getEntryTeam(((Player)e).getName());
+            }
+            // Check the team's collision rule if a team is found
+            if (team != null) {
+                Team.OptionStatus collisionRule = team.getOption(Team.Option.COLLISION_RULE);
+                // Push is enabled for all players. Or the other team can push this player's team.
+                return collisionRule == Team.OptionStatus.ALWAYS || collisionRule == Team.OptionStatus.FOR_OTHER_TEAMS;
+            }
+            // Default to true if no team is found or no rule applies
+            return true;
+        }
+        // Non-player entities: boats, minecart and armor stand are not able to push players or other entities.
+        return
+                (e instanceof LivingEntity)
+                && ((LivingEntity) e).isCollidable() //&& !((LivingEntity) e).getCollidableExemptions().contains(e))
+                && e.getType() != EntityType.MINECART
+                && e.getType() != EntityType.ARMOR_STAND
+                && !MaterialUtil.isBoat(e.getType());
+    }
+    
+    /**
+     * Collects all collidable entities within the AABB of the given relEntity that can exert a pushing force to it. 
+     *
+     * @param relEntity The entity around which other entities are to be collected.
+     * @return A list of entities' locations that intersects with the relEntity's box.
+     */
+    public static List<Location> getCollidingEntitiesLocations(Entity relEntity) {
+        List<Location> collidingEntities = new ArrayList<>();
+        // NOTE: CraftWorld/CraftEntity.java -> entity.level().getEntities(entity, entity.getBoundingBox().inflate(x, y, z), Predicates.alwaysTrue());
+        // The method actually employs the getEntity() one found in World.java
+        // double[] relAABB = AxisAlignedBBUtils.createBoundingBoxFor(relEntity);
+        for (Entity collidingEntity : relEntity.getNearbyEntities(Magic.PREDICTION_EPSILON,0.0, Magic.PREDICTION_EPSILON)) {
+            if (!exertsPushingForce(collidingEntity)) {
+                // Cannot be pushed by this entity
+                continue;
+            }
+            /*double[] collidingAABB = AxisAlignedBBUtils.createBoundingBoxFor(collidingEntity);
+            if (!AxisAlignedBBUtils.isIntersected(relAABB, collidingAABB)) {
+                // Doesn't actually collide with the entity.
+                continue;
+            }*/
+            // Otherwise, do add.
+            collidingEntities.add(collidingEntity.getLocation());
+        }
+        return collidingEntities;
+    }
+    
+    /**
+     * Ensure that the neighboring block is in the correct direction relative to the block being interacted with and the player’s eye position.<br>
+     * Currently, this is rather meant for blocks colliding with a bounding box<br>
+     *
+     * @param neighbor The coordinate of the neighboring block (usually Y). 
+     * @param block The coordinate of the block being interacted with (usually Y).
+     * @param eyeBlock The coordinate of the player’s eye position to block coordinate (usually Y).
      * @return true if correct.
      */
     public static boolean correctDir(int neighbor, int block, int eyeBlock) {
+        // The difference between the eye position and the block being interacted with. Determines the relative direction.
         int d = eyeBlock - block;
+        // (eyeBlock is above block)
         if (d > 0) {
-            if (neighbor > eyeBlock) return false;
-        } else if (d < 0) {
-            if (neighbor < eyeBlock) return false;
-        } else {
-            if (neighbor < eyeBlock || neighbor > eyeBlock) return false;
+            if (neighbor > eyeBlock) {
+                // Neighbour is above eyeBlock 
+                return false;
+            }
+        }
+        else if (d < 0) { // (eyeBlock is below block)
+            if (neighbor < eyeBlock) {
+                // Neighbour is below eyeBlock
+                return false;
+            }
+        }
+        else {
+            // (eyeBlock is at the same level as block)
+            if (neighbor < eyeBlock || neighbor > eyeBlock) {
+                // Neighbor is at the same level as eyeBlock.
+                return false;
+            }
         }
         return true;
     }
 
     /**
-     * Simple check to see if neighnor block is nearly same direction with block trying to interact.<br>
-     * If the check don't satisfied but the coord to check is still within min and max, check still return true.<br>
-     * Design for blocks currently colliding with a bounding box<br>
+     * Ensure that the neighboring block is either within the min and max boundaries, 
+     * or in the correct direction relative to the block being interacted with and the player’s eye position.<br>
+     * Currently, this is rather meant for blocks colliding with a bounding box<br>
      * 
-     * @param neighbor coord to check
-     * @param block coord that trying to interact
-     * @param eyeBlock
-     * @param min Min value of one axis of bounding box
-     * @param max Max value of one axis of bounding box
-     * @return true if correct.
+     * @param neighbor The coordinate of the neighboring block (usually Y). 
+     * @param block The coordinate of the block being interacted with (usually Y).
+     * @param eyeBlock The coordinate of the player’s eye position to block coordinate (usually Y).
+     * @param min The minimum value of one axis of the bounding box (minXYZ, usually Y).
+     * @param max The maximum value of one axis of the bounding box (maxXYZ, usually Y).
+     * @return True, if correct.
      */
     public static boolean correctDir(int neighbor, int block, int eyeBlock, int min, int max) {
-        if (neighbor >= min && neighbor <= max) return true;
-        int d = eyeBlock - block;
-        if (d > 0) {
-            if (neighbor > eyeBlock) return false;
-        } else if (d < 0) {
-            if (neighbor < eyeBlock) return false;
-        } else {
-            if (neighbor < eyeBlock || neighbor > eyeBlock) return false;
+        if (MathUtil.inRange(min, neighbor, max)) {
+            return true;
         }
-        return true;
+        return correctDir(neighbor, block, eyeBlock);
     }
 
     /**
-     * Test if from last block, the next block can pass through
-     * 
+     *
      * @param rayTracing
      * @param blockCache
      * @param lastBlock The last block
-     * @param x The next block
+     * @param x The next block's coordinates (current).
      * @param y
      * @param z
      * @param direction Approximate normalized direction to block
@@ -563,58 +673,107 @@ public class CollisionUtil {
      * @param eyeHeight
      * @param sCollidingBox Start of bounding box(min). Can be null
      * @param eCollidingBox End of bounding box(max). Can be null
-     * @param mightEdgeInteraction 
+     * @param mightEdgeInteraction
      * @param axisData Auxiliary stuff for specific usage can be null
+     *
      * @return true if can.
      */
-    public static boolean canPassThrough(InteractAxisTracing rayTracing, BlockCache blockCache, BlockCoord lastBlock, int x, int y, int z, Vector direction, double eyeX, double eyeY, double eyeZ, double eyeHeight, BlockCoord sCollidingBox, BlockCoord eCollidingBox, boolean mightEdgeInteraction, RichAxisData axisData) {
-        double[] nextBounds = blockCache.getBounds(x, y, z);
-        final Material mat = blockCache.getType(x, y, z);
-        final long flags = BlockFlags.getBlockFlags(mat);
-        if (nextBounds == null || canPassThroughWorkAround(blockCache, x, y, z, direction, eyeX, eyeY, eyeZ, eyeHeight)) return true;
+     // TODO: Lots of cleanup pending for this function: add more comments; split into helper methods; readability improvements.
+    public static boolean canPassThrough(InteractAxisTracing rayTracing, BlockCache blockCache, BlockCoord lastBlock, int x, int y, int z, Vector direction, double eyeX, double eyeY, double eyeZ, double eyeHeight,
+                                         BlockCoord sCollidingBox, BlockCoord eCollidingBox, boolean mightEdgeInteraction, Axis.RichAxisData axisData) {
+        //////////////////////////
+        // 0: Early returns     //
+        //////////////////////////
+        // Access the bounds of the next block at the currently displaced coordinate point.
+        double[] nextBlockBB = blockCache.getBounds(x, y, z);
+        final Material nextMat = blockCache.getType(x, y, z);
+        final long nextFlags = BlockFlags.getBlockFlags(nextMat);
+        if (nextBlockBB == null || canPassThroughWorkAround(blockCache, x, y, z, direction, eyeX, eyeY, eyeZ, eyeHeight)) {
+            return true;
+        }
         // NOTE: Only one of them will be 1 at a time
+        // Calculate distances from next to last block coordinate.
         int dy = y - lastBlock.getY();
         int dx = x - lastBlock.getX();
         int dz = z - lastBlock.getZ();
-        // TODO: This is wrong, liguid should have no bound but still have height. But instead of messing up entire collision system, this hack work well
-        // TODO: What about water plants?
+        // TODO: This is wrong, liquid should have no bound but still have height. But instead of messing up entire collision system, this hack work well
         mightEdgeInteraction |= (BlockFlags.getBlockFlags(blockCache.getType(lastBlock.getX(), lastBlock.getY(), lastBlock.getZ())) & BlockFlags.F_LIQUID) != 0;
-        // Door and trap door
-        double[] lastBounds = blockCache.getBounds(lastBlock.getX(), lastBlock.getY(), lastBlock.getZ());
-        //final Material lastmat = blockCache.getType(lastBlock.getX(), lastBlock.getY(), lastBlock.getZ());
-        if (lastBounds != null && nextBounds != null) {
-            // Slab/door/trap door fix(3/3): Bypass : Can't interact through other side of block from one side 
+        
+        ////////////////////////
+        /// 1: Set axis data  //
+        ////////////////////////
+        // Access the bounds of the last block at the last given coordinate point.
+        double[] lastBlockBB = blockCache.getBounds(lastBlock.getX(), lastBlock.getY(), lastBlock.getZ());
+        // This is to "improve" readability just a bit... Access all bounds in the array.
+        double minX = nextBlockBB[0];
+        double minY = nextBlockBB[1];
+        double minZ = nextBlockBB[2];
+        double maxX = nextBlockBB[3];
+        double maxY = nextBlockBB[4];
+        double maxZ = nextBlockBB[5];
+        double lastMinX = lastBlockBB[0];
+        double lastMinY = lastBlockBB[1];
+        double lastMinZ = lastBlockBB[2];
+        double lastMaxX = lastBlockBB[3];
+        double lastMaxY = lastBlockBB[4];
+        double lastMaxZ = lastBlockBB[5];
+        // Slab/door/trap door fix(3/3): Bypass : Can't interact through other side of block from one side
+        if (lastBlockBB != null) {
             if (axisData != null) {
-                if (dy != 0) {
+                // If there's any y distance...
+                if (dy != 0.0) {
                     // Condition: XZ of two block is full, Y is contain in other block
-                    if (nextBounds[1] == 0.0 && nextBounds[4] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0 
-                        && lastBounds[1] == 0.0 && lastBounds[4] == 1.0 && lastBounds[2] == 0.0 && lastBounds[5] == 1.0
-                        && rangeContains(nextBounds[0], lastBounds[0], nextBounds[3], lastBounds[3])) axisData.exclude = nextBounds[0] == 0.0 ? Direction.X_NEG : nextBounds[3] == 1.0 ? Direction.X_POS : Direction.NONE;
-                    if (nextBounds[1] == 0.0 && nextBounds[4] == 1.0 && nextBounds[0] == 0.0 && nextBounds[3] == 1.0 
-                        && lastBounds[1] == 0.0 && lastBounds[4] == 1.0 && lastBounds[0] == 0.0 && lastBounds[3] == 1.0
-                        && rangeContains(nextBounds[2], lastBounds[2], nextBounds[5], lastBounds[5])) axisData.exclude = nextBounds[2] == 0.0 ? Direction.Z_NEG : nextBounds[5] == 1.0 ? Direction.Z_POS : Direction.NONE;
+                    if (minY == 0.0 && maxY == 1.0 && minZ == 0.0 && maxZ == 1.0 // Full block height - full z length
+                        && lastMinY == 0.0 && lastMaxY == 1.0 && lastMinZ == 0.0 && lastMaxZ == 1.0 // Full block height - full z length
+                        && MathUtil.rangeContains(minX, lastMinX, maxX, lastMaxX)) {
+                        axisData.dirExclusion = minX == 0.0 ? Direction.X_NEG : maxX == 1.0 ? Direction.X_POS : Direction.NONE;
+                    }
+                    if (minY == 0.0 && maxY == 1.0 && minX == 0.0 && maxX == 1.0
+                        && lastMinY == 0.0 && lastMaxY == 1.0 && lastMinX == 0.0 && lastMaxX == 1.0
+                        && MathUtil.rangeContains(minZ, lastMinZ, maxZ, lastMaxZ)) {
+                        axisData.dirExclusion = minZ == 0.0 ? Direction.Z_NEG : maxZ == 1.0 ? Direction.Z_POS : Direction.NONE;
+                    }
                 }
-                if (dx != 0) {
-                    if (nextBounds[0] == 0.0 && nextBounds[3] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0 
-                        && lastBounds[0] == 0.0 && lastBounds[3] == 1.0 && lastBounds[2] == 0.0 && lastBounds[5] == 1.0
-                        && rangeContains(nextBounds[1], lastBounds[1], nextBounds[4], lastBounds[4])) axisData.exclude = nextBounds[1] == 0.0 ? Direction.Y_NEG : nextBounds[4] == 1.0 ? Direction.Y_POS : Direction.NONE;
-                    if (nextBounds[1] == 0.0 && nextBounds[4] == 1.0 && nextBounds[0] == 0.0 && nextBounds[3] == 1.0 
-                        && lastBounds[1] == 0.0 && lastBounds[4] == 1.0 && lastBounds[0] == 0.0 && lastBounds[3] == 1.0
-                        && rangeContains(nextBounds[2], lastBounds[2], nextBounds[5], lastBounds[5])) axisData.exclude = nextBounds[2] == 0.0 ? Direction.Z_NEG : nextBounds[5] == 1.0 ? Direction.Z_POS : Direction.NONE;
+                // If there's any distance on the x-axis...
+                if (dx != 0.0) {
+                    if (minX == 0.0 && maxX == 1.0 && minZ == 0.0 && maxZ == 1.0 // Full block length 
+                        && lastMinX == 0.0 && lastMaxX == 1.0 && lastMinZ == 0.0 && lastMaxZ == 1.0 // Full block length 
+                        && MathUtil.rangeContains(minY, lastMinY, maxY, lastMaxY)) {
+                        axisData.dirExclusion = minY == 0.0 ? Direction.Y_NEG : maxY == 1.0 ? Direction.Y_POS : Direction.NONE;
+                    }
+                    if (minY == 0.0 && maxY == 1.0 && minX == 0.0 && maxX == 1.0
+                        && lastMinY == 0.0 && lastMaxY == 1.0 && lastMinX == 0.0 && lastMaxX == 1.0
+                        && MathUtil.rangeContains(minZ, lastMinZ, maxZ, lastMaxZ)) {
+                        axisData.dirExclusion = minZ == 0.0 ? Direction.Z_NEG : maxZ == 1.0 ? Direction.Z_POS : Direction.NONE;
+                    }
                 }
-                if (dz != 0) {
-                    if (nextBounds[0] == 0.0 && nextBounds[3] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0 
-                        && lastBounds[0] == 0.0 && lastBounds[3] == 1.0 && lastBounds[2] == 0.0 && lastBounds[5] == 1.0
-                        && rangeContains(nextBounds[1], lastBounds[1], nextBounds[4], lastBounds[4])) axisData.exclude = nextBounds[1] == 0.0 ? Direction.Y_NEG : nextBounds[4] == 1.0 ? Direction.Y_POS : Direction.NONE;
-                    if (nextBounds[1] == 0.0 && nextBounds[4] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0 
-                        && lastBounds[1] == 0.0 && lastBounds[4] == 1.0 && lastBounds[2] == 0.0 && lastBounds[5] == 1.0
-                        && rangeContains(nextBounds[0], lastBounds[0], nextBounds[3], lastBounds[3])) axisData.exclude = nextBounds[0] == 0.0 ? Direction.X_NEG : nextBounds[3] == 1.0 ? Direction.X_POS : Direction.NONE;
+                // If there's any distance on the z-axis.
+                if (dz != 0.0) {
+                    if (minX == 0.0 && maxX == 1.0 && minZ == 0.0 && maxZ == 1.0  // Full block length 
+                        && lastMinX == 0.0 && lastMaxX == 1.0 && lastMinZ == 0.0 && lastMaxZ == 1.0 // Full block length 
+                        && MathUtil.rangeContains(minY, lastMinY, maxY, lastMaxY)) {
+                        axisData.dirExclusion = minY == 0.0 ? Direction.Y_NEG : maxY == 1.0 ? Direction.Y_POS : Direction.NONE;
+                    }
+                    if (minY == 0.0 && maxY == 1.0 && minZ == 0.0 && maxZ == 1.0
+                        && lastMinY == 0.0 && lastMaxY == 1.0 && lastMinZ == 0.0 && lastMaxZ == 1.0
+                        && MathUtil.rangeContains(minX, lastMinX, maxX, lastMaxX)) {
+                        axisData.dirExclusion = minX == 0.0 ? Direction.X_NEG : maxX == 1.0 ? Direction.X_POS : Direction.NONE;
+                    }
                 }
             }
         }
-        // Ignore initially colliding block(block inside bounding box)
+        
+        /////////////////////////////////////////////////////////////////////////
+        // 2: Ignore initially colliding block(block inside bounding box)      //
+        ////////////////////////////////////////////////////////////////////////
         if (sCollidingBox != null && eCollidingBox != null
-                && isInsideAABBIncludeEdges(x,y,z, sCollidingBox.getX(), sCollidingBox.getY(), sCollidingBox.getZ(), eCollidingBox.getX(), eCollidingBox.getY(), eCollidingBox.getZ())) return true;
+            && AxisAlignedBBUtils.isInsideAABBIncludeEdges(x,y,z, sCollidingBox.getX(), sCollidingBox.getY(), sCollidingBox.getZ(), eCollidingBox.getX(), eCollidingBox.getY(), eCollidingBox.getZ())) {
+            return true;
+        }
+        
+        //////////////////////////////////////////////
+        // 3: Test for raytracing collision         //
+        //////////////////////////////////////////////
         // Move the end point to nearly end of block
         double stepX = dx * 0.99;
         double stepY = dy * 0.99;
@@ -623,72 +782,106 @@ public class CollisionUtil {
         rayTracing.setIgnoreInitiallyColliding(true);
         rayTracing.loop();
         rayTracing.setIgnoreInitiallyColliding(false);
-        if (!rayTracing.collides()) return true;
+        if (!rayTracing.collides()) {
+            // Does not collide. The ray can pass through this direction
+            return true;
+        }
+        
+        // (Ray collided with something in the given direction. Check for special cases/workarounds.)
+        // TODO: Document why this is needed
+        //////////////////////////////////
+        // 4: Handle stairs             //
+        //////////////////////////////////
         // Too headache to think out a perfect algorithm
-        if ((flags & BlockFlags.F_STAIRS) != 0) {
+        if ((nextFlags & BlockFlags.F_STAIRS) != 0) {
             // Stair is being interacted from side!
-            if (dy == 0) {
+            if (dy == 0.0) {
                 int eyeBlockY = Location.locToBlock(eyeY);
                 // nextBounds[4]: maxY of the slab of the stair
                 // nextBounds[1]: minY of the slab of the stair
-                if (eyeBlockY > y && nextBounds[4] == 1.0) return false;
-                if (eyeBlockY < y && nextBounds[1] == 0.0) return false;
-            }
-            if (dx != 0) {
-                // first bound is always a slab and will be handle below
-                for (int i = 2; i <= (int)nextBounds.length / 6; i++) {
-                    if (nextBounds[i*6-4] == 0.0 && nextBounds[i*6-1] == 1.0 && (dx < 0 ? nextBounds[i*6-3] == 1.0 : nextBounds[i*6-6] == 0.0)) return false;
+                if (eyeBlockY > y && maxY == 1.0) {
+                    return false;
+                }
+                if (eyeBlockY < y && minY == 0.0) {
+                    return false;
                 }
             }
-            if (dz != 0) {
+            if (dx != 0.0) {
                 // first bound is always a slab and will be handle below
-                for (int i = 2; i <= (int)nextBounds.length / 6; i++) {
-                    if (nextBounds[i*6-6] == 0.0 && nextBounds[i*6-3] == 1.0 && (dz < 0 ? nextBounds[i*6-1] == 1.0 : nextBounds[i*6-4] == 0.0)) return false;
+                for (int i = 2; i <= (int)nextBlockBB.length / 6; i++) {
+                    if (nextBlockBB[i*6-4] == 0.0 && nextBlockBB[i*6-1] == 1.0 && (dx < 0 ? nextBlockBB[i*6-3] == 1.0 : nextBlockBB[i*6-6] == 0.0)) {
+                        return false;
+                    }
+                }
+            }
+            if (dz != 0.0) {
+                // first bound is always a slab and will be handle below
+                for (int i = 2; i <= (int)nextBlockBB.length / 6; i++) {
+                    if (nextBlockBB[i*6-6] == 0.0 && nextBlockBB[i*6-3] == 1.0 && (dz < 0 ? nextBlockBB[i*6-1] == 1.0 : nextBlockBB[i*6-4] == 0.0)) {
+                        return false;
+                    }
                 }
             }
         }
-        if (dy != 0) {
-            if (nextBounds[0] == 0.0 && nextBounds[3] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0) {
+        
+        // TODO: Document why this is needed
+        ///////////////////////////////////////////
+        // 5: Handle slabs on each axis          //
+        ///////////////////////////////////////////
+        // Y
+        if (dy != 0.0) {
+            if (minX == 0.0 && maxX == 1.0 && minZ == 0.0 && maxZ == 1.0) {
                 // Slab fix(1/3): False positive: Moving on Y Axis but get obstructed by a slab like block, allow to pass, but not allow to move on Y Axis further
-                if (axisData != null && (dy > 0 ? nextBounds[1] != 0.0 : nextBounds[4] != 1.0)) {
-                    axisData.exclude = dy > 0 ? Direction.Y_POS : Direction.Y_NEG;
+                if (axisData != null && (dy > 0.0 ? minY != 0.0 : maxY != 1.0)) {
+                    axisData.dirExclusion = dy > 0.0 ? Direction.Y_POS : Direction.Y_NEG;
                     return true;
                 }
                 return rayTracing.getCollidingAxis() != Axis.Y_AXIS;
             }
             // Slab fix(2/3): Bypass: lastBounds is bottom slab and nextBounds is upper slab _-, can't pass through
             // Condition: not the block trying to interact, Y axis of two block intersect, 
-            if (!mightEdgeInteraction && lastBounds != null && (dy > 0 ? lastBounds[4] == 1.0 && nextBounds[1] == 0.0 : lastBounds[1] == 0.0 && nextBounds[4]==1.0)
-                    // Two block's X axis is full, Sum(exclude overlapping) of two block's Z axis is equal to 1.0 
-                    && (nextBounds[0] == 0.0 && lastBounds[0] == 0.0 && nextBounds[3] == 1.0 && lastBounds[3] == 1.0 && equal(getFilledSpace(lastBounds[2], lastBounds[5], nextBounds[2], nextBounds[5]), 1.0, 0.001)
-                    // Or two block's Z axis is full, Sum(exclude overlapping) of two block's X axis is equal to 1.0 
-                    || nextBounds[2] == 0.0 && lastBounds[2] == 0.0 && nextBounds[5] == 1.0 && lastBounds[5] == 1.0 && equal(getFilledSpace(lastBounds[0], lastBounds[3], nextBounds[0], nextBounds[3]), 1.0, 0.001))) return false;
-            return true;
+            return mightEdgeInteraction || lastBlockBB == null || (dy > 0 ? lastMaxY != 1.0 || minY != 0.0 : lastMinY != 0.0 || maxY != 1.0)
+                   // Two block's X axis is full, Sum(exclude overlapping) of two block's Z axis is equal to 1.0
+                   || (
+                          (minX != 0.0 || lastMinX != 0.0 || maxX != 1.0 || lastMaxX != 1.0  
+                          || !MathUtil.equal(MathUtil.getCoveredSpace(lastMinZ, lastMaxZ, minZ, maxZ), 1.0, 0.001))
+                          // Or two block's Z axis is full, Sum(exclude overlapping) of two block's X axis is equal to 1.0
+                          && (minZ != 0.0 || lastMinZ != 0.0 || maxZ != 1.0 || lastMaxZ != 1.0 
+                          || !MathUtil.equal(MathUtil.getCoveredSpace(lastMinX, lastMaxX, minX, maxX), 1.0, 0.001))
+                  );
         }
-        if (dx != 0) {
-            if (nextBounds[1] == 0.0 && nextBounds[4] == 1.0 && nextBounds[2] == 0.0 && nextBounds[5] == 1.0) {
-                if (axisData != null && (dx > 0 ? nextBounds[0] != 0.0 : nextBounds[3] != 1.0)) {
-                    axisData.exclude = dx > 0 ? Direction.X_POS : Direction.X_NEG;
+        // X
+        if (dx != 0.0) {
+            if (nextBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && nextBlockBB[2] == 0.0 && nextBlockBB[5] == 1.0) {
+                if (axisData != null && (dx > 0 ? nextBlockBB[0] != 0.0 : nextBlockBB[3] != 1.0)) {
+                    axisData.dirExclusion = dx > 0 ? Direction.X_POS : Direction.X_NEG;
                     return true;
                 }
                 return rayTracing.getCollidingAxis() != Axis.X_AXIS;
             }
-            if (!mightEdgeInteraction && lastBounds != null && (dx > 0 ? lastBounds[3] == 1.0 && nextBounds[0] == 0.0 : lastBounds[0] == 0.0 && nextBounds[3]==1.0) 
-                    && (nextBounds[1] == 0.0 && lastBounds[1] == 0.0 && nextBounds[4] == 1.0 && lastBounds[4] == 1.0 && equal(getFilledSpace(lastBounds[2], lastBounds[5], nextBounds[2], nextBounds[5]), 1.0, 0.001)
-                    || nextBounds[2] == 0.0 && lastBounds[2] == 0.0 && nextBounds[5] == 1.0 && lastBounds[5] == 1.0 && equal(getFilledSpace(lastBounds[1], lastBounds[4], nextBounds[1], nextBounds[4]), 1.0, 0.001))) return false;
+            if (!mightEdgeInteraction && lastBlockBB != null && (dx > 0 ? lastBlockBB[3] == 1.0 && nextBlockBB[0] == 0.0 : lastBlockBB[0] == 0.0 && nextBlockBB[3]==1.0) 
+                && (
+                    nextBlockBB[1] == 0.0 && lastBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && lastBlockBB[4] == 1.0 
+                    && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[2], lastBlockBB[5], nextBlockBB[2], nextBlockBB[5]), 1.0, 0.001) 
+                    || nextBlockBB[2] == 0.0 && lastBlockBB[2] == 0.0 && nextBlockBB[5] == 1.0 && lastBlockBB[5] == 1.0 
+                    && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[1], lastBlockBB[4], nextBlockBB[1], nextBlockBB[4]), 1.0, 0.001)
+                )) {
+                return false;
+            }
             return true;
         }
+        // Z
         if (dz != 0) {
-            if (nextBounds[0] == 0.0 && nextBounds[3] == 1.0 && nextBounds[1] == 0.0 && nextBounds[4] == 1.0) {
-                if (axisData != null && (dz > 0 ? nextBounds[2] != 0.0 : nextBounds[5] != 1.0)) {
-                    axisData.exclude = dz > 0 ? Direction.Z_POS : Direction.Z_NEG;
+            if (nextBlockBB[0] == 0.0 && nextBlockBB[3] == 1.0 && nextBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0) {
+                if (axisData != null && (dz > 0 ? nextBlockBB[2] != 0.0 : nextBlockBB[5] != 1.0)) {
+                    axisData.dirExclusion = dz > 0 ? Direction.Z_POS : Direction.Z_NEG;
                     return true;
                 }
                 return rayTracing.getCollidingAxis() != Axis.Z_AXIS;
             }
-            if (!mightEdgeInteraction && lastBounds != null && (dz > 0 ? lastBounds[5] == 1.0 && nextBounds[2] == 0.0 : lastBounds[2] == 0.0 && nextBounds[5]==1.0) 
-                    && (nextBounds[1] == 0.0 && lastBounds[1] == 0.0 && nextBounds[4] == 1.0 && lastBounds[4] == 1.0 && equal(getFilledSpace(lastBounds[0], lastBounds[3], nextBounds[0], nextBounds[3]), 1.0, 0.001)
-                    || nextBounds[0] == 0.0 && lastBounds[0] == 0.0 && nextBounds[3] == 1.0 && lastBounds[3] == 1.0 && equal(getFilledSpace(lastBounds[1], lastBounds[4], nextBounds[1], nextBounds[4]), 1.0, 0.001))) return false;
+            if (!mightEdgeInteraction && lastBlockBB != null && (dz > 0 ? lastBlockBB[5] == 1.0 && nextBlockBB[2] == 0.0 : lastBlockBB[2] == 0.0 && nextBlockBB[5]==1.0)
+                    && (nextBlockBB[1] == 0.0 && lastBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && lastBlockBB[4] == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[0], lastBlockBB[3], nextBlockBB[0], nextBlockBB[3]), 1.0, 0.001)
+                    || nextBlockBB[0] == 0.0 && lastBlockBB[0] == 0.0 && nextBlockBB[3] == 1.0 && lastBlockBB[3] == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[1], lastBlockBB[4], nextBlockBB[1], nextBlockBB[4]), 1.0, 0.001))) return false;
             return true;
         }
         return false;
@@ -718,116 +911,330 @@ public class CollisionUtil {
         }
         return false;
     }
-
-    /**
-     * Function to return the list of blocks that can be interact from.<br>
-     * As we can only see maximum 3 sides of a cube at a time
-     * 
-     * @param currentBlock Current block to move on
-     * @param direction
-     * @param eyeX Eye location just to automatically prioritize with Axis will attempt to try first
-     * @param eyeY
-     * @param eyeZ
-     * @param axisData Rich data for specific usage. Can be null. If not null will consume data 
-     * @return List of blocks that can possibly interact from
-     */ 
-    public static List<BlockCoord> getNeighborsInDirection(BlockCoord currentBlock, Vector direction, double eyeX, double eyeY, double eyeZ, RichAxisData axisData) {
-        List<BlockCoord> neighbors = new ArrayList<>();
-        int stepY = direction.getY() > 0 ? 1 : (direction.getY() < 0 ? -1 : 0);
-        int stepX = direction.getX() > 0 ? 1 : (direction.getX() < 0 ? -1 : 0);
-        int stepZ = direction.getZ() > 0 ? 1 : (direction.getZ() < 0 ? -1 : 0);
-        Axis priorityAxis = Axis.NONE;
-        Direction excludeDir = Direction.NONE;
-        boolean allowX = true;
-        boolean allowY = true;
-        boolean allowZ = true;
-        if (axisData != null) {
-            priorityAxis = axisData.priority;
-            excludeDir = axisData.exclude;
-            axisData.priority = Axis.NONE;
-            axisData.exclude = Direction.NONE;
-            allowX = !(excludeDir == Direction.X_NEG && stepX < 0 || excludeDir == Direction.X_POS && stepX > 0);
-            allowY = !(excludeDir == Direction.Y_NEG && stepY < 0 || excludeDir == Direction.Y_POS && stepY > 0);
-            allowZ = !(excludeDir == Direction.Z_NEG && stepZ < 0 || excludeDir == Direction.Z_POS && stepZ > 0);
-        }
-        switch (priorityAxis) {
-            case X_AXIS:
-                neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-                if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-                if (allowY) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-                return neighbors;
-            case Y_AXIS:
-                neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-                if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-                if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-                return neighbors;
-            case Z_AXIS:
-                neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-                if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-                if (allowY) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-                return neighbors;
-            default:
-                break;
-        }
-        
-        final double dYM = TrigUtil.manhattan(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ(), eyeX, eyeY, eyeZ);
-        final double dZM = TrigUtil.manhattan(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ, eyeX, eyeY, eyeZ);
-        final double dXM = TrigUtil.manhattan(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ(), eyeX, eyeY, eyeZ);
-        
-        // Is this one correct?
-        if (dYM <= dXM && dYM <= dZM && Math.abs(direction.getY()) >= 0.5) {
-            if (allowY) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-            // Do sort priority of XZ in case Y not possible
-            if (dXM < dZM) {
-                if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-                if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-            } else {
-                if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-                if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-            }
-            return neighbors;
-        }
-
-        if (dXM < dZM) {
-            if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-            if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-            if (allowY) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-        } else {
-            if (allowZ) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY(), currentBlock.getZ() + stepZ));
-            if (allowX) neighbors.add(new BlockCoord(currentBlock.getX() + stepX, currentBlock.getY(), currentBlock.getZ()));
-            if (allowY) neighbors.add(new BlockCoord(currentBlock.getX(), currentBlock.getY() + stepY, currentBlock.getZ()));
-        }
-        return neighbors;
-    }
-
-    private static double getFilledSpace(double sA, double eA, double sB, double eB) {
-        return (eA-sA) + (eB-sB) - Math.max(0, Math.min(eA, eB) - Math.max(sA, sB));
-    }
-    
-    private static boolean rangeContains(double lBMin, double nBMin, double lBMax, double nBMax) {
-        return nBMin <= lBMin && lBMax <=nBMax || lBMin <= nBMin && nBMax <= lBMax;
-    }
-
-    public static class RichAxisData {
-        public Axis priority;
-        public Direction exclude;
-        public RichAxisData(Axis priority, Direction exclude) {
-            this.priority = priority;
-            this.exclude = exclude;
-        }
-    }
     
     /**
-     * Test if the absolute difference between two values is small enough to be considered equal.
-     * 
-     * @param a The minuend
-     * @param b The subtrahend
-     * @param c Absolute(!) value to compare the difference with
-     * @return True if the absolute difference is smaller or equals C.
-     *         Returns false for negative C inputs.
+     * Resolves collisions between a bounding box and a list of other bounding boxes by adjusting its movement in 
+     * the X, Y, and Z dimensions, to avoid overlaps with the other bounding boxes.
+     *
+     * <p>The collision resolution is performed in a specific order:
+     * 1. Adjustments are first made in the Y dimension if there is movement in that direction.
+     * 2. Next, if the absolute value of movement in the X dimension is less than that of the Z one, 
+     *    adjustments are made in the Z dimension before the X's.
+     * 3. If necessary, adjustments in the Z dimension are recalculated after the X dimension adjustments.
+     *
+     * @param toCollide The Vector representing the movement to apply to the bounding box. This vector contains 
+     *                  the initial displacement in the X, Y, and Z dimensions.
+     * @param AABB The bounding box to be moved.
+     * @param collisionBoxes A list of other bounding boxes. These are the boxes against which collisions are checked.
+     *
+     * @return A Vector representing the adjusted movement in the X, Y, and Z dimensions after resolving collisions.
+     *         The vector's components reflect how much the original movement should be adjusted to avoid overlaps.
      */
-    public static boolean equal(double a, double b, double c) {
-       if (c < 0.0) return false;
-       return Math.abs(a-b) <= c;
+    public static Vector collideBoundingBox(Vector toCollide, double[] AABB, List<double[]> collisionBoxes) {
+        double[] tAABB = AABB.clone();
+        double x = toCollide.getX();
+        double y = toCollide.getY();
+        double z = toCollide.getZ();
+        if (y != 0.0) {
+            for (double[] cb : collisionBoxes) {
+                y = AxisAlignedBBUtils.collideY(cb, tAABB, y);
+            }
+            tAABB[1] += y;
+            tAABB[4] += y;
+        }
+        boolean prioritizeZ = Math.abs(x) < Math.abs(z);
+        if (prioritizeZ && z != 0.0) {
+            for (double[] cb : collisionBoxes) {
+                z = AxisAlignedBBUtils.collideZ(cb, tAABB, z);
+            }
+            tAABB[2] += z;
+            tAABB[5] += z;
+        }
+        if (x != 0.0) {
+            for (double[] cb : collisionBoxes) {
+                x = AxisAlignedBBUtils.collideX(cb, tAABB, x);
+            }
+            tAABB[0] += x;
+            tAABB[3] += x;
+        }
+        if (!prioritizeZ && z != 0.0) {
+            for (double[] cb : collisionBoxes) {
+                z = AxisAlignedBBUtils.collideZ(cb, tAABB, z);
+            }
+            tAABB[2] += z;
+            tAABB[5] += z;
+        }
+        return new Vector(x, y, z);
+    }
+    
+    /**
+     * From: {@code VoxelShapeSpliterator.java}.<br>
+     * Checks for collisions between an entity and nearby blocks, optionally including world border collisions.
+     *
+     * <p>If {@code onlyCheckCollide} is true, the method returns immediately upon detecting a collision.
+     * Otherwise, it collects all relevant collision boxes into {@code collisionBoxes} for further processing.
+     * 
+     * @param blockCache The block cache.
+     * @param entity The entity whose bounding box is being checked for collisions.
+     * @param AABB The axis-aligned bounding box (AABB) of the entity.
+     * @param collisionBoxes A {@link List} to store collision boxes (ignored if {@code onlyCheckCollide} is true).
+     * @param onlyCheckCollide If true, only checks for collisions and returns immediately if a collision is detected. 
+     *                         If false, collects collision boxes for further processing.
+     *
+     * @return {@code true} if a collision is detected in check-only mode or if a world border collision occurs; otherwise, {@code false}.
+     */
+    public static boolean getCollisionBoxes(BlockCache blockCache, Entity entity, double[] AABB, List<double[]> collisionBoxes, boolean onlyCheckCollide) {
+        boolean collided = addWorldBorder(entity, AABB, collisionBoxes, onlyCheckCollide);
+        if (onlyCheckCollide && collided) {
+            // Already collided with the world border, return.
+            return true;
+        }
+        int minBlockX = (int) Math.floor(AABB[0] - COLLISION_EPSILON) - 1;
+        int maxBlockX = (int) Math.floor(AABB[3] + COLLISION_EPSILON) + 1;
+        int minBlockY = (int) Math.floor(AABB[1] - COLLISION_EPSILON) - 1;
+        int maxBlockY = (int) Math.floor(AABB[4] + COLLISION_EPSILON) + 1;
+        int minBlockZ = (int) Math.floor(AABB[2] - COLLISION_EPSILON) - 1;
+        int maxBlockZ = (int) Math.floor(AABB[5] + COLLISION_EPSILON) + 1;
+        for (int y = minBlockY; y < maxBlockY; y++) {
+            for (int x = minBlockX; x <= maxBlockX; x++) {
+                for (int z = minBlockZ; z <= maxBlockZ; z++) {
+                    Material mat = blockCache.getType(x, y, z);
+                    if (BlockProperties.isAir(mat) || BlockProperties.isPassable(mat)) {
+                        continue;
+                    }
+                    // how many of the current block’s coordinates (x, y, z) lie on the edges of the search region defined by the entity’s AABB
+                    int edgeCount = ((x == minBlockX || x == maxBlockX) ? 1 : 0) +
+                                    ((y == minBlockY || y == maxBlockY) ? 1 : 0) +
+                                    ((z == minBlockZ || z == maxBlockZ) ? 1 : 0);
+                    if (edgeCount != 3 && (edgeCount != 1 || (BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0) 
+                        && (edgeCount != 2 || mat == BridgeMaterial.MOVING_PISTON)) {
+                        // Don't add to a list if we only care if the player intersects with the block
+                        if (!onlyCheckCollide) {
+                            double[] multiAABB = AxisAlignedBBUtils.move(blockCache.fetchBounds(x, y, z), x, y, z);
+                            collisionBoxes.addAll(AxisAlignedBBUtils.splitIntoSingle(multiAABB));
+                        } 
+                        else if (AxisAlignedBBUtils.isCollided(blockCache.getBounds(x, y, z), x, y, z, AABB, true)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Determines if the specified entity's bounding box is empty of any collisions within the world.
+     * <p> If any collision is detected, the method returns `false`. If no collisions are detected, the method returns `true`.
+     *
+     * <p>The method is a wrapper around the {@link #getCollisionBoxes} method, invoking it in a mode where it only checks 
+     * for collisions and returns immediately if a collision is found.
+     *
+     * @param blockCache 
+     * @param entity The entity whose bounding box is being checked for collisions.
+     * @param AABB The axis-aligned bounding box (AABB) of the entity.
+     * @return `true` if no collisions are detected within the specified AABB, otherwise `false`.
+     */
+    public static boolean isEmpty(BlockCache blockCache, Entity entity, double[] AABB) {
+        return !getCollisionBoxes(blockCache, entity, AABB, null, true);
+    }
+    
+    /**
+     * Adds the world border to the list of collision boxes if the entity is within a specified distance from the world border.
+     * The method adjusts the bounding box to include the world border collision boxes if necessary.
+     *
+     * <p>This method performs the following:
+     * 1. Checks if the world border is active and retrieves its size and center location.
+     * 2. Determines the boundaries of the world border.
+     * 3. If the entity is within 16 blocks of the world border, it adds the world border collision boxes to the provided list.
+     *
+     * @param entity The entity whose proximity to the world border is being checked.
+     * @param AABB The axis-aligned bounding box (AABB) of the entity, used to check for proximity to the world border.
+     * @param collisionBoxes A list to which world border collision boxes will be added if the entity is close to the border. 
+     *                       If this is null, a new list will be created.
+     * @param onlyCheckCollide If true, only checks for collisions with the world border and does not add collision boxes 
+     *                         to the list.
+     *
+     * @return True if the entity is within 16 blocks of the world border and the world border collision boxes have been added.
+     *         Otherwise, returns false.
+     */
+    public static boolean addWorldBorder(Entity entity, double[] AABB, List<double[]> collisionBoxes, boolean onlyCheckCollide) {
+        if (ServerIsAtLeast1_8) {
+            WorldBorder border = entity.getWorld().getWorldBorder();
+            Location tloc = border.getCenter();
+            double centerX = tloc.getX();
+            double centerZ = tloc.getZ();
+
+            double size = border.getSize() / 2;
+            double absoluteMaxSize = 29999984;
+
+            double minX = Math.floor(MathUtil.clamp(centerX - size, -absoluteMaxSize, absoluteMaxSize));
+            double minZ = Math.floor(MathUtil.clamp(centerZ - size, -absoluteMaxSize, absoluteMaxSize));
+            double maxX = Math.ceil(MathUtil.clamp(centerX + size, -absoluteMaxSize, absoluteMaxSize));
+            double maxZ = Math.ceil(MathUtil.clamp(centerZ + size, -absoluteMaxSize, absoluteMaxSize));
+
+            // If the player is fully within the world border
+            // TODO: Allow to input location?
+            Location lastPlayerLoc = entity.getLocation(tloc);
+            double toMinX = lastPlayerLoc.getX() - minX;
+            double toMaxX = maxX - lastPlayerLoc.getX();
+            double minimumInXDirection = Math.min(toMinX, toMaxX);
+
+            double toMinZ = lastPlayerLoc.getZ() - minZ;
+            double toMaxZ = maxZ - lastPlayerLoc.getZ();
+            double minimumInZDirection = Math.min(toMinZ, toMaxZ);
+
+            double distanceToBorder = Math.min(minimumInXDirection, minimumInZDirection);
+
+            // If the player's is within 16 blocks of the world border, add the world border to the collisions (optimization)
+            if (distanceToBorder < 16 && lastPlayerLoc.getX() > minX && lastPlayerLoc.getX() < maxX && lastPlayerLoc.getZ() > minZ && lastPlayerLoc.getZ() < maxZ) {
+                if (collisionBoxes == null) collisionBoxes = new ArrayList<>();
+
+                // South border
+                collisionBoxes.add(new double[] {minX - 10, Double.NEGATIVE_INFINITY, maxZ, maxX + 10, Double.POSITIVE_INFINITY, maxZ});
+                // North border
+                collisionBoxes.add(new double[] {minX - 10, Double.NEGATIVE_INFINITY, minZ, maxX + 10, Double.POSITIVE_INFINITY, minZ});
+                // East border
+                collisionBoxes.add(new double[] {maxX, Double.NEGATIVE_INFINITY, minZ - 10, maxX, Double.POSITIVE_INFINITY, maxZ + 10});
+                // West border
+                collisionBoxes.add(new double[] {minX, Double.NEGATIVE_INFINITY, minZ - 10, minX, Double.POSITIVE_INFINITY, maxZ + 10});
+
+                //if (onlyCheckCollide) {
+                //    for (double[] box : collisionBoxes) {
+                //        if (isIntersected(box, AABB)) return true;
+                //    }
+                //}
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * From {@code Entity.java}.<br>
+     * Collects possible step heights for a given bounding box by analyzing its interaction
+     * with other bounding boxes in the environment. The method compares the Y-axis point
+     * positions of the bounding boxes and returns a sorted array of possible step heights.
+     *
+     * @param AABB An array representing the bounding box as [minX, minY, minZ, maxX, maxY, maxZ].
+     * @param collisionsBoxes A List of other bounding boxes, each represented as a double array.
+     * @param stepHeight The maximum step height that can be traversed.
+     * @param collideY The Y-coordinate of the collision point to avoid.
+     * @return A sorted array of valid step heights.
+     */
+    public static float[] collectCandidateStepUpHeights(double[] AABB, List<double[]> collisionsBoxes, float stepHeight, float collideY) {
+        Set<Float> stepHeights = new HashSet<>();
+        // Extract the minimum Y-coordinate from the AABB
+        double minY = AABB[1];
+        
+        // Iterate over all collision boxes
+        for (double[] collision : collisionsBoxes) {
+            // For each block, get possible Y-axis step points (minY and maxY)
+            List<Double> yPoints = AxisAlignedBBUtils.getYPointPositions(collision);
+            
+            for (double possibleStepY : yPoints) {
+                float yDiff = (float) (possibleStepY - minY); // Difference in height
+                // Only consider steps above the current position but not equal to the collision point
+                if (yDiff >= 0.0F && yDiff != collideY) {
+                    if (yDiff > stepHeight) {
+                        break; // Stop further processing for this block, as it exceeds max step height
+                    }
+                    // Add valid step heights to the set
+                    stepHeights.add(yDiff);
+                }
+            }
+        }
+        
+        // Convert the set of step heights to a list, then sort the list
+        List<Float> sortedStepHeights = new ArrayList<>(stepHeights);
+        Collections.sort(sortedStepHeights);
+        
+        // Convert the sorted list to an array of floats
+        float[] stepHeightArray = new float[sortedStepHeights.size()];
+        for (int i = 0; i < sortedStepHeights.size(); i++) {
+            stepHeightArray[i] = sortedStepHeights.get(i);
+        }
+        // Return the sorted array of step heights
+        return stepHeightArray;  
+    }
+    
+    /**
+     * Correct onto the block (from off-block), against the direction.
+     * <p>This method adjusts the collision coordinate to be within the bounds of the block if it is found to be slightly outside due to calculation inaccuracies.</p>
+     * 
+     * @param blockC The coordinate of the block.
+     * @param bdC The difference between the block's coordinate and the eye's block coordinate.
+     * @param collideC The computed collision coordinate.
+     * @return Adjusted coordinate.
+     */
+    public static double postCorrect(int blockC, int bdC, double collideC) {
+        // If the computed collision coordinate is outside the block's coordinate, adjust it to be within the block.
+        int ref = bdC < 0 ? blockC + 1 : blockC;
+        if (Location.locToBlock(collideC) == ref) {
+            return collideC;
+        }
+        return ref;
+    }
+    
+    /**
+     * Time until on the block (time = steps of dir).
+     * <p>This method calculates the minimum time required for the player's line of sight to intersect the target block along a specific axis.</p>
+     * 
+     * @param eye The coordinate of the player's eye along the specific axis.
+     * @param eyeBlock The block coordinate of the player's eye along the specific axis.
+     * @param dir The direction vector component along the specific axis.
+     * @param blockDiff The difference in block coordinates along the specific axis.
+     * @return The min time.
+     */
+    public static double getMinTime(final double eye, final int eyeBlock, final double dir, final int blockDiff) {
+        if (blockDiff == 0) {
+            // If the block difference is zero, return 0.0 since the player's eye is already within the block.
+            return 0.0;
+        }
+        // Otherwise, compute the time required to reach the block's edge from the current position.
+        final double eyeOffset = Math.abs(eye - eyeBlock); // (abs not needed)
+        return ((dir < 0.0 ? eyeOffset : 1.0 - eyeOffset) + (double) (Math.abs(blockDiff) - 1)) / Math.abs(dir);
+    }
+    
+    /**
+     * Time when not on the block anymore (after having hit it, time = steps of dir).
+     * <p>This method calculates the maximum time the player's line of sight will remain within the target block along a specific axis.</p>
+     * 
+     * @param eye The coordinate of the player's eye along the specific axis.
+     * @param eyeBlock The block coordinate of the player's eye along the specific axis.
+     * @param dir The direction vector component along the specific axis.
+     * @param tMin The minimum time to reach the block, calculated using {@code getMinTime}.
+     * @return The max time.
+     */
+    public static double getMaxTime(final double eye, final int eyeBlock, final double dir, final double tMin) {
+        if (dir == 0.0) {
+            // If the direction vector component is zero, return Double.MAX_VALUE since the line of sight will always remain within the block.
+            return Double.MAX_VALUE;
+        }
+        // Otherwise, compute the time required to exit the block from the current position.
+        if (tMin == 0.0) {
+            //  Already on the block, return "rest on block".
+            final double eyeOffset = Math.abs(eye - eyeBlock); // (abs not needed)
+            return (dir < 0.0 ? eyeOffset : 1.0 - eyeOffset) / Math.abs(dir);
+        }
+        // Just the time within range.
+        return tMin + 1.0 /  Math.abs(dir);
+    }
+    
+    /**
+     * This method adjusts a coordinate to ensure it is within the bounds of a specific block.<br>
+     * (only if outside, for correcting inside-block to edge tMin has to be checked)
+     * 
+     * @param coord The coordinate to be adjusted.
+     * @param block The block coordinate that the adjusted coordinate should align with.
+     * @return The adjusted coordinate.
+     */
+    public static double toBlock(final double coord, final int block) {
+        final int blockDiff = block - Location.locToBlock(coord);
+        if (blockDiff == 0) {
+            return coord;
+        }
+        else {
+            return Math.round(coord);
+        }
     }
 }

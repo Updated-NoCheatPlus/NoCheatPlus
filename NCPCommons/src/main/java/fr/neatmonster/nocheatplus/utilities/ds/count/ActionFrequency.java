@@ -140,24 +140,6 @@ public class ActionFrequency {
     }
 
     /**
-     * @deprecated Use instead: score(float).
-     * @param factor
-     * @return
-     */
-    public final float getScore(final float factor) {
-        return score(factor);
-    }
-
-    /**
-     * @deprecated Use instead: score(float).
-     * @param factor
-     * @return
-     */
-    public final float getScore(final int bucket) {
-        return bucketScore(bucket);
-    }
-
-    /**
      * Get a weighted sum score, weight for bucket i: w(i) = factor^i. 
      * @param factor
      * @return

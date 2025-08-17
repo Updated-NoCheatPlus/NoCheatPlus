@@ -20,46 +20,53 @@ import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 
+/**
+ * The speed check will identify players who spam interactions to the server.
+ */
 public class Speed extends Check {
-
+    
+    /**
+     * Instantiates a new speed check
+     */
     public Speed() {
         super(CheckType.BLOCKINTERACT_SPEED);
     }
-
-    public boolean check(final Player player, final BlockInteractData data, final BlockInteractConfig cc){
+    
+    /**
+     * Checks a player
+     * 
+     * @param player
+     * @param data
+     * @param cc
+     * @return true if failed.
+     */
+    public boolean check(final Player player, final BlockInteractData data, final BlockInteractConfig cc) {
 
         final long time = System.currentTimeMillis();
-
-        if (time < data.speedTime || time > data.speedTime + cc.speedInterval){
+        boolean cancel = false;
+        if (time < data.speedTime || time > data.speedTime + cc.speedInterval) {
             data.speedTime = time;
             data.speedCount = 0;
         }
 
-        // Increase count.
-        data.speedCount ++;
-
-        boolean cancel = false;
-
-        if (data.speedCount > cc.speedLimit){
+        // Increase count with each interaction
+        data.speedCount++;
+        if (data.speedCount > cc.speedLimit) {
             // Lag correction
             final int correctedCount = (int) ((double) data.speedCount / TickTask.getLag(time - data.speedTime, true));
-            if (correctedCount > cc.speedLimit){
+            if (correctedCount > cc.speedLimit) {
                 data.speedVL ++;
                 if (executeActions(player, data.speedVL, 1, cc.speedActions).willCancel()){
                     cancel = true;
                 }
             }
-            else {
-                // keep vl. // Not sure either.
-                data.addPassedCheck(this.type); // Not sure.
-            }
+            // keep vl. // Not sure either.
+            else data.addPassedCheck(this.type); 
         }
-        else{
+        else {
             data.speedVL *= 0.99;
             data.addPassedCheck(this.type);
         }
-
         return cancel;
     }
-
 }

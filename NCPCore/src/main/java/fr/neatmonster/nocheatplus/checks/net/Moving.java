@@ -14,52 +14,40 @@
  */
 package fr.neatmonster.nocheatplus.checks.net;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.Location;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+
+import fr.neatmonster.nocheatplus.NCPAPIProvider;
+import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
-import fr.neatmonster.nocheatplus.checks.combined.Improbable;
-import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
+import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.net.NetConfig;
-import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
-import fr.neatmonster.nocheatplus.players.DataManager;
-import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
-import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.logging.Streams;
-import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
-import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.Folia;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
-import fr.neatmonster.nocheatplus.utilities.TickTask;
+import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
 /**
  * Misc. checks related to flying packets.
+ * Currently only has a simplistic check for extreme moves.
  */
 public class Moving extends Check {
 
+    /** For temporary use: LocUtil.clone before passing deeply, call setWorld(null) after use. */
+    final Location useLoc = new Location(null, 0, 0, 0);
+    final List<String> tags = new ArrayList<String>();
     
     public Moving() {
         super(CheckType.NET_MOVING);
     }
-
-    long timeRespawn;
-    long timeJoin;
-    long timeTeleport;
-
 
     /**
      * Checks a player
@@ -70,85 +58,60 @@ public class Moving extends Check {
      * @param cc
      * @param pData
      * @param cc
-     * @return if to cancel
+     * @return True, if to cancel the event
      */
     public boolean check(final Player player, final DataPacketFlying packetData, final NetData data, final NetConfig cc, 
                          final IPlayerData pData, final Plugin plugin) {
-        
+        // TODO: This will trigger if the client is waiting for chunks to load (Slow fall, on join or after a teleport)
+        // TODO Replace this check with a packet-sync thing: Sync flying packets with a PlayerMoveEvent, flag incoming packets which don't fire any move event.
         boolean cancel = false;
-        // Early return tests, for the case the player has teleported somewhere/respawned/joined too recently.
         final long now = System.currentTimeMillis();
-        // TODO: This still triggers on join if chunk isn't loaded and the player is sinking...
-        if (now - timeJoin < 20000 || now - timeTeleport < 5000 || now - timeRespawn < 5000 || !player.isOnline()) {
-            return false;
+        final boolean debug = pData.isDebugActive(CheckType.NET_MOVING);
+        tags.clear();
+        if (now > pData.getLastJoinTime() && pData.getLastJoinTime() + 10000 > now) {
+            tags.add("login_grace");
+        	return false;
         }
-        // Work as ExtremeMove but for packet sent!
-        // Observed: this seems to prevent long/mid distance blink cheats.
-        else if (packetData.hasPos) {
+        if (packetData != null && packetData.hasPos) {
             final MovingData mData = pData.getGenericInstance(MovingData.class);
-            final Location knownLocation = player.getLocation();
+            /** Actual Location on the server */
+            final Location knownLocation = player.getLocation(useLoc);
+            /** Claimed Location sent by the client */
             final Location packetLocation = new Location(null, packetData.getX(), packetData.getY(), packetData.getZ());
-            final double hDistanceDiff = TrigUtil.distance(knownLocation, packetLocation);
-            final double yDistanceDiff = Math.abs(knownLocation.getY() - packetLocation.getY());
+            //final double distanceSq = TrigUtil.distanceSquared(knownLocation, packetLocation);
+            final double yDistance = Math.abs(knownLocation.getY() - packetLocation.getY());
+            final double hDistance = TrigUtil.xzDistance(knownLocation, packetLocation);
+            final double distance = TrigUtil.distance(knownLocation, packetLocation);
 
-            // Vertical move.
-            if (yDistanceDiff > 100.0) {
+            // 100 it's the minimum [Math.max(100, config distance)]distance for the 'moved too quickly' check to fire
+            // See PlayerConnection.java
+            if (yDistance > 100.0 || distance > 100.0/*distanceSq > 100.0 || hDistance > 100.0*/) {
                 data.movingVL++ ;
+                tags.add("invalid_pos");
+                final ViolationData vd = new ViolationData(this, player, data.movingVL, 1.0, cc.movingActions);
+                if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+                cancel = executeActions(vd).willCancel();
             }
-            // Horizontal move.
-            else if (hDistanceDiff > 100.0) {
-                data.movingVL++ ;
-            } 
-            else data.movingVL *= 0.98;
-
-            if (data.movingVL > 7) {
-                cancel = executeActions(player, data.movingVL, 1, cc.movingActions).willCancel();
-            }
-            
-            if (data.movingVL > 15) {
-                // Player might be freezed by canceling, set back might turn it to normal
-                data.movingVL = 0.0;
-                Object task = null;
-                task = Folia.runSyncTaskForEntity(player, plugin, (arg) -> {
-                    final Location newTo = mData.hasSetBack() ? mData.getSetBack(knownLocation) :
-                                           mData.hasMorePacketsSetBack() ? mData.getMorePacketsSetBack() :
-                                           // Unsafe position! Null world or world not updated
-                                           knownLocation;
-                                           //null;
-                    if (newTo == null) {
-                        StaticLog.logSevere("[NoCheatPlus] Could not restore location for " + player.getName() + ", kicking them.");
-                        CheckUtils.kickIllegalMove(player, pData.getGenericInstance(MovingConfig.class));
-                    } 
-                    else {
-                        // Mask player teleport as a set back.
-                        mData.prepareSetBack(newTo);
-                        Folia.teleportEntity(player, LocUtil.clone(newTo), BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION);
-                        // Request an Improbable update, unlikely that this is legit.
-                        TickTask.requestImprobableUpdate(player.getUniqueId(), 0.3f);
-                        if (pData.isDebugActive(CheckType.NET_MOVING)) 
-                            debug(player, "Set back player: " + player.getName() + ":" + LocUtil.simpleFormat(newTo));
-                    }
-                }, null);
-                if (!Folia.isTaskScheduled(task)) {
-                    StaticLog.logWarning("[NoCheatPlus] Failed to schedule task. Player: " + player.getName());
-                }
-                mData.resetTeleported(); // Cleanup, just in case.
+            else {
+                data.movingVL *= 0.98;
             }
         }
+
+        if (debug) {
+            final Location packetLocation = new Location(null, packetData.getX(), packetData.getY(), packetData.getZ());
+            final StringBuilder builder = new StringBuilder(500);
+            if (packetData.hasPos) {
+                builder.append(CheckUtils.getLogMessagePrefix(player, type));
+                builder.append("\nPacket location: " + LocUtil.simpleFormat(packetLocation));
+                builder.append("\nServer location: " + LocUtil.simpleFormat(player.getLocation(useLoc)));
+                builder.append("\nDeltas: h= " + TrigUtil.distance(player.getLocation(useLoc), packetLocation) + ", y= " + Math.abs(player.getLocation(useLoc).getY() - packetLocation.getY()));
+            }
+            else {
+            	builder.append("Empty packet (no position)");
+            }
+            NCPAPIProvider.getNoCheatPlusAPI().getLogManager().debug(Streams.TRACE_FILE, builder.toString());
+        }
+        useLoc.setWorld(null);
         return cancel;
-    }
-    
-    // Currently only related to these, no need to make another class.
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void playerTeleport(PlayerTeleportEvent e) {
-        timeTeleport = System.currentTimeMillis();
-    }
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void playerJoin(PlayerJoinEvent e) {
-        timeJoin = System.currentTimeMillis();
-    }
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void playerRespawn(PlayerRespawnEvent e) {
-        timeRespawn = System.currentTimeMillis();
     }
 }

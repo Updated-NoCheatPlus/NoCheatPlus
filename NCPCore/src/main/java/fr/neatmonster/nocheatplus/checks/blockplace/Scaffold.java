@@ -17,8 +17,6 @@ package fr.neatmonster.nocheatplus.checks.blockplace;
 import java.util.LinkedList;
 import java.util.List;
 
-import fr.neatmonster.nocheatplus.components.registry.feature.TickListener;
-import fr.neatmonster.nocheatplus.utilities.TickTask;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
@@ -28,14 +26,20 @@ import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
+import fr.neatmonster.nocheatplus.components.registry.feature.TickListener;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
+import fr.neatmonster.nocheatplus.utilities.TickTask;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+
 
 /**
  * Check for common behavior from a client using the "Scaffold" cheat.
  * Each sub-check should cover areas that one sub-check may not cover.
  * If the cheat does not flag any other sub-checks, the time sub-check
  * Should enforce realistic time between block placements.
+ * 
+ * @author CaptainObvious0
  */
 public class Scaffold extends Check {
 
@@ -43,8 +47,7 @@ public class Scaffold extends Check {
     public List<String> tags = new LinkedList<>();
     
    /*
-    * Instanties a new Scaffold check
-    *
+    * Instantiates a new Scaffold check
     */
     public Scaffold() {
         super(CheckType.BLOCKPLACE_SCAFFOLD);
@@ -66,31 +69,45 @@ public class Scaffold extends Check {
     public boolean check(final Player player, final BlockFace placedFace, final IPlayerData pData,
                          final BlockPlaceData data, final BlockPlaceConfig cc, final boolean isCancelled,
                          final double yDistance, final int jumpPhase) {
-        
+        // NOTE: Looks like there's a legit fast-scaffolding technique called 'god-bridge'
+        // Would be useful to compare the speed with a skilled player god-bridging VS scaffold cheats.
+        // TODO: ^ Need testing + debug log + someone who can actually replicate such... :)
+
+        // TODO: Not too sure about the usefulness of this check these days:
+        // Angle: like reported in the comment below, this is already covered by BlockInteract.Direction. Why not simply sharpen that one instead of bloating NCP with redundant code?
+        // Time: Possibly rethink it. Could be moved to FastPlace as a sub-check
+        //       ...Or just remove it. We already have a FastPlace check (which is ALSO
+        //       feeding Improbable with too fast block placements on longer time periods...)
+        // Sprint: Would be best to have our own sprinting handling, and catch the cheat with SurvivalFly instead.
+        //        (If the player sprints while placing a block: sprinting = false -> cause Sf to enforce walking speed -> the player will then trigger a speed violation)
+        // ToolSwitch: matter of taste... it may catch badly implemented scaffold cheats but not really much else. 
+        //             Also clashes with NCP's principle (having long-lasting checks based on deterministic protection, not detecting specific cheat implementations)  
+        // PitchRotation: this is the only one that I can see being kept. Combined with yawrate, they can nerf the cheat decently.
+        //                (At that point it should be moved as a subcheck into something else. Wrongturn? A new Combined.PitchRate check? Wouldn't make sense keeping it into the BlockPlace category)      
         boolean cancel = false;
 
         // Update sneakTime since the player may have unsneaked after the last move.
         if (player.isSneaking()) {
             data.sneakTime = data.currentTick;
         }
-
         data.currentTick = TickTask.getTick();
 
         // Angle Check - Check if the player is looking at the block (Should already be covered by BlockInteract.Direction)
         if (cc.scaffoldAngle) {
             final Vector placedVector = new Vector(placedFace.getModX(), placedFace.getModY(), placedFace.getModZ());
-            float placedAngle = player.getLocation().getDirection().angle(placedVector);
-
-            if (placedAngle > MAX_ANGLE) cancel = violation("Angle", Math.min(Math.max(1, (int) (placedAngle - MAX_ANGLE) * 10), 10), player, data, pData);
+            double placedAngle = TrigUtil.angle(player.getLocation().getDirection(), placedVector);
+            if (placedAngle > MAX_ANGLE) {
+                cancel = violation("Angle", Math.min(Math.max(1, (int) (placedAngle - MAX_ANGLE) * 10), 10), player, data, pData);
+            }
         }
 
         // Time Check - A FastPlace check but for Scaffold type block placements. If all other sub-checks fail to detect the cheat this
         // Should ensure the player cannot quickly place blocks below themselves.
         if (cc.scaffoldTime && !isCancelled && Math.abs(player.getLocation().getPitch()) > 70
             && (data.currentTick - data.sneakTime) > 3 
-            && !player.hasPotionEffect(PotionEffectType.SPEED)
-            ) {
-
+            && !player.hasPotionEffect(PotionEffectType.SPEED)) {
+            
+            // TODO: Switch to ActionAccumulator based check.
             data.placeTick.add(data.currentTick);
             if (data.placeTick.size() > 2) {
                 long sum = 0;
@@ -128,7 +145,7 @@ public class Scaffold extends Check {
         // Note: Yaw speed change is also monitored. (See listener...)
         if (cc.scaffoldRotate) {
             data.lastYaw = player.getLocation().getYaw();
-            TickListener pitchTick = new TickListener() {
+            TickListener yawTick = new TickListener() {
                 @Override
                 public void onTick(int tick, long timeLast) {
                     // Needs to be run on the next tick
@@ -144,7 +161,7 @@ public class Scaffold extends Check {
                     }
                 }
             };
-            TickTask.addTickListener(pitchTick);
+            TickTask.addTickListener(yawTick);
         }
 
         // Tool Switch - Check if the player is quickly switching inventory slots between block placements
@@ -182,14 +199,12 @@ public class Scaffold extends Check {
      * @param pData
      * @return
      */
-    public boolean violation(final String addTags, final int weight, final Player player,
-                             final BlockPlaceData data, final IPlayerData pData) {
-
+    private boolean violation(final String addTags, final int weight, final Player player,
+                              final BlockPlaceData data, final IPlayerData pData) {
         ViolationData vd = new ViolationData(this, player, data.scaffoldVL, weight, pData.getGenericInstance(BlockPlaceConfig.class).scaffoldActions);
         tags.add(addTags);
         if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
         data.scaffoldVL += weight;
-
         return executeActions(vd).willCancel();
     }
 }

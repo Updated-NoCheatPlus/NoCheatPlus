@@ -18,7 +18,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -43,8 +42,8 @@ import fr.neatmonster.nocheatplus.utilities.ds.map.LinkedCoordHashMap;
 import fr.neatmonster.nocheatplus.utilities.ds.map.LinkedCoordHashMap.MoveOrder;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache.IBlockCacheNode;
-import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
+import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.MapUtil;
 
 /**
@@ -821,11 +820,11 @@ public class BlockChangeTracker {
      * @param ignoreFlags
      * @return
      */
-    public boolean isOnGround(final BlockCache blockCache, 
-            final BlockChangeReference ref, final int tick, final UUID worldId,
-            final double minX, final double minY, final double minZ, 
-            final double maxX, final double maxY, final double maxZ, 
-            final long ignoreFlags) {
+    public boolean isOnGround(final BlockCache blockCache,
+                              final BlockChangeReference ref, final int tick, final UUID worldId,
+                              final double minX, final double minY, final double minZ,
+                              final double maxX, final double maxY, final double maxZ,
+                              final long ignoreFlags) {
         // (The method has been put here for efficiency. Alternative: put specific stuff into OnGroundReference.)
         // TODO: Keep the outer iteration code in line with BlockProperties.isOnGround.
         final WorldNode worldNode = getValidWorldNode(tick, worldId);

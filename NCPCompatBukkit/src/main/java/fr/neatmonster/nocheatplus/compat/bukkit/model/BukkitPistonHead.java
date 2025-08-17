@@ -32,44 +32,50 @@ public class BukkitPistonHead implements BukkitShapeModel {
             Directional b = (Directional) blockData;
             BlockFace face = b.getFacing();
             switch (face) {
-            case UP: return new double[] {
-                    // Shaft
-                    0.375, 0.0, 0.375, 0.625, 1.0, 0.625,
-                    // Plank
-                    0.0, 0.75, 0.0, 1.0, 1.0, 1.0
-                    };
-            case DOWN: return new double[] {
-                    // Shaft
-                    0.375, 0.0, 0.375, 0.625, 1.0, 0.625,
-                    // Plank
-                    0.0, 0.0, 0.0, 1.0, 0.25, 1.0
-                    };
-            case NORTH: return new double[] {
-                    // Shaft
-                    0.375, 0.375, 0.0, 0.625, 0.625, 1.0,
-                    // Plank
-                    0.0, 0.0, 0.0, 1.0, 1.0, 0.25
-                    };
-            case SOUTH: return new double[] {
-                    // Shaft
-                    0.375, 0.375, 0.0, 0.625, 0.625, 1.0,
-                    // Plank
-                    0.0, 0.0, 0.75, 1.0, 1.0, 1.0
-                    };
-            case WEST: return new double[] {
-                    // Shaft
-                    0.0, 0.375, 0.375, 1.0, 0.625, 0.625,
-                    // Plank
-                    0.0, 0.0, 0.0, 0.25, 1.0, 1.0
-                    };
-            case EAST: return new double[] {
-                    // Shaft
-                    0.0, 0.375, 0.375, 1.0, 0.625, 0.625,
-                    // Plank
-                    0.75, 0.0, 0.0, 1.0, 1.0, 1.0
-                    };
-            default:
-                break;
+                case UP: 
+                    return new double[] {
+                        // Shaft
+                        0.375, 0.0, 0.375, 0.625, 1.0, 0.625,
+                        // Plank
+                        0.0, 0.75, 0.0, 1.0, 1.0, 1.0
+                        };
+                case DOWN: 
+                    return new double[] {
+                        // Shaft
+                        0.375, 0.0, 0.375, 0.625, 1.0, 0.625,
+                        // Plank
+                        0.0, 0.0, 0.0, 1.0, 0.25, 1.0
+                        };
+                case NORTH: 
+                    return new double[] {
+                        // Shaft
+                        0.375, 0.375, 0.0, 0.625, 0.625, 1.0,
+                        // Plank
+                        0.0, 0.0, 0.0, 1.0, 1.0, 0.25
+                        };
+                case SOUTH: 
+                    return new double[] {
+                        // Shaft
+                        0.375, 0.375, 0.0, 0.625, 0.625, 1.0,
+                        // Plank
+                        0.0, 0.0, 0.75, 1.0, 1.0, 1.0
+                        };
+                case WEST: 
+                    return new double[] {
+                        // Shaft
+                        0.0, 0.375, 0.375, 1.0, 0.625, 0.625,
+                        // Plank
+                        0.0, 0.0, 0.0, 0.25, 1.0, 1.0
+                        };
+                case EAST: 
+                    return new double[] {
+                        // Shaft
+                        0.0, 0.375, 0.375, 1.0, 0.625, 0.625,
+                        // Plank
+                        0.75, 0.0, 0.0, 1.0, 1.0, 1.0
+                        };
+                default:
+                    break;
             }
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
@@ -79,5 +85,4 @@ public class BukkitPistonHead implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
-
 }

@@ -24,10 +24,11 @@ import org.junit.Test;
 
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.build.BuildParameters;
-import fr.neatmonster.nocheatplus.utilities.collision.RayTracing;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.RayTracing;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+import fr.neatmonster.nocheatplus.MockServerBase;
 
-public class TestRayTracing {
+public class TestRayTracing extends MockServerBase {
 
     // TODO: Add a test that fails if going beyond target block coordinate.
 

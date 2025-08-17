@@ -25,14 +25,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.components.registry.feature.TickListener;
-import fr.neatmonster.nocheatplus.compat.Folia;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
@@ -372,30 +371,6 @@ public class TickTask implements Runnable {
     }
 
     /**
-     * Get moderate lag spikes of the last hour (>150 ms, lowest tracked spike
-     * duration).
-     *
-     * @return the moderate lag spikes
-     * @deprecated What is moderate :) ?
-     */
-    public static final int getModerateLagSpikes() {
-        spikes[0].update(System.currentTimeMillis());
-        return (int) spikes[0].score(1f);
-    }
-
-    /**
-     * Get heavy lag spikes of the last hour (> 450 ms supposedly, first
-     * duration bigger than 150 ms).
-     *
-     * @return the heavy lag spikes
-     * @deprecated What is heavy :) ?
-     */
-    public static final int getHeavyLagSpikes() {
-        spikes[1].update(System.currentTimeMillis());
-        return (int) spikes[1].score(1f);
-    }
-
-    /**
      * Get total number of lag spikes counted at all. This is the number of lag
      * spikes with a duration above spikeDuations[0] which should be 150 ms.
      * This is the score of spikes[0].
@@ -451,8 +426,8 @@ public class TickTask implements Runnable {
     // Public methods for internal use.
     public static Object start(final Plugin plugin) {
         cancel();
-        taskId = Folia.runSyncRepatingTask(plugin, (arg) -> new TickTask().run(), 1, 1);
-        if (Folia.isTaskScheduled(taskId)) {
+        taskId = SchedulerHelper.runSyncRepeatingTask(plugin, (arg) -> new TickTask().run(), 1, 1);
+        if (SchedulerHelper.isTaskScheduled(taskId)) {
             timeStart = System.currentTimeMillis();
         }
         else {
@@ -465,10 +440,10 @@ public class TickTask implements Runnable {
      * Cancel.
      */
     public static void cancel() {
-        if (!Folia.isTaskScheduled(taskId)) {
+        if (!SchedulerHelper.isTaskScheduled(taskId)) {
             return;
         }
-        Folia.cancelTask(taskId);
+        SchedulerHelper.cancelTask(taskId);
         taskId = null;
     }
 

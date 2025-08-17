@@ -59,7 +59,8 @@ public class KeepAliveAdapter extends BaseAdapter {
     public void onPacketReceiving(final PacketEvent event) {
         try {
             if (event.isPlayerTemporary()) return;
-        } catch(NoSuchMethodError e) {}
+        } 
+        catch(NoSuchMethodError e) {}
         final long time = System.currentTimeMillis();
         final Player player = event.getPlayer();
         if (player == null) {
@@ -79,7 +80,7 @@ public class KeepAliveAdapter extends BaseAdapter {
         // TODO: Better modeling of actual packet sequences (flying vs. keep alive vs. request/ping).
         // TODO: Better integration with god-mode check / trigger reset ndt.
         if (frequencyCheck.isEnabled(player, pData) 
-                && frequencyCheck.check(player, time, data, cc, pData)) {
+            && frequencyCheck.check(player, time, data, cc, pData)) {
             event.setCancelled(true);
         }
     }

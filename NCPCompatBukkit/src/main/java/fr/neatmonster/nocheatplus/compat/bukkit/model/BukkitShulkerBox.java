@@ -25,8 +25,7 @@ import org.bukkit.block.ShulkerBox;
 public class BukkitShulkerBox implements BukkitShapeModel {
 
     @Override
-    public double[] getShape(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
 
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();
@@ -41,9 +40,7 @@ public class BukkitShulkerBox implements BukkitShapeModel {
     }
 
     @Override
-    public int getFakeData(final BlockCache blockCache, 
-            final World world, final int x, final int y, final int z) {
+    public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
-
 }

@@ -31,9 +31,9 @@ import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
-import fr.neatmonster.nocheatplus.checks.moving.util.MovingUtil;
 import fr.neatmonster.nocheatplus.command.CommandUtil;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.components.data.IData;
@@ -49,6 +49,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.players.PlayerFactoryArgument;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.SimpleCharPrefixTree;
+import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 import fr.neatmonster.nocheatplus.worlds.WorldFactoryArgument;
 
 /**
@@ -59,28 +60,26 @@ import fr.neatmonster.nocheatplus.worlds.WorldFactoryArgument;
 public class ChatListener extends CheckListener implements INotifyReload, JoinLeaveListener {
 
     // Checks.
-
     /** Captcha handler. */
-    private final Captcha captcha		= addCheck(new Captcha());  
+    private final Captcha captcha  = addCheck(new Captcha());  
 
     /** Commands repetition check. */
-    private final Commands commands 	= addCheck(new Commands()); 
+    private final Commands commands = addCheck(new Commands()); 
 
-    /** Logins check (global) */
-    private final Logins logins 		= addCheck(new Logins());
+    /** Logins check (global,how many simualtenous logins can the server accept in a specified time-frame) */
+    private final Logins logins = addCheck(new Logins());
 
     /** Chat message check. */
-    private final Text text 			= addCheck(new Text());
+    private final Text text = addCheck(new Text());
 
-    /** Relogging check. */
-    private final Relog relog 			= addCheck(new Relog());
+    /** Relogging check (per-player re-log time. */
+    private final Relog relog  = addCheck(new Relog());
 
     // Auxiliary stuff.
-
     /** Commands to be ignored completely. */
     private final SimpleCharPrefixTree commandExclusions = new SimpleCharPrefixTree();
 
-    /** Commands to be handled as chat. */
+    /** Commands to be handled as chat (thus handled by Text and not Command check). */
     private final SimpleCharPrefixTree chatCommands = new SimpleCharPrefixTree();
 
     /** Commands not to be executed in-game.  */
@@ -118,32 +117,17 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
                 );
     }
 
-    private void initFilters(ConfigFile config) {
-        CommandUtil.feedCommands(consoleOnlyCommands, config, ConfPaths.PROTECT_COMMANDS_CONSOLEONLY_CMDS, true);
-        CommandUtil.feedCommands(chatCommands, config, ConfPaths.CHAT_COMMANDS_HANDLEASCHAT, true);
-        CommandUtil.feedCommands(commandExclusions, config, ConfPaths.CHAT_COMMANDS_EXCLUSIONS, true);
-    }
-
-    /**
-     * We listen to PlayerChat events for obvious reasons.
-     * 
-     * @param event
-     *            the event
-     */
     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
     public void onPlayerChat(final AsyncPlayerChatEvent event) {
-
         final Player player = event.getPlayer();
         final boolean alreadyCancelled = event.isCancelled();
-
-        if (!DataManager.getPlayerData(player).isCheckActive(CheckType.CHAT, player)) return;
-
+        if (!DataManager.getPlayerData(player).isCheckActive(CheckType.CHAT, player)) {
+            return;
+        }
         // Tell TickTask to update cached permissions.
         // (Might omit this if already cancelled.)
         final IPlayerData pData = DataManager.getPlayerData(player);
         final ChatConfig cc = pData.getGenericInstance(ChatConfig.class);
-
-
         // Then the no chat check.
         // TODO: isMainThread: Could consider event.isAsync ?
         if (textChecks(player, event.getMessage(), cc, pData, false, alreadyCancelled)) {
@@ -152,16 +136,36 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
 
     }
 
-    /**
-     * We listen to PlayerCommandPreprocess events because commands can be used for spamming too.
-     * 
-     * @param event
-     *            the event
-     */
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onPlayerLogin(final PlayerLoginEvent event) {
+        if (event.getResult() != Result.ALLOWED) {
+            return;
+        }
+        final Player player = event.getPlayer();
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        if (!pData.isCheckActive(CheckType.CHAT, player)) {
+            return;
+        }
+        final ChatConfig cc = pData.getGenericInstance(ChatConfig.class);
+        final ChatData data = pData.getGenericInstance(ChatData.class);
+        // (No forced permission update, because the associated permissions are treated as hints rather.)
+        // Reset captcha of player if needed.
+        synchronized (data) {
+            captcha.resetCaptcha(player, cc, data, pData);
+        }
+        // Fast relog check.
+        if (relog.isEnabled(player, pData) && relog.unsafeLoginCheck(player, cc, data,pData)) {
+            event.disallow(Result.KICK_OTHER, cc.relogKickMessage);
+        }
+        else if (logins.isEnabled(player, pData) && logins.check(player, cc, data)) {
+            event.disallow(Result.KICK_OTHER, cc.loginsKickMessage);
+        }
+    }
+
+    /** We listen to PlayerCommandPreprocess events because commands can be used for spamming too. */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommandPreprocess(final PlayerCommandPreprocessEvent event) {
         final Player player = event.getPlayer();
-
         // Tell TickTask to update cached permissions.
         final IPlayerData pData = DataManager.getPlayerData(player);
         final ChatConfig cc = pData.getGenericInstance(ChatConfig.class);
@@ -169,14 +173,14 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
         final String message = event.getMessage();
         final String lcMessage = StringUtil.leftTrim(message).toLowerCase();
         // TODO: Remove bukkit: etc.
-
         final String[] split = lcMessage.split(" ", 2);
         final String alias = split[0].substring(1);
         final Command command = CommandUtil.getCommand(alias);
 
         final List<String> messageVars = new ArrayList<String>(); // Could as well use an array and allow null on input of SimpleCharPrefixTree.
         messageVars.add(lcMessage);
-        String checkMessage = message; // Message to run chat checks on.
+        // Message to run chat checks on.
+        String checkMessage = message; 
         if (command != null) {
             messageVars.add("/" + command.getLabel().toLowerCase() + (split.length > 1 ? (" " + split[1]) : ""));
         }
@@ -195,7 +199,6 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
             event.setCancelled(true);
             return;
         }
-
         // Handle as chat or command.
         if (chatCommands.hasAnyPrefixWords(messageVars)) {
             // Treat as chat.
@@ -221,22 +224,20 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
                 }
             }
         }
-
     }
 
     private boolean checkUntrackedLocation(final Player player, final String message, 
-            final MovingConfig mcc, final IPlayerData pData) {
+                                           final MovingConfig mcc, final IPlayerData pData) {
         final Location loc = player.getLocation(useLoc);
         boolean cancel = false;
         if (MovingUtil.shouldCheckUntrackedLocation(player, loc, pData)) {
             final Location newTo = MovingUtil.checkUntrackedLocation(loc);
             if (newTo != null) {
                 if (mcc.passableUntrackedCommandTryTeleport 
-                        && player.teleport(newTo, BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION)) {
+                    && SchedulerHelper.teleportEntity(player, newTo, BridgeMisc.TELEPORT_CAUSE_CORRECTION_OF_POSITION)) {
                     NCPAPIProvider.getNoCheatPlusAPI().getLogManager().info(Streams.TRACE_FILE, player.getName() + " runs the command '" + message + "' at an untracked location: " + loc + " , teleport to: " + newTo);
-                } else {
-                    // TODO: Allow disabling cancel?
-                    // TODO: Should message the player?
+                } 
+                else {
                     NCPAPIProvider.getNoCheatPlusAPI().getLogManager().info(Streams.TRACE_FILE, player.getName() + " runs the command '" + message + "' at an untracked location: " + loc + " , cancel the command.");
                     cancel = true;
                 }
@@ -246,44 +247,16 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
         return cancel;
     }
 
-    private boolean textChecks(final Player player, final String message, 
-            final ChatConfig cc, final IPlayerData pData,
-            final boolean isMainThread, final boolean alreadyCancelled) {
-        return text.isEnabled(player, pData) && text.check(player, message, cc, pData, 
-                captcha, isMainThread, alreadyCancelled);
+    private void initFilters(ConfigFile config) {
+        CommandUtil.feedCommands(consoleOnlyCommands, config, ConfPaths.PROTECT_COMMANDS_CONSOLEONLY_CMDS, true);
+        CommandUtil.feedCommands(chatCommands, config, ConfPaths.CHAT_COMMANDS_HANDLEASCHAT, true);
+        CommandUtil.feedCommands(commandExclusions, config, ConfPaths.CHAT_COMMANDS_EXCLUSIONS, true);
     }
 
-    /**
-     * We listen to this type of events to prevent spambots from login to the server.
-     * 
-     * @param event
-     *            the event
-     */
-    @EventHandler(
-            priority = EventPriority.NORMAL)
-    public void onPlayerLogin(final PlayerLoginEvent event) {
-        if (event.getResult() != Result.ALLOWED) return;
-        final Player player = event.getPlayer();
-        final IPlayerData pData = DataManager.getPlayerData(player);
-
-        if (!pData.isCheckActive(CheckType.CHAT, player)) return;
-
-        final ChatConfig cc = pData.getGenericInstance(ChatConfig.class);
-        final ChatData data = pData.getGenericInstance(ChatData.class);
-
-        // (No forced permission update, because the associated permissions are treated as hints rather.)
-
-        // Reset captcha of player if needed.
-        synchronized(data) {
-            captcha.resetCaptcha(player, cc, data, pData);
-        }
-        // Fast relog check.
-        if (relog.isEnabled(player, pData) && relog.unsafeLoginCheck(player, cc, data,pData)) {
-            event.disallow(Result.KICK_OTHER, cc.relogKickMessage);
-        }
-        else if (logins.isEnabled(player, pData) && logins.check(player, cc, data)) {
-            event.disallow(Result.KICK_OTHER, cc.loginsKickMessage);
-        }
+    private boolean textChecks(final Player player, final String message, 
+                               final ChatConfig cc, final IPlayerData pData,
+                               final boolean isMainThread, final boolean alreadyCancelled) {
+        return text.isEnabled(player, pData) && text.check(player, message, cc, pData, captcha, isMainThread, alreadyCancelled);
     }
 
     @Override
@@ -319,7 +292,5 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
     }
 
     @Override
-    public void playerLeaves(final Player player) {
-    }
-
+    public void playerLeaves(final Player player) {}
 }

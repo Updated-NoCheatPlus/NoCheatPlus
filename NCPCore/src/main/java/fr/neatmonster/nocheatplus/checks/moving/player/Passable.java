@@ -30,12 +30,12 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
-import fr.neatmonster.nocheatplus.utilities.collision.ICollidePassable;
-import fr.neatmonster.nocheatplus.utilities.collision.PassableAxisTracing;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.ICollidePassable;
+import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.PassableAxisTracing;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
-import fr.neatmonster.nocheatplus.utilities.location.TrigUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
 public class Passable extends Check {
 
@@ -71,33 +71,26 @@ public class Passable extends Check {
         blockTracker = NCPAPIProvider.getNoCheatPlusAPI().getBlockChangeTracker();
     }
 
-    public Location check(final Player player, 
-            final PlayerLocation from, final PlayerLocation to, 
-            final MovingData data, final MovingConfig cc, final IPlayerData pData, 
-            final int tick, final boolean useBlockChangeTracker) {
+    public Location check(final Player player, final PlayerLocation from, final PlayerLocation to, 
+                          final MovingData data, final MovingConfig cc, final IPlayerData pData, 
+                          final int tick, final boolean useBlockChangeTracker) {
         return checkActual(player, from, to, data, cc, pData, tick, useBlockChangeTracker);
     }
 
-    private Location checkActual(final Player player, 
-            final PlayerLocation from, final PlayerLocation to, 
-            final MovingData data, final MovingConfig cc, final IPlayerData pData,
-            final int tick, final boolean useBlockChangeTracker) {
+    private Location checkActual(final Player player, final PlayerLocation from, final PlayerLocation to, 
+                                 final MovingData data, final MovingConfig cc, final IPlayerData pData,
+                                 final int tick, final boolean useBlockChangeTracker) {
 
         final boolean debug = pData.isDebugActive(type);
-
         // TODO: Distinguish feet vs. box.
-
         // Block distances (sum, max) for from-to (not for loc!).
         final int manhattan = from.manhattan(to);
 
         // Check default order first, then others.
         rayTracing.setAxisOrder(Axis.AXIS_ORDER_YXZ);
-        String newTag = checkRayTracing(player, from, to, manhattan, 
-                data, cc, debug, tick, useBlockChangeTracker);
+        String newTag = checkRayTracing(player, from, to, manhattan, data, cc, debug, tick, useBlockChangeTracker);
         if (newTag != null) {
-            newTag = checkRayTracingAlernateOrder(player, from, to, manhattan, 
-                    debug, data, cc, tick, 
-                    useBlockChangeTracker, newTag);
+            newTag = checkRayTracingAlernateOrder(player, from, to, manhattan, debug, data, cc, tick, useBlockChangeTracker, newTag);
         }
         // Finally handle violations.
         if (newTag == null) {
@@ -107,17 +100,15 @@ public class Passable extends Check {
         }
         else {
             // Direct return.
-            return potentialViolation(player, from, to, manhattan, 
-                    debug, newTag, data, cc);
+            return potentialViolation(player, from, to, manhattan, debug, newTag, data, cc);
         }
     }
 
-    private String checkRayTracingAlernateOrder(final Player player, 
-            final PlayerLocation from, final PlayerLocation to, 
-            final int manhattan, final boolean debug,
-            final MovingData data, final MovingConfig cc, 
-            final int tick, final boolean useBlockChangeTracker,
-            final String previousTag) {
+    private String checkRayTracingAlernateOrder(final Player player, final PlayerLocation from, final PlayerLocation to, 
+                                                final int manhattan, final boolean debug,
+                                                final MovingData data, final MovingConfig cc, 
+                                                final int tick, final boolean useBlockChangeTracker,
+                                                final String previousTag) {
         /*
          * General assumption for now: Not all combinations have to be checked.
          * If y-first works, only XZ and ZX need to be checked. There may be
@@ -126,32 +117,28 @@ public class Passable extends Check {
          */
         Axis axis = rayTracing.getCollidingAxis();
         // (YXZ is the default order, for which ray-tracing collides.)
+        // Test the horizontal alternative only.
         if (axis == Axis.X_AXIS || axis == Axis.Z_AXIS) {
-            // Test the horizontal alternative only.
             rayTracing.setAxisOrder(Axis.AXIS_ORDER_YZX);
-            return checkRayTracing(player, from, to, manhattan, data, cc, 
-                    debug, tick, useBlockChangeTracker);
+            return checkRayTracing(player, from, to, manhattan, data, cc, debug, tick, useBlockChangeTracker);
         }
+        // Test both horizontal options, each before vertical.
         else if (axis == Axis.Y_AXIS) {
-            // Test both horizontal options, each before vertical.
             rayTracing.setAxisOrder(Axis.AXIS_ORDER_XZY);
-            if (checkRayTracing(player, from, to, manhattan, data, cc, 
-                    debug, tick, useBlockChangeTracker) == null) {
+            if (checkRayTracing(player, from, to, manhattan, data, cc, debug, tick, useBlockChangeTracker) == null) {
                 return null;
             }
             rayTracing.setAxisOrder(Axis.AXIS_ORDER_ZXY);
-            return checkRayTracing(player, from, to, manhattan, data, cc, 
-                    debug, tick, useBlockChangeTracker);
+            return checkRayTracing(player, from, to, manhattan, data, cc, debug, tick, useBlockChangeTracker);
         }
         else {
             return previousTag; // In case nothing could be done.
         }
     }
 
-    private String checkRayTracing(final Player player, 
-            final PlayerLocation from, final PlayerLocation to, final int manhattan, 
-            final MovingData data, final MovingConfig cc, final boolean debug,
-            final int tick, final boolean useBlockChangeTracker) {
+    private String checkRayTracing(final Player player, final PlayerLocation from, final PlayerLocation to, final int manhattan, 
+                                   final MovingData data, final MovingConfig cc, final boolean debug,
+                                   final int tick, final boolean useBlockChangeTracker) {
         String tags = null;
         // NOTE: axis order is set externally.
         setNormalMargins(rayTracing, from, cc);

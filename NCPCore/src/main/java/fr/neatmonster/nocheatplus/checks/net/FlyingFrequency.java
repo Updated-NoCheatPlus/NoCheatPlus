@@ -20,6 +20,8 @@ import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.TickTask;
+
 
 /**
  * Check frequency of (pos/look/) flying packets, disregarding packet content.
@@ -29,10 +31,6 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
  */
 public class FlyingFrequency extends Check {
 
-    // Thresholds for firing moving events (CraftBukkit). TODO: Move to some model thing in NCPCore, possibly a ServerConfig?
-    public static final double minMoveDistSq = 1f / 256; // PlayerConnection magic.
-    public static final float minLookChange = 10f;
-
     public FlyingFrequency() {
         super(CheckType.NET_FLYINGFREQUENCY);
     }
@@ -41,21 +39,30 @@ public class FlyingFrequency extends Check {
      * Always update data, check bypass on violation only.
      * 
      * @param player
+     * @param packetData
      * @param time
      * @param data
      * @param cc
+     * @param pData
      * @return
      */
     public boolean check(final Player player, final DataPacketFlying packetData, final long time, 
-            final NetData data, final NetConfig cc, final IPlayerData pData) {
+                         final NetData data, final NetConfig cc, final IPlayerData pData) {
+        boolean cancel = false;
         data.flyingFrequencyAll.add(time, 1f);
         final float allScore = data.flyingFrequencyAll.score(1f);
-        if (allScore / cc.flyingFrequencySeconds > cc.flyingFrequencyPPS  
-                && executeActions(player, allScore / cc.flyingFrequencySeconds - cc.flyingFrequencyPPS, 1.0 / cc.flyingFrequencySeconds, cc.flyingFrequencyActions).willCancel()) {
-            return true;
-        } else {
-            return false;
+        final float fullTime = data.flyingFrequencyAll.bucketDuration() * data.flyingFrequencyAll.numberOfBuckets();
+        float amount = allScore / cc.flyingFrequencySeconds;
+        // Check if packets are above frequency limit
+        if (amount > cc.flyingFrequencyPPS) {
+            // Scale according to current lag factor
+            amount /= TickTask.getLag((long)fullTime);
+            // Re-check if packets are still above limit.
+            if (amount > cc.flyingFrequencyPPS) {
+                double violation = amount - cc.flyingFrequencyPPS;
+                cancel = executeActions(player, violation, 1.0 / cc.flyingFrequencySeconds, cc.flyingFrequencyActions).willCancel();
+            }
         }
+        return cancel;
     }
-
 }

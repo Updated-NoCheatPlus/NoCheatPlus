@@ -43,7 +43,7 @@ import fr.neatmonster.nocheatplus.logging.StaticLog;
 
 /**
  * Process words.
- * @author mc_dev
+ * @author asofold
  *
  */
 public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChecker{
@@ -59,19 +59,19 @@ public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChe
     public LetterEngine(ConfigFile config){
         // Add word processors.
         // NOTE: These settings should be compared to the per player settings done in the EnginePlayerConfig constructor.
-        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_WORDS_CHECK, false)){
+        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_WORDS_CHECK, false)) {
             FlatWordsSettings settings = new FlatWordsSettings();
             settings.maxSize = 1000;
             settings.applyConfig(config, ConfPaths.CHAT_TEXT_GL_WORDS);
             processors.add(new FlatWords("glWords",settings));
         }
-        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_PREFIXES_CHECK , false)){
+        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_PREFIXES_CHECK , false)) {
             WordPrefixesSettings settings = new WordPrefixesSettings();
             settings.maxAdd = 2000;
             settings.applyConfig(config, ConfPaths.CHAT_TEXT_GL_PREFIXES);
             processors.add(new WordPrefixes("glPrefixes", settings));
         }
-        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_SIMILARITY_CHECK , false)){
+        if (config.getBoolean(ConfPaths.CHAT_TEXT_GL_SIMILARITY_CHECK , false)) {
             SimilarWordsBKLSettings settings = new SimilarWordsBKLSettings();
             settings.maxSize = 1000;
             settings.applyConfig(config, ConfPaths.CHAT_TEXT_GL_SIMILARITY);
@@ -81,17 +81,15 @@ public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChe
         dataMap = new EnginePlayerDataMap(600000L, 100, 0.75f);
     }
 
-    public Map<String, Float> process(final MessageLetterCount letterCount, final String playerName, final ChatConfig cc, final ChatData data){
-
+    public Map<String, Float> process(final MessageLetterCount letterCount, final String playerName, final ChatConfig cc, final ChatData data) {
         final Map<String, Float> result = new HashMap<String, Float>();
-
         // Global processors.
-        if (cc.textGlobalCheck){
-            for (final WordProcessor processor : processors){
-                try{
+        if (cc.textGlobalCheck) {
+            for (final WordProcessor processor : processors) {
+                try {
                     result.put(processor.getProcessorName(), processor.process(letterCount) * cc.textGlobalWeight);
                 }
-                catch( final Exception e){
+                catch( final Exception e) {
                     StaticLog.logSevere("chat.text: processor("+processor.getProcessorName()+") generated an exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     StaticLog.logSevere(e);
                     continue;
@@ -100,13 +98,13 @@ public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChe
         }
 
         // Per player processors.
-        if (cc.textPlayerCheck){
+        if (cc.textPlayerCheck) {
             final EnginePlayerData engineData = dataMap.get(playerName, cc); 
             for (final WordProcessor processor : engineData.processors){
-                try{
+                try {
                     result.put(processor.getProcessorName(), processor.process(letterCount) * cc.textPlayerWeight);
                 }
-                catch( final Exception e){
+                catch( final Exception e) {
                     StaticLog.logSevere("chat.text: processor("+processor.getProcessorName()+") generated an exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     StaticLog.logSevere(e);
                     continue;
@@ -118,7 +116,7 @@ public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChe
     }
 
     public void clear() {
-        for (WordProcessor processor : processors){
+        for (WordProcessor processor : processors) {
             processor.clear();
         }
         processors.clear();
@@ -144,11 +142,11 @@ public class LetterEngine implements IRemoveData, IHaveCheckType, ConsistencyChe
     public void checkConsistency(final Player[] onlinePlayers) {
         // Use consistency checking to release some memory.
         final long now = System.currentTimeMillis();
-        if (now < dataMap.lastExpired){
+        if (now < dataMap.lastExpired) {
             dataMap.clear();
             return;
         }
-        if (now - dataMap.lastExpired > dataMap.durExpire){
+        if (now - dataMap.lastExpired > dataMap.durExpire) {
             dataMap.expire(now - dataMap.durExpire);
         }
     }

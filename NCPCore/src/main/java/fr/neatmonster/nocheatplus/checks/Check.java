@@ -51,10 +51,10 @@ import fr.neatmonster.nocheatplus.worlds.IWorldData;
  * <li>For checks run off the primary thread, permissions are cached. Updates
  * must be requested with the TickTask explicitly, e.g. in the listener. This
  * depends on the definition of which checks might run asynchronously, as given
- * in fr.neatmonster.nocheatplus.hooks.APIUtils and the default permissions
+ * in fr.neatmonster.utilities.CheckTypeUtil and the default permissions
  * defined in ICheckConfig implementations.</li>
  * <li>At present exemption checking is only thread-safe for the checks that are
- * set to run off main thread (APIUtils).</li>
+ * set to run off main thread (fr.neatmonster.utilities.CheckTypeUtil).</li>
  * <br>
  * Note on performance:
  * <li>You might check the configuration flag directly with a given
@@ -103,7 +103,6 @@ public abstract class Check implements IDebugPlayer {
      * @param type
      *            the type
      */
-    @SuppressWarnings("deprecation")
     public Check(final CheckType type) {
         this.type = type;
         mcAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(MCAccess.class);
