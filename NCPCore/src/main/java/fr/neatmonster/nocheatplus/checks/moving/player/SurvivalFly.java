@@ -774,7 +774,7 @@ public class SurvivalFly extends Check {
      * <em><strong>After {@code [Entity].collide()} is called, the next movement is prepared. Every subsequent operation 
      *           applies to the next move for the client.</strong></em>
      *         <li>Set the supporting block data; call {@code setGroundWithMovement()}</li>
-     *         <li>Handle horizontal collisions (speed is now reset to 0 on the colliding axis)
+     *         <li>Handle horizontal collisions (speed is now reset to 0 on the colliding axis); <em><strong>NCP STARTS ESTIMATING FROM HERE ON (!)</strong></em>
      *         <li>Invoke {@code checkFallDamage()} (apply fluid pushing if not previously in water)
      *         <li>Invoke {@code [Block].updateEntityAfterFallOn()} (for slime bouncing)
      *         <li>Invoke {@code [Block].stepOn()} (for slime blocks only, currently)
@@ -872,7 +872,7 @@ public class SurvivalFly extends Check {
             }
         }
         else {
-            // The input's matrix is:  NONE, LEFT, RIGHT, FORWARD, FORWARD_LEFT, FORWARD_RIGHT, BACKWARD, BACKWARD_LEFT, BACKWARD_RIGHT.
+            // The input's matrix is: NONE, LEFT, RIGHT, FORWARD, FORWARD_LEFT, FORWARD_RIGHT, BACKWARD, BACKWARD_LEFT, BACKWARD_RIGHT.
             theorInputs = new InputDirection[9];
             // Loop through all combinations otherwise.
             for (int strafe = -1; strafe <= 1; strafe++) {
@@ -911,8 +911,6 @@ public class SurvivalFly extends Check {
         // This essentially represents the momentum of the player.
         thisMove.xAllowedDistance = lastMove.toIsValid ? lastMove.xDistance : 0.0;
         thisMove.zAllowedDistance = lastMove.toIsValid ? lastMove.zDistance : 0.0;
-        // Set the supporting block data.
-        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
         // If the player collided with something on the previous tick, start with 0 momentum now.
         doWallCollision(lastMove, thisMove);
         // (The game calls a checkFallDamage() function, which, as you can imagine, handles fall damage. But also handles liquids' flow force, thus we need to apply this 2 times.)
@@ -1084,6 +1082,10 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance = collisionVector.getZ();
             // More edge data...
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
+            // Set the supporting block data.
+            if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
+                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
+            }
             // Check for block push.
             // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end.
             final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
@@ -1148,7 +1150,7 @@ public class SurvivalFly extends Check {
                 zTheoreticalDistance[i] += theorInputs[i].getForward() * (double)cosYaw + theorInputs[i].getStrafe() * (double)sinYaw;
             }
         }
-        // All subsequent modifiers get applied to each theoretical speed...
+        // All later modifiers get applied to each theoretical speed...
         if (from.isOnClimbable() && !from.isInLiquid()) {
             //data.clearActiveHorVel();
             for (i = 0; i < 9; i++) {
@@ -1252,6 +1254,10 @@ public class SurvivalFly extends Check {
                     thisMove.collideZ = collideZ[i];
                     thisMove.collidesHorizontally = thisMove.collideX || thisMove.collideZ;
                     thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
+                    // Also set the supporting block.
+                    if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
+                        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yAllowedDistance, zTheoreticalDistance[i]), from.getBoundingBox(), onGround));
+                    }
                     break;
                 }
             }
@@ -1259,7 +1265,7 @@ public class SurvivalFly extends Check {
         //////////////////////////////////////////////////////////////
         // Finish. Check if the move had been predictable at all    //
         //////////////////////////////////////////////////////////////
-        /* The index representing the input associated to the pair of speed to set in this move. */
+        /* The index representing the input associated with the pair of speed to set in this move. */
         int indexPair = i;
         int xIdx = -1;
         int zIdx = -1;
@@ -1277,7 +1283,7 @@ public class SurvivalFly extends Check {
         // Done, set in this move.
         thisMove.xAllowedDistance = xTheoreticalDistance[!isPredictable ? xIdx : indexPair];
         thisMove.zAllowedDistance = zTheoreticalDistance[!isPredictable ? zIdx : indexPair];
-        thisMove.hasImpulse = !isPredictable ? AlmostBoolean.MAYBE // We don't actually know the direction in this case.
+        thisMove.hasImpulse = !isPredictable ? AlmostBoolean.MAYBE // We don't know the direction in this case.
                               : AlmostBoolean.match(theorInputs[indexPair].getForwardDir() != ForwardDirection.NONE || theorInputs[indexPair].getStrafeDir() != StrafeDirection.NONE);
         thisMove.strafeImpulse = theorInputs[isPredictable ? indexPair : xIdx].getStrafeDir();
         thisMove.forwardImpulse = theorInputs[isPredictable ? indexPair : zIdx].getForwardDir();
@@ -1301,7 +1307,7 @@ public class SurvivalFly extends Check {
         double hDistanceAboveLimit = 0.0;
         double offset = thisMove.hDistance - thisMove.hAllowedDistance;
         if (strict) {
-            // both axes must be below allowed distance if strict.
+            // both axes must be below-allowed distance if strict.
             if (MathUtil.exceedsAllowedDistance(thisMove.xDistance, thisMove.xAllowedDistance) 
                 || MathUtil.exceedsAllowedDistance(thisMove.zDistance, thisMove.zAllowedDistance)) {
                 hDistanceAboveLimit = Math.max(hDistanceAboveLimit, offset);
@@ -1630,7 +1636,7 @@ public class SurvivalFly extends Check {
         }
         // *----------Beginning of EntityLiving.travel(); call Entity.move(); apply stuck speed multipliers----------*
         if (TrigUtil.lengthSquared(data.nextStuckInBlockHorizontal, data.nextStuckInBlockVertical, data.nextStuckInBlockHorizontal) > 1.0E-7) {
-            // If we looped the space bar impulse, all subsequent modifiers are applied to each speed.
+            // If we looped the space bar impulse, all later modifiers are applied to each speed.
             if (yTheoreticalDistance != null) {
                 for (int i = 0; i < yTheoreticalDistance.length; i++) {
                     yTheoreticalDistance[i] *= data.nextStuckInBlockVertical;

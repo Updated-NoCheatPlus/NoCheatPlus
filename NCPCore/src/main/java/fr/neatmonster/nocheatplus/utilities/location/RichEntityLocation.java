@@ -365,7 +365,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (GenericVersion.isAtLeast(entity, "1.14") && GenericVersion.isLowerThan(entity, "1.16")) {
             // Force-override the inLava result from RichBoundsLocation
             inLava = false;
-            inLava = isInsideBlock(BlockFlags.F_LAVA);
+            inLava = isInside(BlockFlags.F_LAVA);
             return inLava;
         }
         // Not a legacy client, nothing to do.
@@ -423,7 +423,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         }
         // Is the player actually in the block?
         if (GenericVersion.isLowerThan(entity, "1.15")) {
-            // Legacy clients don't have such block.
+            // Legacy clients don't have such a block.
             // This will allow "jumping" on it but won't solve legacy players "floating" midair due to the honey block's lower height (ViaVersion maps it to slime, thus full collision box (1.0))
             // We'd need per-player blocks for such.
             onHoneyBlock = false;
@@ -500,7 +500,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         }
         // Finally, test for collision
         // (This is not pure vanilla logic, but seems to be replicate it well enough.)
-        return isNextToBlock(0.01, BlockFlags.F_STICKY);
+        return isNextTo(0.01, BlockFlags.F_STICKY);
     }
 
     /**
@@ -733,7 +733,7 @@ public class RichEntityLocation extends RichBoundsLocation {
                         if (liquidHeightToWorld >= minY + 0.001 && liquidHeight != 0.0 && !(entity instanceof Player && ((Player) entity).isFlying())) {
                             // Collided.
                             maxSubmersionDepth = Math.max(liquidHeightToWorld - minY + 0.001, maxSubmersionDepth); // 0.001 is the Magic number the game uses to expand the box with newer versions.
-                            // Determine pushing speed by using the current flow of the liquid.
+                            // Determine to push speed by using the current flow of the liquid.
                             Vector flowVector = getFlowForceVector(x, y, z, liquidTypeFlag);
                             if (maxSubmersionDepth < 0.4) {
                                 flowVector = flowVector.multiply(maxSubmersionDepth);
@@ -783,7 +783,7 @@ public class RichEntityLocation extends RichBoundsLocation {
      * Abridged version of {@link #getLiquidPushingVector} for getting the submersion height of the entity.
      * 
      * @param liquidTypeFlag The flags F_LAVA or F_WATER to use.
-     * @return Height have been sink into liquid.
+     * @return The height the player has sunk into liquid.
      */
     public double getSubmergedLiquidHeight(final long liquidTypeFlag) {
         if (isInLava() && GenericVersion.isLowerThan(entity, "1.16")) {
@@ -816,8 +816,8 @@ public class RichEntityLocation extends RichBoundsLocation {
     }
     
     /**
-     * Minecraft's function to calculate the liquid's flow force. <br>
-     * Can be found in FlowingFluid.java / FluidTypeFlowing.java, getFlow()
+     * Gets the flow force of the block with the given <code>liquidTypeFlag</code> at the given block coordinates. <br>
+     * Can be found in <code>FlowingFluid.java / FluidTypeFlowing.java, getFlow()</code>
      * 
      * @param x
      * @param y
@@ -1052,7 +1052,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         }
         return  BlockProperties.collides(blockCache, minX, maxY, minZ, maxX, maxY + marginAboveEyeHeight, maxZ, BlockFlags.F_GROUND | BlockFlags.F_SOLID)
                 // Here the player's AABB would be INSIDE the block sideways(thus, the maxY's AABB would result as hitting the honey block above)
-                && !isNextToBlock(0.01, BlockFlags.F_STICKY);
+                && !isNextTo(0.01, BlockFlags.F_STICKY);
     }
 
     /**

@@ -2460,7 +2460,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         if (loaded > 0 && pData.isDebugActive(checkType)) {
             StaticLog.logInfo("Hover check: Needed to load " + loaded + " chunk" + (loaded == 1 ? "" : "s") + " for the world " + loc.getWorld().getName() +  " around " + loc.getBlockX() + "," + loc.getBlockZ() + " in order to check player: " + player.getName());
         }
-        if (info.from.isOnGroundOrResetCond() || info.from.isAboveLadder() || info.from.isAboveStairs()) {
+        if (info.from.isOnGroundOrResetCond() || info.from.isAboveLadder()) {
             res = true;
             data.sfHoverTicks = 0;
         }

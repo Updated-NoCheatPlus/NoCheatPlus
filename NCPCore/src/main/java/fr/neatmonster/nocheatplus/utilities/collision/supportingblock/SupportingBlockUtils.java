@@ -33,7 +33,7 @@ public class SupportingBlockUtils {
     /**
      * From: {@code VoxelShapeSpliterator.java / BlockCollision.java}<br>
      * Mostly a copy of {@link CollisionUtil#getCollisionBoxes(BlockCache, Entity, double[], List, boolean)}.<br>
-     * This one however check for intersection rather than an actual collision.
+     * This one however checks for intersection rather than an actual collision.
      * Retrieves a list of block positions that intersect with the given entity playerAABB.
      *
      * @param blockCache The block cache used for retrieving block data.

@@ -107,9 +107,6 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /** Bounding box collides with blocks. */
     Boolean passableBox = null;
     
-    /** Is the player above stairs?. */
-    Boolean aboveStairs = null;
-
     /** Is the player in lava?. */
     Boolean inLava = null;
 
@@ -597,7 +594,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      * @param flags
      * @return True, if is next to the block with the attached flags.
      */
-    public boolean isNextToBlock(final double xzMargin, final long flags) {
+    public boolean isNextTo(final double xzMargin, final long flags) {
         return BlockProperties.collides(blockCache, minX - xzMargin, minY, minZ - xzMargin, maxX + xzMargin, maxY, maxZ + xzMargin, flags);
     }
     
@@ -607,7 +604,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      * @param flags The flags attached to the block.
      * @return True, if the player is inside the block with the attached flags.
      */
-    public boolean isInsideBlock(final long flags) {
+    public boolean isInside(final long flags) {
         return BlockProperties.collides(blockCache, minX + 0.001, minY + 0.001, minZ + 0.001, maxX - 0.001, maxY - 0.001, maxZ - 0.001, flags);
     }
 
@@ -621,25 +618,11 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      *            the flags
      * @return True, if the player is on ground and standing on the block with the attached flag(s).
      */
-    public boolean standsOnBlock(final long flags) {
+    public boolean standsOn(final long flags) {
         if (!isOnGround()) {
             return false;
         }
         return BlockProperties.collides(blockCache, minX, minY - yOnGround, minZ, maxX, minY, maxZ, flags);
-    }
-
-    /**
-     * @return true, if is above stairs
-     */
-    public boolean isAboveStairs() {
-        if (aboveStairs == null) {
-            if (blockFlags != null && (blockFlags & BlockFlags.F_STAIRS) == 0) {
-                aboveStairs = false;
-                return false;
-            }
-            aboveStairs = standsOnBlock(BlockFlags.F_STAIRS);
-        }
-        return aboveStairs;
     }
 
     /**
@@ -846,7 +829,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             if (blockFlags != null && (blockFlags & BlockFlags.F_COBWEB) == 0) {
                 inWeb = false;
             }
-            else inWeb = isInsideBlock(BlockFlags.F_COBWEB);
+            else inWeb = isInside(BlockFlags.F_COBWEB);
         }
         return inWeb;
     }
@@ -897,7 +880,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             if (blockFlags != null && (blockFlags & BlockFlags.F_BERRY_BUSH) == 0) {
                 inBerryBush = false;
             }
-            else inBerryBush = isInsideBlock(BlockFlags.F_BERRY_BUSH);
+            else inBerryBush = isInside(BlockFlags.F_BERRY_BUSH);
         }
         return inBerryBush;
     }
@@ -993,7 +976,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             else if (blockFlags != null && (blockFlags & BlockFlags.F_BED) == 0) {
                 onBouncyBlock = false;
             }
-            else onBouncyBlock = standsOnBlock(BlockFlags.F_BED);
+            else onBouncyBlock = standsOn(BlockFlags.F_BED);
         }
         return onBouncyBlock;
     }
@@ -1026,7 +1009,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             if (blockFlags != null && (blockFlags & BlockFlags.F_BUBBLE_COLUMN) == 0) {
                 inBubbleStream = false;
             }
-            else inBubbleStream = isInsideBlock(BlockFlags.F_BUBBLE_COLUMN);
+            else inBubbleStream = isInside(BlockFlags.F_BUBBLE_COLUMN);
         }
         return inBubbleStream;
      
@@ -1593,7 +1576,6 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         this.inPowderSnow = other.isInPowderSnow();
         this.onClimbable = other.isOnClimbable();
         this.onBouncyBlock = other.isOnBouncyBlock();
-        this.aboveStairs = other.isAboveStairs();
     }
 
     /**
@@ -1655,7 +1637,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
 
         // Reset cached values.
         node = nodeBelow = null;
-        aboveStairs = inLava = inWater = inWaterLogged = inWeb = onIce = onBlueIce = inSoulSand = onHoneyBlock 
+        inLava = inWater = inWaterLogged = inWeb = onIce = onBlueIce = inSoulSand = onHoneyBlock 
         = onSlimeBlock = inBerryBush = inPowderSnow = onGround = onClimbable = onBouncyBlock = passable 
         = passableBox = inBubbleStream = null;
         onGroundMinY = Double.MAX_VALUE;

@@ -18,6 +18,7 @@ import org.bukkit.Material;
 
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.config.ConfPaths;
 import fr.neatmonster.nocheatplus.config.ConfigFile;
 import fr.neatmonster.nocheatplus.config.ConfigManager;
@@ -62,6 +63,19 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
         BlockInit.setAs("RESIN_BRICK_WALL", Material.MUD_BRICK_WALL);
         
         BlockInit.setAs("CHISELED_RESIN_BRICKS", Material.MUD_BRICKS);
+        
+        if (ServerVersion.isAtLeast("1.21.5")) {
+            /* BLOCK BREAKING (CACTUS_FLOWER / IGN_PASSABLE)
+                    * BLOCK BREAKING (LEAF_LITTER / IGN_PASSABLE)
+                    * BLOCK BREAKING (SHORT_DRY_GRASS / IGN_PASSABLE)
+                    * BLOCK BREAKING (TALL_DRY_GRASS / IGN_PASSABLE)
+                    * BLOCK BREAKING (TEST_BLOCK / SOLID+GROUND)
+                    * BLOCK BREAKING (TEST_INSTANCE_BLOCK / SOLID+GROUND)
+                    * BLOCK BREAKING (WILDFLOWERS / IGN_PASSABLE)
+                    
+             */
+            
+        }
                
         ConfigFile config = ConfigManager.getConfigFile();
         if (config.getBoolean(ConfPaths.BLOCKBREAK_DEBUG, config.getBoolean(ConfPaths.CHECKS_DEBUG, false)))
