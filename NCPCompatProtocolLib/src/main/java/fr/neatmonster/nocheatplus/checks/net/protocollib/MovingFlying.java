@@ -83,7 +83,7 @@ public class MovingFlying extends BaseAdapter {
     private final Plugin plugin = Bukkit.getPluginManager().getPlugin("NoCheatPlus");
     private static PacketType[] initPacketTypes() {
         final List<PacketType> types = new LinkedList<PacketType>(Arrays.asList(PacketType.Play.Client.LOOK, PacketType.Play.Client.POSITION, PacketType.Play.Client.POSITION_LOOK));
-        if (ServerVersion.compareMinecraftVersion("1.17") < 0) {
+        if (ServerVersion.isLowerThan("1.17") ) {
             types.add(PacketType.Play.Client.FLYING);
             StaticLog.logInfo("Add listener for legacy PlayInFlying packet.");
         } 
@@ -95,14 +95,13 @@ public class MovingFlying extends BaseAdapter {
             confirmTeleportType = ProtocolLibComponent.findPacketTypeByName(Protocol.PLAY, Sender.CLIENT, "TeleportAccept");
         }
 
-        if (confirmTeleportType != null && ServerVersion.compareMinecraftVersion("1.9") >= 0) {
+        if (confirmTeleportType != null && ServerVersion.isAtLeast("1.9")) {
             StaticLog.logInfo("Confirm teleport packet available (via name): " + confirmTeleportType);
             types.add(confirmTeleportType);
             acceptConfirmTeleportPackets = true;
-        } else {
-            acceptConfirmTeleportPackets = false;
-        }
-
+        } 
+        else acceptConfirmTeleportPackets = false;
+        
         return types.toArray(new PacketType[types.size()]);
     }
 
@@ -123,11 +122,7 @@ public class MovingFlying extends BaseAdapter {
     private long packetMismatchLogFrequency = 60000;
 
     private final HashSet<PACKET_CONTENT> validContent = new LinkedHashSet<PACKET_CONTENT>();
-
-    private final PacketType confirmTeleportType = ProtocolLibComponent.findPacketTypeByName(Protocol.PLAY, Sender.CLIENT, "TeleportAccept");
-
-    private boolean acceptConfirmTeleportPackets = confirmTeleportType != null;
-
+    
     public MovingFlying(Plugin plugin) {
         // PacketPlayInFlying[3, legacy: 10]
         super(plugin, ListenerPriority.LOW, initPacketTypes());
@@ -340,12 +335,8 @@ public class MovingFlying extends BaseAdapter {
 
     /**
      * Interpret the packet content and do with it whatever is suitable.
-     * @param player
      * @param event
-     * @param allScore
      * @param time
-     * @param data
-     * @param cc
      * @return Packet data if successful, or null on packet mismatch.
      */
     private DataPacketFlying interpretPacket(final PacketEvent event, final long time) {
@@ -357,7 +348,7 @@ public class MovingFlying extends BaseAdapter {
             return null;
         }
         final boolean onGround = booleans.get(MovingFlying.indexOnGround).booleanValue();
-        final boolean horizontalCollision = isServerAtLeast1_21_3 ? booleans.get(MovingFlying.indexhorizontalCollision).booleanValue() : false;
+        final boolean horizontalCollision = isServerAtLeast1_21_3 && booleans.get(MovingFlying.indexhorizontalCollision).booleanValue();
         final boolean hasPos = booleans.get(MovingFlying.indexhasPos).booleanValue();
         final boolean hasLook = booleans.get(MovingFlying.indexhasLook).booleanValue();
 
