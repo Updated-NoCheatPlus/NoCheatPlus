@@ -14,6 +14,7 @@
  */
 package fr.neatmonster.nocheatplus.checks.combined;
 
+import org.bukkit.Input;
 import org.bukkit.Location;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -31,6 +32,7 @@ import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
@@ -43,6 +45,7 @@ import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
@@ -136,6 +139,18 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 }
             });
         }
+        if (BridgeMisc.hasPlayerInputEvent()) {
+            queuedComponents.add(new Listener() {
+                /**
+                 * See {@link PlayerMoveData#input} as for why we listen to this event.
+                 * @param event the input event
+                 */
+                @EventHandler(priority = EventPriority.LOWEST)
+                public void onInputChange(final PlayerInputEvent event) {
+                    handleInputs(event.getInput(), event.getPlayer());
+                }
+            });
+        }
 
         // Register Data, Listener and Config.
         api.register(api.newRegistrationContext()
@@ -161,6 +176,19 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 .removeSubCheckData(CheckType.COMBINED, true)
                 .context() //
                 );
+    }
+    
+    /**
+     * Sets the input in this move.
+     * 
+     * @param bukkitInput Input from the event.
+     * @param player
+     */
+    public void handleInputs(Input bukkitInput, Player player) {
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        final MovingData data = pData.getGenericInstance(MovingData.class);
+        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
+        thisMove.input = new InputDirection(bukkitInput);
     }
 
     /** 

@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
@@ -73,6 +74,14 @@ public class PlayerMoveData extends MoveData {
     
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent} */
     public boolean isSwimming;
+    
+    /**
+     * Inputs are tipically read during player movement (in other words, on PlayerMoveEvents).<br>
+     * Calling {@link Player#getCurrentInput()} only provides the current input state
+     * at the time the move event is fired. It does not indicate when the input changed,
+     * thus any input changes that occurred between events are lost, and we need to accurately keep track of them for moving checks.
+     */
+    public InputDirection input;
     
     /**
      * The distance covered by a move from the setback point to the to.getY() point.
@@ -245,6 +254,7 @@ public class PlayerMoveData extends MoveData {
         slowedByUsingAnItem = false;
         forwardImpulse = InputDirection.ForwardDirection.NONE;
         strafeImpulse = InputDirection.StrafeDirection.NONE;
+        input = null;
         // Properties involving the environment.
         bunnyHop = false;
         isStepUp = false;

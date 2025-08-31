@@ -71,6 +71,23 @@ public class InputDirection {
     }
     
     /**
+     * Composes a new InputDirection instance based on the dispatched {@link Input}.
+     *
+     * @param input The given input read from the {@link org.bukkit.event.player.PlayerInputEvent}
+     * @throws UnsupportedOperationException if {@link org.bukkit.event.player.PlayerInputEvent} is not available.
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    public InputDirection(Input input) {
+        if (!BridgeMisc.hasPlayerInputEvent()) {
+            throw new UnsupportedOperationException("PlayerInputEvent is not available.");
+        }
+        this.strafe = input.isLeft() ? 1.0f : input.isRight() ? -1.0f : 0.0f;
+        this.forward = input.isForward() ? 1.0f : input.isBackward() ? -1.0f : 0.0f;
+        this.fdir = forward == 0.0f ? ForwardDirection.NONE : forward > 0.0 ? ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
+        this.sdir = strafe == 0.0f ? StrafeDirection.NONE : strafe > 0.0 ? StrafeDirection.LEFT : StrafeDirection.RIGHT;
+    }
+    
+    /**
      * @return the strafe value
      */
     public float getStrafe() {
