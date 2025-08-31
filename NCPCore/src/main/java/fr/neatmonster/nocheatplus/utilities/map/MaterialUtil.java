@@ -554,7 +554,8 @@ public class MaterialUtil {
                     "weeping_vines", "weeping_vines_plant",
                     "twisting_vines", "twisting_vines_plant",
                     "mangrove_propagule", "pink_petals", "torchflower", "torchflower_crop",
-                    "pitcher_plant", "open_eyeblossom", "closed_eyeblossom", "pale_hanging_moss"
+                    "pitcher_plant", "open_eyeblossom", "closed_eyeblossom", "pale_hanging_moss", 
+                    "leaf_litter", "cactus_flower", "short_dry_grass", "tall_dry_grass", "wildflowers"
                     ),
             new HashSet<Material>(Arrays.asList(BridgeMaterial.TALL_GRASS, 
                     BridgeMaterial.WHEAT_CROPS, BridgeMaterial.CARROTS, 
@@ -572,7 +573,7 @@ public class MaterialUtil {
                 WATER_PLANTS,
                     BridgeMaterial.getAllBlocks("peony", "sunflower", "lilac", "rose_bush", "sweet_berry_bush", 
                                                 "cocoa", "double_plant", "fern", "large_fern", "attached_melon_stem", 
-                                                "attached_pumpkin_stem", "bamboo", "bamboo_sapling")
+                                                "attached_pumpkin_stem", "bamboo", "bamboo_sapling", "wildflowers", "pink_petals", "mangrove_propagule")
 
 
 ));

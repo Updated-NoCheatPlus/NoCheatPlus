@@ -153,6 +153,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_SINGLE_CHEST = new BukkitStatic(0.0625, 0.875);
     private static final BukkitShapeModel MODEL_HONEY_BLOCK = new BukkitStatic(0.0625, 0.9375);
     private static final BukkitShapeModel MODEL_SCULK_SHRIEKER = new BukkitStatic(0.0, 0.5);
+    private static final BukkitShapeModel MODEL_DRIED_GHAST = new BukkitStatic(0.1875f, 0.8125f); // 0.1875F, 0.0F, 0.1875F, 0.8125F, 0.8125F, 0.8125F
 
     // Static blocks with full height sorted by inset.
     private static final BukkitShapeModel MODEL_INSET16_1_HEIGHT100 = new BukkitStatic(0.0625, 1.0);
@@ -254,7 +255,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             "azalea", "flowering_azalea",
             "sculk_sensor", "frogspawn",
             "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor", "bubble_column",
-            "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump")) {
+            "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump","cactus_flower", "short_dry_grass", "tall_dry_grass")) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
         
@@ -531,6 +532,10 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // Heavy core
         mt = BridgeMaterial.getBlock("heavy_core");
         if (mt != null) addModel(mt, MODEL_GROUND_HEAD);
+        
+        // Dried ghast
+        mt = BridgeMaterial.getBlock("dried_ghast");
+        if (mt != null) addModel(mt, MODEL_DRIED_GHAST);
 
         // Sort to processed by flags.
         for (final Material mat : Material.values()) {

@@ -65,16 +65,28 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
         BlockInit.setAs("CHISELED_RESIN_BRICKS", Material.MUD_BRICKS);
         
         if (ServerVersion.isAtLeast("1.21.5")) {
-            /* BLOCK BREAKING (CACTUS_FLOWER / IGN_PASSABLE)
-                    * BLOCK BREAKING (LEAF_LITTER / IGN_PASSABLE)
-                    * BLOCK BREAKING (SHORT_DRY_GRASS / IGN_PASSABLE)
-                    * BLOCK BREAKING (TALL_DRY_GRASS / IGN_PASSABLE)
-                    * BLOCK BREAKING (TEST_BLOCK / SOLID+GROUND)
-                    * BLOCK BREAKING (TEST_INSTANCE_BLOCK / SOLID+GROUND)
-                    * BLOCK BREAKING (WILDFLOWERS / IGN_PASSABLE)
+                    // Already set with MaterialUtil.INSTANT_PLANTS
+                    /* LOCK BREAKING (CACTUS_FLOWER / IGN_PASSABLE)
                     
+                    // Already set with MaterialUtil.INSTANT_PLANTS
+                    * BLOCK BREAKING (LEAF_LITTER / IGN_PASSABLE)
+                    
+                    // Already set with MaterialUtil.INSTANT_PLANTS
+                    * BLOCK BREAKING (SHORT_DRY_GRASS / IGN_PASSABLE)
+                    
+                    // Already set with MaterialUtil.INSTANT_PLANTS
+                    * BLOCK BREAKING (TALL_DRY_GRASS / IGN_PASSABLE)*/
+            BlockInit.setAs("TEST_BLOCK", Material.BEDROCK);
+            BlockInit.setAs("TEST_INSTANCE_BLOCK", Material.BEDROCK);
+                    /*
+                    // Already set with MaterialUtil.INSTANT_PLANTS
+                    * BLOCK BREAKING (WILDFLOWERS / IGN_PASSABLE)  
              */
-            
+        }
+        
+        if (ServerVersion.isAtLeast("1.21.6")) {
+            BlockProperties.setBlockProps("DRIED_GHAST", new BlockProperties.BlockProps(BlockProperties.noTool, 0.0f));
+            BlockFlags.setBlockFlags("DRIED_GHAST", BlockFlags.F_GROUND);
         }
                
         ConfigFile config = ConfigManager.getConfigFile();
