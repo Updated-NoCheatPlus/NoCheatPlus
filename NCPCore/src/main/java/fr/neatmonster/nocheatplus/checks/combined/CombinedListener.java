@@ -76,6 +76,7 @@ import fr.neatmonster.nocheatplus.worlds.WorldFactoryArgument;
  * @author asofold
  *
  */
+@SuppressWarnings("UnstableApiUsage")
 public class CombinedListener extends CheckListener implements JoinLeaveListener {
 
     protected final Improbable improbable = addCheck(new Improbable());

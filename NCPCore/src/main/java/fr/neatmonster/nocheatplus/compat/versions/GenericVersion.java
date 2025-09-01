@@ -317,7 +317,7 @@ public class GenericVersion {
         if (entity instanceof Player) {
             Player player = (Player) entity;
             final ClientVersion version = DataManager.getPlayerData(player).getClientVersion();
-            if (version == ClientVersion.UNKNOWN) {
+            if (version == ClientVersion.UNKNOWN || version == ClientVersion.LOWER_THAN_KNOWN_VERSIONS || version == ClientVersion.HIGHER_THAN_KNOWN_VERSIONS) {
                 // Assume clients to match the server's version. If unknown.
                 return ServerVersion.getMinecraftVersion();
             }

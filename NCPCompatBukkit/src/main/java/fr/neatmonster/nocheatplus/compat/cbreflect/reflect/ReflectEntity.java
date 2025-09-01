@@ -86,7 +86,8 @@ public class ReflectEntity extends ReflectGetHandleBase<Entity> {
     }
 
     private Method seekClearActiveItemMethod(Class<?> nmsClass) {
-        // void releaseUsingItem() -> fE(1.21.2-1.21.3)
+        // void releaseUsingItem() -> fL (1.21.8 and possibly down to .4)
+        //                            fE(1.21.2-1.21.3)
         //                            fw(1.21-1.21.1)
         //                            fA(1.20.5-1.20.6)
         //                            fs(1.20.4)
@@ -95,7 +96,7 @@ public class ReflectEntity extends ReflectGetHandleBase<Entity> {
         //                            fj(1.19-19.4)
         //                            eR(???)
         //                            clearActiveItem(1.13-???)
-        String[] methodname = {"fE", "fw", "fA", "fs", "fr", "fn", "fj", "eR", "clearActiveItem", "releaseUsingItem"};
+        String[] methodname = {"fL", "fE", "fw", "fA", "fs", "fr", "fn", "fj", "eR", "clearActiveItem", "releaseUsingItem"};
         for (String name : methodname) {
             Method method = ReflectionUtil.getMethodNoArgs(nmsClass, name);
             if (method != null) return method;
