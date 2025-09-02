@@ -35,11 +35,10 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
 
-//import com.viaversion.viaversion.api.Via;
-
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
+import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
@@ -141,7 +140,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
                 register("fr.neatmonster.nocheatplus.checks.net.protocollib.CatchAllAdapter", plugin);
             }
         }
-        if (ServerVersion.compareMinecraftVersion("1.8") >= 0) {
+        if (ServerVersion.isAtLeast("1.8")) {
         	// if (!BridgeMisc.hasIsUsingItemMethod()) {
         	    register("fr.neatmonster.nocheatplus.checks.net.protocollib.UseItemAdapter", plugin);
         	// }
@@ -153,6 +152,9 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         }
         if (worldMan.isActiveAnywhere(CheckType.NET_TOGGLEFREQUENCY)) {
             register("fr.neatmonster.nocheatplus.checks.net.protocollib.EntityActionAdapter", plugin);
+        }
+        if (BridgeMisc.hasPlayerInputEvent()) {
+            register("fr.neatmonster.nocheatplus.checks.net.protocollib.InputsAdapter", plugin);
         }
         if (!registeredPacketAdapters.isEmpty()) {
             List<String> names = new ArrayList<String>(registeredPacketAdapters.size());

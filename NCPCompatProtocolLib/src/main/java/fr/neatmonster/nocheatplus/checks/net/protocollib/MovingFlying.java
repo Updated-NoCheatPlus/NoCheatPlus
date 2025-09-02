@@ -83,7 +83,7 @@ public class MovingFlying extends BaseAdapter {
     private final Plugin plugin = Bukkit.getPluginManager().getPlugin("NoCheatPlus");
     private static PacketType[] initPacketTypes() {
         final List<PacketType> types = new LinkedList<PacketType>(Arrays.asList(PacketType.Play.Client.LOOK, PacketType.Play.Client.POSITION, PacketType.Play.Client.POSITION_LOOK));
-        if (ServerVersion.isLowerThan("1.17") ) {
+        if (ServerVersion.isLowerThan("1.17")) {
             types.add(PacketType.Play.Client.FLYING);
             StaticLog.logInfo("Add listener for legacy PlayInFlying packet.");
         } 
@@ -94,14 +94,12 @@ public class MovingFlying extends BaseAdapter {
         if (confirmTeleportType == null) { // Fallback check for the old packet name.
             confirmTeleportType = ProtocolLibComponent.findPacketTypeByName(Protocol.PLAY, Sender.CLIENT, "TeleportAccept");
         }
-
         if (confirmTeleportType != null && ServerVersion.isAtLeast("1.9")) {
             StaticLog.logInfo("Confirm teleport packet available (via name): " + confirmTeleportType);
             types.add(confirmTeleportType);
             acceptConfirmTeleportPackets = true;
         } 
         else acceptConfirmTeleportPackets = false;
-        
         return types.toArray(new PacketType[types.size()]);
     }
 
@@ -340,7 +338,6 @@ public class MovingFlying extends BaseAdapter {
      * @return Packet data if successful, or null on packet mismatch.
      */
     private DataPacketFlying interpretPacket(final PacketEvent event, final long time) {
-
         final PacketContainer packet = event.getPacket();
         final List<Boolean> booleans = packet.getBooleans().getValues();
         if (booleans.size() != (isServerAtLeast1_21_3 ? 4 : 3)) {
