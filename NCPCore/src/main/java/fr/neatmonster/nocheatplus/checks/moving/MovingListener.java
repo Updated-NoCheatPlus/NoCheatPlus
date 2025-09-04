@@ -882,7 +882,11 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             || lastMove.valid && TrigUtil.isSamePos(loc, lastMove.from.getX(), lastMove.from.getY(), lastMove.from.getZ())) {
             // TODO: On pistons pulling the player back: -1.15 yDistance for split move 1 (untracked position > 0.5 yDistance!).
             // Detect idle packet original design but now serve as look corrector for PlayerMoveEvent
-            // TODO: Documentation for this looping mechanic.
+            // Walks backwards through the flying packet queue to fix yaw/pitch.
+            // - Update yaw/pitch from the most recent packet with look data.
+            // - Apply these values when matching the "from" position.
+            // - Stop once the "to" position is found.
+            // Ensures PlayerMoveEvent uses correct orientation even if Bukkit skipped packets.
             final FlyingQueueHandle flyingHandle = new FlyingQueueHandle(pData);
             final DataPacketFlying[] queue = flyingHandle.getHandle();
             float currentYaw = from.getYaw();

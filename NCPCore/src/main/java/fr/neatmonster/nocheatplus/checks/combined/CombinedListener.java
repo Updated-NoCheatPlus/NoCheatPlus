@@ -284,7 +284,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
      *       (see: {@code LocalPlayer.java -> aiStep() -> isMovingSlowly() -> isVisuallyCrawling()}).</li>
      * </ul>
      * <p>
-     * Therefore, Bukkit's methods/event can no longer be relied upon to determine if a player should have reduced movement speed, as 
+     * Therefore, Bukkit's methods/event can no longer be relied upon to determine if a player should move slower, as 
      * they are associated with shift key presses and not player poses; and we need to know this for the horizontal speed prediction
      * </p>
      * <p>
@@ -421,7 +421,6 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
     @EventHandler(priority = EventPriority.MONITOR)
     public void onToggleSprint(final PlayerToggleSprintEvent event) {
         final IPlayerData pData = DataManager.getPlayerData(event.getPlayer());
-        final PlayerMoveData lastMove = pData.getGenericInstance(MovingData.class).playerMoves.getFirstPastMove();
         if (!event.isSprinting()) {
             // Player was sprinting and they now toggled it off.
             pData.setSprintingState(false);

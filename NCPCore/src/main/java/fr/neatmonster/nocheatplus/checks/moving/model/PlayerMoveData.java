@@ -164,7 +164,7 @@ public class PlayerMoveData extends MoveData {
     
     /**
      * Mojang introduced a new "mechanic" in 1.17 which allows player to re-send their position on right-clicking.
-     * On Bukkit's side, this translates in a {@link org.bukkit.event.player.PlayerMoveEvent} which doesn't actually have any movement change ({@link PlayerMoveEvent#getFrom()} and {@link PlayerMoveEvent#getTo()} contain the same location)
+     * On Bukkit's side, this translates in a {@link org.bukkit.event.player.PlayerMoveEvent} which doesn't have any movement change ({@link PlayerMoveEvent#getFrom()} and {@link PlayerMoveEvent#getTo()} contain the same location)
      * This moving event is skipped from being processed.
      * Do note that players cannot send duplicate packets in a row: after we receive an "empty" PlayerMoveEvent, the next one incoming must have the actual movement change.
      * (Sequence is: normal PME -> duplicate PME -> normal PME(...))<br>

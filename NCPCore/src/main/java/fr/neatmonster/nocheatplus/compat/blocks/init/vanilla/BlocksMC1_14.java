@@ -140,7 +140,7 @@ public class BlocksMC1_14 implements BlockPropertiesSetup{
         }
 
         BlockInit.setPropsAs("GRINDSTONE", Material.COBBLESTONE);
-        BlockFlags.addFlags("GRINDSTONE", BlockFlags.SOLID_GROUND | BlockFlags.F_VARIABLE);
+        BlockFlags.addFlags("GRINDSTONE", BlockFlags.SOLID_GROUND);
 
         BlockInit.setPropsAs("CAMPFIRE", Material.OAK_PLANKS);
         BlockFlags.addFlags("CAMPFIRE", BlockFlags.SOLID_GROUND);

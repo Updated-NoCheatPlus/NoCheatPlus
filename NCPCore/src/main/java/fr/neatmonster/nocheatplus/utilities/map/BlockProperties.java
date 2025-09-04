@@ -4374,7 +4374,7 @@ public class BlockProperties {
 
     /**
      * Check for ground at a certain block position. <br>
-     * Intended order for collision-checking would be top-down within a x-z loop.
+     * The Intended order for collision-checking would be top-down within a x-z loop.
      * 
      * @param access
      * @param minX Entity/Player's AABB coords...
@@ -4405,10 +4405,18 @@ public class BlockProperties {
         ////////////////////////////
         final Material id = node.getType();
         final long flags = BlockFlags.getBlockFlags(id);
-        if ((flags & BlockFlags.F_GROUND) == 0 || (flags & ignoreFlags) != 0) {
-            // The block does not have the ground flag, or the present flags are set to be disregarded.
-            // Keep looping until we've collected the right flags.
+        if ((flags & BlockFlags.F_GROUND) == 0) {
+            // The block does not have the ground flag.
             return AlmostBoolean.MAYBE;
+        }
+         if ((flags & ignoreFlags) != 0) {
+             final double[] blockAABB = node.getBounds(access, x, y, z);
+             // Fast check; primary bound is valid.
+             if (blockAABB != null && (blockAABB[3] == 0.0 || blockAABB[5] == 0.0)) {
+                 // The present flags are set to be disregarded.
+                 // Keep looping until we've collected the right flags.
+                 return AlmostBoolean.MAYBE;
+             }
         }
         final double[] blockAABB = node.getBounds(access, x, y, z);
         if (blockAABB == null) {
@@ -4429,10 +4437,12 @@ public class BlockProperties {
         // Judge if the block collision can be considered as "ground"     //
         ////////////////////////////////////////////////////////////////////
         final IPlayerData pData = access.getPlayerData();
-        boolean hasBoots = pData.getGenericInstance(MovingData.class).hasLeatherBoots;
-        if ((flags & BlockFlags.F_POWDER_SNOW) != 0 && pData != null && !hasBoots) {
-            // Player is in/on powder snow, but doesn't have leather boots to walk on it. Return immediately.
-            return AlmostBoolean.NO;
+        if (pData != null) {
+            boolean hasBoots = pData.getGenericInstance(MovingData.class).hasLeatherBoots;
+            if ((flags & BlockFlags.F_POWDER_SNOW) != 0 && !hasBoots) {
+                // Player is in/on powder snow, but doesn't have leather boots to walk on it. Return immediately.
+                return AlmostBoolean.NO;
+            }
         }
         // Check if the collided block can be passed through with the bounding box (wall-climbing. Disregard the ignore flag).
         if (isPassableWorkaround(access, x, y, z, minX - x, minY - y, minZ - z, node, maxX - minX, maxY - minY, maxZ - minZ, minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {

@@ -78,6 +78,8 @@ public class LostGround {
             return false;
         }
         if (PhysicsEnvelope.isVerticallyConstricted(from, to, DataManager.getPlayerData(player))) {
+            // Too little vertical space for lost ground to happen. 
+            // More of an assumption. Hasn't been observed in-game.
             return false;
         }
         
