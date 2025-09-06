@@ -166,7 +166,7 @@ public class CreativeFly extends Check {
         }
 
         // Velocity.
-        if (resultV > 0.0 && (thisMove.verVelUsed != null || data.getOrUseVerticalVelocity(yDistance) != null)) {
+        if (resultV > 0.0 && (!thisMove.verVelUsed.isEmpty() || !data.getOrUseVerticalVelocity(yDistance).isEmpty())) {
             resultV = 0.0;
             tags.add("vvel");
         }

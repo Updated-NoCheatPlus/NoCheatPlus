@@ -1714,7 +1714,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // About -1.85 seems to be the negative maximum for velocity use in survival mode. Falling can result in slightly less than -3.
             if (lastMove.toIsValid && Math.abs(thisMove.yDistance) < Math.abs(lastMove.yDistance)
                 && (thisMove.yDistance > 0.0 && lastMove.yDistance > 0.0 || thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0) 
-                || allowVerticalVelocity && data.getOrUseVerticalVelocity(thisMove.yDistance) != null) {
+                || allowVerticalVelocity && !data.getOrUseVerticalVelocity(thisMove.yDistance).isEmpty()) {
                 // Speed decreased or velocity is present.
             }
             else violation += thisMove.yDistance; // Could subtract lastMove.yDistance.

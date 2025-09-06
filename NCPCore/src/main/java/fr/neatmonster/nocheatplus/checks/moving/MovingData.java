@@ -1112,7 +1112,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      */
     public List<SimpleEntry> getOrUseVerticalVelocity(final double amount) {
         final List<SimpleEntry> verVelUsed = playerMoves.getCurrentMove().verVelUsed;
-        if (verVelUsed != null) {
+        if (!verVelUsed.isEmpty()) {
             double sum = 0;
             for (SimpleEntry entry : verVelUsed) {
                 sum += entry.value;

@@ -38,7 +38,7 @@ public class SfLegacy {
                 } else {
                     // Moving upwards after falling without having touched the ground first
                     if (data.jumpDelay < 9 && !((lastMove.touchedGround || lastMove.from.onGroundOrResetCond) && lastMove.yDistance == 0D)
-                            && data.getOrUseVerticalVelocity(yDistance) == null && !thisMove.hasLevitation) {
+                            && data.getOrUseVerticalVelocity(yDistance).isEmpty() && !thisMove.hasLevitation) {
                         violation = true;
                         tags.add("airjump");
                     } else tags.add("y_inair_switch");

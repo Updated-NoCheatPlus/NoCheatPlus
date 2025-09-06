@@ -139,8 +139,8 @@ public class Open extends Check implements IDisableListener {
             || creative 
             // Ignore merchant inventories.
             || isMerchant 
-            // Velocity is ignored altogether
-            || mData.getOrUseVerticalVelocity(thisMove.yDistance) != null
+            // Velocity is ignored altogether. TODO: Should be horizontal too. Maybe this still work fine, most the time appear together
+            || !mData.getOrUseVerticalVelocity(thisMove.yDistance).isEmpty()
             //|| mData.useHorizontalVelocity(thisMove.hDistance - mData.getHorizontalFreedom()) >= thisMove.hDistance - mData.getHorizontalFreedom()
             // Ignore entity pushing.
             || pData.getClientVersion().isAtLeast(ClientVersion.V_1_9) && CollisionUtil.isCollidingWithEntities(player, 0.5, 0.1, 0.5, true)) {

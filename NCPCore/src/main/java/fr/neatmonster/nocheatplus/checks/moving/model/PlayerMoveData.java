@@ -260,7 +260,7 @@ public class PlayerMoveData extends MoveData {
         collideZ = false;
         // Meta stuff.
         multiMoveCount = 0;
-        verVelUsed = new LinkedList<>();
+        verVelUsed.clear();
         hasNoMovementDueToDuplicatePacket = false;
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;

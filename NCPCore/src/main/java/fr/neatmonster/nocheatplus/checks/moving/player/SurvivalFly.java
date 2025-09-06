@@ -572,7 +572,7 @@ public class SurvivalFly extends Check {
         }
         else {
             // If velocity can be used for compensation, use it.
-            if (data.getOrUseVerticalVelocity(thisMove.yDistance) == null) {
+            if (data.getOrUseVerticalVelocity(thisMove.yDistance).isEmpty()) {
                 yDistanceAboveLimit = Math.max(yDistanceAboveLimit, Math.abs(offsetV));
                 tags.add("vdistrel");
             }
@@ -1718,7 +1718,7 @@ public class SurvivalFly extends Check {
                     player.sendMessage("Workaround ID: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
                 }
             }
-            else if (data.getOrUseVerticalVelocity(yDistance) == null) {
+            else if (data.getOrUseVerticalVelocity(yDistance).isEmpty()) {
                 // If velocity can be used for compensation, use it.
                 yDistanceAboveLimit = Math.max(yDistanceAboveLimit, Math.abs(offset));
                 tags.add("vdistrel");
@@ -1798,7 +1798,7 @@ public class SurvivalFly extends Check {
         
         // Do allow vertical velocity.
         // TODO: Looks like less velocity is used here (normal hitting 0.361 of 0.462).
-        if (yDistanceAboveLimit > 0.0 && data.getOrUseVerticalVelocity(yDistance) != null) {
+        if (yDistanceAboveLimit > 0.0 && !data.getOrUseVerticalVelocity(yDistance).isEmpty()) {
             yDistanceAboveLimit = 0.0;
         }
         return new double[]{yAllowedDistance, yDistanceAboveLimit};
@@ -2023,7 +2023,7 @@ public class SurvivalFly extends Check {
         if (!lastMove.valid) {
             builder.append("\n Invalid last move (missing data)");
         }
-        if (thisMove.verVelUsed != null) {
+        if (!thisMove.verVelUsed.isEmpty()) {
             builder.append(" , vVelUsed: " + thisMove.verVelUsed + " ");
         }
         data.addVerticalVelocity(builder);
