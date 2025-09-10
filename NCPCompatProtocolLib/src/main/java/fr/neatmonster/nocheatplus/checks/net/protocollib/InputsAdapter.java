@@ -28,6 +28,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.AutoWrapper;
 
+import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
@@ -89,7 +90,9 @@ public class InputsAdapter extends BaseAdapter {
         boolean sprint = in.sprint;
         // Finally, set.
         thisMove.input = new InputDirection(Boolean.compare(left, right), Boolean.compare(forward, backward));
-        player.sendMessage("Strafe: " + thisMove.input.getStrafeDir() + " Frwd: " + thisMove.input.getForwardDir());
+        if (pData.isDebugActive(CheckType.MOVING)) {
+            player.sendMessage("Strafe: " + thisMove.input.getStrafeDir() + " Frwd: " + thisMove.input.getForwardDir());
+        }
     }
     
     public static class Input7Bools {
