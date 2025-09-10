@@ -160,7 +160,7 @@ public class SurvivalFly extends Check {
         // Horizontal move                ///
         /////////////////////////////////////
         double hAllowedDistance, hDistanceAboveLimit, hFreedom;
-        double[] resGlide = processGliding(from, to, pData, data, player, isNormalOrPacketSplitMove, fromOnGround, toOnGround);
+        double[] resGlide = processGliding(from, to, pData, data, player, isNormalOrPacketSplitMove, fromOnGround, toOnGround, debug);
         // Set the allowed distance and determine the distance above limit
         double[] hRes = Bridge1_9.isGliding(player) ? resGlide : prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
         hAllowedDistance = hRes[0];
@@ -196,18 +196,18 @@ public class SurvivalFly extends Check {
             yDistanceAboveLimit = resGlide[3];
             // If failed, try testing for after-failure conditions.
             if (yDistanceAboveLimit > 0.0) {
-                double[] res = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker);
+                double[] res = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker, debug);
                 yAllowedDistance = res[0];
                 yDistanceAboveLimit = res[1];
             }
         }
         else {
-            final double[] res = vDistRel(now, player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false);
+            final double[] res = vDistRel(now, player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug);
             yAllowedDistance = res[0];
             yDistanceAboveLimit = res[1];
             // If failed, try testing for after-failure conditions.
             if (yDistanceAboveLimit > 0.0) {
-                double[] vRes = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker);
+                double[] vRes = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker, debug);
                 yAllowedDistance = vRes[0];
                 yDistanceAboveLimit = vRes[1];
             }
@@ -451,7 +451,7 @@ public class SurvivalFly extends Check {
      * @return the allowed xyz distances + distances above limit.
      */
     private double[] processGliding(final PlayerLocation from, final PlayerLocation to, final IPlayerData pData, final MovingData data,
-                                    final Player player, boolean isNormalOrPacketSplitMove, final boolean fromOnGround, final boolean toOnGround) {
+                                    final Player player, boolean isNormalOrPacketSplitMove, final boolean fromOnGround, final boolean toOnGround, final boolean debug) {
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         double yDistanceAboveLimit = 0.0, hDistanceAboveLimit = 0.0;
@@ -587,8 +587,10 @@ public class SurvivalFly extends Check {
             hDistanceAboveLimit = Math.max(hDistanceAboveLimit, offsetH);
             tags.add("hdistrel");
         }
-        player.sendMessage("hDistance/Predicted " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
-        player.sendMessage("vDistance/Predicted " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
+        if (debug) {
+            player.sendMessage("hDistance/Predicted " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
+            player.sendMessage("vDistance/Predicted " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
+        }
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit, thisMove.yAllowedDistance, yDistanceAboveLimit};
     }
     
@@ -1360,7 +1362,7 @@ public class SurvivalFly extends Check {
                               final double yDistance, boolean isNormalOrPacketSplitMove,
                               final PlayerMoveData lastMove,
                               final MovingData data, final MovingConfig cc, final IPlayerData pData,
-                              boolean forceResetMomentum) {
+                              boolean forceResetMomentum, final boolean debug) {
         double yDistanceAboveLimit = 0.0;
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final boolean yDirectionSwitch = lastMove.toIsValid && lastMove.yDistance != yDistance && (yDistance <= 0.0 && lastMove.yDistance >= 0.0 || yDistance >= 0.0 && lastMove.yDistance <= 0.0);
@@ -1655,7 +1657,9 @@ public class SurvivalFly extends Check {
                 }
             }
             else thisMove.yAllowedDistance += riptideForce.getY();
-            player.sendMessage("Trident propel(v): " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
+            if (debug) {
+                player.sendMessage("Trident propel(v): " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
+            }
         }
         // *----------Entity.move(), call the collide() function----------*
         // Include horizontal motion to account for stepping: there are cases where NCP's isStep definition fails to catch it.
@@ -1714,7 +1718,7 @@ public class SurvivalFly extends Check {
             // Check for workarounds at the end and override the prediction if needed (just allow the movement in this case.)
             if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
                 thisMove.yAllowedDistance = thisMove.yDistance;
-                if (pData.isDebugActive(type)) {
+                if (debug) {
                     player.sendMessage("Workaround ID: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
                 }
             }
@@ -1724,7 +1728,7 @@ public class SurvivalFly extends Check {
                 tags.add("vdistrel");
             }
         }
-        if (pData.isDebugActive(type)) {
+        if (debug) {
             player.sendMessage("y actual/predict: " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
         }
         return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
@@ -1813,7 +1817,7 @@ public class SurvivalFly extends Check {
     private double[] vDistAfterFailure(final Player player, final IPlayerData pData, final MovingData data, boolean fromOnGround, boolean toOnGround,
                                        final PlayerLocation from, final PlayerLocation to, boolean isNormalOrPacketSplitMove,
                                        boolean resetFrom, boolean resetTo, final PlayerMoveData thisMove, final PlayerMoveData lastMove, double yDistanceAboveLimit, double yAllowedDistance,
-                                       boolean useBlockChangeTracker) {
+                                       boolean useBlockChangeTracker, final boolean debug) {
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         /*
          * 0: Vertical push/pull is put on top priority
@@ -1843,7 +1847,7 @@ public class SurvivalFly extends Check {
         if (!thisMove.couldStepUp && thisMove.yDistance < 0.0 && yDistanceAboveLimit > 0.0 && (lastMove.toLostGround || lastMove.to.onGround) && !thisMove.from.onGround) {
             // After completing a "touch-down" (toOnGround), the next move should always come *from* ground
             // Thus, such cases can be generalised by checking for negative motion and last move landing on ground, but this move not *starting back* from a ground position.
-            double[] res = vDistRel(System.currentTimeMillis(), player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, true);
+            double[] res = vDistRel(System.currentTimeMillis(), player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, true, debug);
             yAllowedDistance = res[0];
             yDistanceAboveLimit = res[1];
         }

@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
@@ -29,6 +30,7 @@ import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.players.DataManager;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
@@ -263,7 +265,11 @@ public class LostGround {
         thisMove.touchedGround = true;
         thisMove.touchedGroundWorkaround = true;
         tags.add("lostground_" + tag);
-        player.sendMessage("lostground_" + tag);
+
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        if (pData.isDebugActive(CheckType.MOVING_SURVIVALFLY) || pData.isDebugActive(CheckType.MOVING_CREATIVEFLY)) {
+            player.sendMessage("lostground_" + tag);
+        }
         return true;
     }
 
