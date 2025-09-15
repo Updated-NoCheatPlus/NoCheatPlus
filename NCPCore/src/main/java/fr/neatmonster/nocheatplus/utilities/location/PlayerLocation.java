@@ -86,12 +86,11 @@ public class PlayerLocation extends RichEntityLocation {
     
     /**
      * From {@code TridentItem.java}.<br>
-     * Gets the riptiding force. Not context-aware.
+     * Gets the riptiding velocity. Not context-aware.
      *
-     * @param onGround
-     * @return A Vector containing the riptiding force's components (x,y,z).
+     * @return A Vector containing the riptiding velocity's components (x,y,z).
      */
-    public Vector getTridentPropellingForce(boolean onGround) {
+    public Vector getRiptideVelocity(boolean onGround) {
         // Only players are allowed to riptide (hence why this is in PlayerLocation and not RichEntity).
         final IPlayerData pData = DataManager.getPlayerData(player);
         if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
@@ -100,7 +99,6 @@ public class PlayerLocation extends RichEntityLocation {
         }
         final double RiptideLevel = BridgeEnchant.getRiptideLevel(player);
         if (RiptideLevel > 0.0) {
-            // Compute the force of the push
             float x = -TrigUtil.sin(getYaw() * TrigUtil.toRadians) * TrigUtil.cos(getPitch() * TrigUtil.toRadians);
             float y = -TrigUtil.sin(getPitch() * TrigUtil.toRadians);
             float z = TrigUtil.cos(getYaw() * TrigUtil.toRadians) * TrigUtil.cos(getPitch() * TrigUtil.toRadians);
@@ -110,7 +108,14 @@ public class PlayerLocation extends RichEntityLocation {
             y *= force / distance;
             z *= force / distance;
             if (onGround) {
-                y += 1.1999999284744263f;
+                // If on ground, the game calls both move() too.
+                // The player is moved by 1.2 blocks from the ground the instant they release the trident
+                // This is NOT velocity, but a direct move of the player’s position upward, ignoring physics (the travel function isn't called), almost like a teleport offset.
+                // Because the move function is called, this offset is collision-aware.
+                double offset = 1.2;
+                Vector offsetVector = collide(new Vector(0.0, offset, 0.0), true, getBoundingBox());
+                double clampedOffset = offsetVector.getY();
+                return new Vector(x, y + clampedOffset, z);
             }
             return new Vector(x, y, z);
         }

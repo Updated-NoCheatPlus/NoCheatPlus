@@ -858,7 +858,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         // Split the event into separate moves, or correct the looking data, if suitable          //
         ////////////////////////////////////////////////////////////////////////////////////////////
         // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet:
-        // 1) In some particular cases, a single PlayerMoveEvent can be the result of multiple flying packets.
+        // 1) In some cases, a single PlayerMoveEvent can be the result of multiple flying packets.
         // 2) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction). 
         //    This will result in movements that don't have a significant change to be skipped. 
         //    With anticheating, this means that micro and very slow moves cannot be checked accurately (or at all, for that matter), as coordinates will not be reported correctly.
@@ -926,7 +926,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             checkPlayerMove(player, from, to, 0, moveInfo, debug, data, cc, pData, event, true);
         }
         else {
-            // Something happened: there was a mismatch between the player's location and the event's location(s)
+            // Something happened: there was a mismatch between the player's location, and the event's location(s)
             // Peek into ProtocolLib to recover the movement's actual locations.
             final FlyingQueueHandle flyingHandle = new FlyingQueueHandle(pData);
             final DataPacketFlying[] queue = flyingHandle.getHandle();
@@ -984,10 +984,11 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 Location packet = null;
                 for (int i = 0; i < j; i++) {
                     if (queuePos[i].hasLook) {
-                        // Ensure to set the correct look as well
+                        // If a packet has look data, update yaw/pitch.
                         currentYaw = queuePos[i].getYaw();
                         currentPitch = queuePos[i].getPitch();
                     }
+                    // If a packet has position data, we can split.
                     if (queuePos[i].hasPos) {
                         // If from was set...
                         if (packet != null) {

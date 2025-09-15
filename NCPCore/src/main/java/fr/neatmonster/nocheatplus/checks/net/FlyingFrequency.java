@@ -24,7 +24,7 @@ import fr.neatmonster.nocheatplus.utilities.TickTask;
 
 
 /**
- * Check frequency of (pos/look/) flying packets, disregarding packet content.
+ * Check the frequency of (pos/look/) flying packets, disregarding packet content.
  * 
  * @author asofold
  *

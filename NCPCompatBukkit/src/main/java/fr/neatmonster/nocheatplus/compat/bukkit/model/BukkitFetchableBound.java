@@ -20,6 +20,14 @@ import org.bukkit.util.BoundingBox;
 
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
+/**
+ * Fetches a single BoundingBox from Bukkit's Block#getBoundingBox().
+ * Returns a six-element double[] {minX, minY, minZ, maxX, maxY, maxZ}
+ * relative to the block position (world coords minus the block's x,y,z).
+ *
+ * This class returns one bounding box; BukkitFetchableBounds reads the VoxelShape and may return multiple boxes for complex
+ * collision shapes.
+ */
 public class BukkitFetchableBound implements BukkitShapeModel {
 
     @Override

@@ -57,9 +57,6 @@ public class NetData extends ACheckData {
     // FlyingFrequency
     /** All flying packets, use System.currentTimeMillis() for time. */
     public final ActionFrequency flyingFrequencyAll;
-    public boolean flyingFrequencyOnGround = false;
-    public long flyingFrequencyTimeOnGround = 0L;
-    public long flyingFrequencyTimeNotOnGround = 0L;
 
     // Moving
     public double movingVL = 0;
@@ -100,10 +97,7 @@ public class NetData extends ACheckData {
     private final LinkedList<DataPacketFlying> flyingQueue = new LinkedList<DataPacketFlying>();
     /** Maximum amount of packets to store. */
     private final int flyingQueueMaxSize = 20;
-    /**
-     * The maximum of so far already returned sequence values, altered under
-     * lock.
-     */
+    /** The maximum of so far already returned sequence values, altered under lock. */
     private long maxSequence = 0;
 
     /** Overall packet frequency. */
@@ -245,8 +239,6 @@ public class NetData extends ACheckData {
         final long now = System.currentTimeMillis();
         teleportQueue.clear(); // Can't handle timeouts. TODO: Might still keep.
         lastKeepAliveTime = Math.min(lastKeepAliveTime, now);
-        flyingFrequencyTimeNotOnGround = Math.min(flyingFrequencyTimeNotOnGround, now);
-        flyingFrequencyTimeOnGround = Math.min(flyingFrequencyTimeOnGround, now);
         // (Keep flyingQueue.)
         // (ActionFrequency can handle this.)
     }

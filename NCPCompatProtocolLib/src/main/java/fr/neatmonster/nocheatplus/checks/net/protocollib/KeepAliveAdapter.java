@@ -47,10 +47,8 @@ public class KeepAliveAdapter extends BaseAdapter {
         super(plugin, ListenerPriority.LOW, PacketType.Play.Client.KEEP_ALIVE);
         this.checkType = CheckType.NET_KEEPALIVEFREQUENCY;
         // Add feature tags for checks.
-        if (NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().isActiveAnywhere(
-                CheckType.NET_KEEPALIVEFREQUENCY)) {
-            NCPAPIProvider.getNoCheatPlusAPI().addFeatureTags(
-                    "checks", Arrays.asList(KeepAliveFrequency.class.getSimpleName()));
+        if (NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().isActiveAnywhere(CheckType.NET_KEEPALIVEFREQUENCY)) {
+            NCPAPIProvider.getNoCheatPlusAPI().addFeatureTags("checks", Arrays.asList(KeepAliveFrequency.class.getSimpleName()));
         }
         NCPAPIProvider.getNoCheatPlusAPI().addComponent(frequencyCheck);
     }
@@ -89,5 +87,4 @@ public class KeepAliveAdapter extends BaseAdapter {
     public void onPacketSending(PacketEvent event) {
         // TODO: Maybe detect if keep alive wasn't asked for + allow cancel.
     }
-
 }

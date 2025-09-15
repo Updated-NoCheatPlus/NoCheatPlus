@@ -120,9 +120,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
             // (Also sets lastKeepAliveTime, if enabled.)
             register("fr.neatmonster.nocheatplus.checks.net.protocollib.UseEntityAdapter", plugin);
         }
-        if (worldMan.isActiveAnywhere(CheckType.NET_FLYINGFREQUENCY) 
-            || worldMan.isActiveAnywhere(CheckType.NET_MOVING)
-            || worldMan.isActiveAnywhere(CheckType.NET_WRONGTURN)) {
+        if (worldMan.isActiveAnywhere(CheckType.MOVING) || worldMan.isActiveAnywhere(CheckType.NET)) {
             // (Also sets lastKeepAliveTime, if enabled.)
             // If any check that uses flying packets is enabled, register all 
             register("fr.neatmonster.nocheatplus.checks.net.protocollib.MovingFlying", plugin);
@@ -148,7 +146,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         }
         else {
             // Fuck 1.7.
-            NCPAPIProvider.getNoCheatPlusAPI().getLogManager().info(Streams.STATUS, "Disable UseItemAdapter due to incompatibilities. Using-item status won't be monitored.");
+            NCPAPIProvider.getNoCheatPlusAPI().getLogManager().info(Streams.STATUS, "Disable UseItemAdapter and VelocityAdapter due to incompatibilities. Using-item status and explosion velocity won't be monitored.");
         }
         if (worldMan.isActiveAnywhere(CheckType.NET_TOGGLEFREQUENCY)) {
             register("fr.neatmonster.nocheatplus.checks.net.protocollib.EntityActionAdapter", plugin);
@@ -303,5 +301,4 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
             data.clearFlyingQueue();
         }
     }
-
 }

@@ -677,15 +677,17 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             // Client-version checking is already contained in isInBubbleStream.
             return vector;
         }
-        boolean airAbove = BlockProperties.isAir(node.getType());
+        // Determine whether the block above the column is effectively "air".
+        IBlockCacheNode nodeAbove = blockCache.getBlockCacheNode(this.blockX, this.blockY + 1, this.blockZ);
+        boolean airAbove = (nodeAbove == null) ? BlockProperties.isAir(world.getBlockAt(this.blockX, this.blockY + 1, this.blockZ).getType())
+                                               : BlockProperties.isAir(nodeAbove.getType());
+
         boolean isDrag = false;
-        // Set if above is clear
-        IBlockCacheNode node = blockCache.getBlockCacheNode(this.blockX, this.blockY + 1, this.blockZ);
-        // Set whether this column can drag players.
-        BlockData data = world.getBlockAt(this.blockX, this.blockY, this.blockZ).getBlockData(); // Mh. Heavy on performance.
+        BlockData data = world.getBlockAt(this.blockX, this.blockY, this.blockZ).getBlockData();
         if (data instanceof BubbleColumn) {
-            isDrag = ((BubbleColumn)data).isDrag();
+            isDrag = ((BubbleColumn) data).isDrag();
         }
+
         double yMotion;
         if (airAbove) {
             // Above the column
@@ -705,8 +707,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
                 yMotion = Math.min(0.7D, vector.getY() + 0.06D);
             }
         }
-        vector = new Vector(vector.getX(), yMotion, vector.getZ());
-        return vector;
+        return new Vector(vector.getX(), yMotion, vector.getZ());
     }
 
     /**

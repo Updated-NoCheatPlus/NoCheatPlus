@@ -46,7 +46,7 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
     public final PenaltyTime timeFreeze = new PenaltyTime();
 
     // Improbable check
-    public final ActionFrequency improbableCount = new ActionFrequency(20, 3000); // 20 buckets covering 3 seconds each (full time resolution of 1 minute)
+    public final ActionFrequency improbableCount = new ActionFrequency(20, 3000); // Sliding window of 20 buckets, each 3 seconds long (total span: ~1 minute, with 3s resolution)
 
     // *----------No slowdown related data----------*
     /** Whether the player use the item on left hand */

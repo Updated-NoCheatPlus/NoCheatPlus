@@ -58,6 +58,8 @@ public class PlayerMoveData extends MoveData {
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. */
     public boolean slowedByUsingAnItem;
     
+    public boolean tridentRelease;
+    
     /** 
      * Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. 
      * NOTE: this is NOT the propelling moment triggered by {@link org.bukkit.event.player.PlayerRiptideEvent}, 
@@ -243,6 +245,7 @@ public class PlayerMoveData extends MoveData {
         isCrouching = false;
         isSwimming = false;
         slowedByUsingAnItem = false;
+        tridentRelease = false;
         forwardImpulse = InputDirection.ForwardDirection.NONE;
         strafeImpulse = InputDirection.StrafeDirection.NONE;
         // Properties involving the environment.

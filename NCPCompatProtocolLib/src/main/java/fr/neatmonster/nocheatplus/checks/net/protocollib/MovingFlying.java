@@ -62,7 +62,8 @@ import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
  *
  */
 public class MovingFlying extends BaseAdapter {
-    private static final boolean isServerAtLeast1_21_3 = ServerVersion.compareMinecraftVersion("1.21.3") >= 0;
+
+    private static final boolean isServerAtLeast1_21_3 = ServerVersion.isAtLeast("1.21.3");
     // Setup for flying packets.
     public static final int indexOnGround = 0;
     public static final int indexhorizontalCollision = isServerAtLeast1_21_3 ? 1 : 0;
@@ -71,8 +72,7 @@ public class MovingFlying extends BaseAdapter {
     public static final int indexX = 0;
     public static final int indexY = 1;
     public static final int indexZ = 2;
-    /** 1.7.10 */
-    public static final int indexStance = 3;
+    public static final int indexStance = 3; // 1.7.10
     public static final int indexYaw = 0;
     public static final int indexPitch = 1;
 
@@ -111,7 +111,6 @@ public class MovingFlying extends BaseAdapter {
     private final WrongTurn wrongTurn = new WrongTurn(); 
 
     private final int idFlying = counters.registerKey("packet.flying");
-
     private final int idAsyncFlying = counters.registerKey("packet.flying.asynchronous");
 
     /** If a packet can't be parsed, this time stamp is set for occasional logging. */
@@ -224,28 +223,27 @@ public class MovingFlying extends BaseAdapter {
         // Interpret the packet content.
         final DataPacketFlying packetData = interpretPacket(event, time);
         // Early return tests, if the packet can be interpreted.
-        boolean skipFlyingFrequency = false;
+        boolean skipChecks = false;
         if (packetData != null) {
             // Prevent processing packets with obviously malicious content.
             if (isInvalidContent(packetData)) {
                 // TODO: extra actions: log and kick (cancel state is not evaluated)
                 event.setCancelled(true);
                 if (pData.isDebugActive(this.checkType)) {
-                    debug(player, "Incoming packet, cancel due to malicious content: " + packetData.toString());
+                    debug(player, "Incoming flying packet, cancel due to malicious content: " + packetData.toString());
                 }
                 return;
             }
 
-            switch(data.teleportQueue.processAck(packetData)) {
+            switch (data.teleportQueue.processAck(packetData)) {
                 case WAITING: {
                     if (pData.isDebugActive(this.checkType)) {
-                        debug(player, "Incoming packet, still waiting for ACK on outgoing position.");
+                        debug(player, "Incoming flying packet, still waiting for ACK on outgoing position.");
                     }
                     if (confirmTeleportType != null && cc.supersededFlyingCancelWaiting) {
                         // Don't add to the flying queue for now (assumed invalid).
                         final AckReference ackReference = data.teleportQueue.getLastAckReference();
-                        if (ackReference.lastOutgoingId != Integer.MIN_VALUE
-                            && ackReference.lastOutgoingId != ackReference.maxConfirmedId) {
+                        if (ackReference.lastOutgoingId != Integer.MIN_VALUE && ackReference.lastOutgoingId != ackReference.maxConfirmedId) {
                             // Still waiting for a 'confirm teleport' packet. More or less safe to cancel this out.
                             /*
                              * TODO: The actual issue with this, apart from
@@ -260,18 +258,17 @@ public class MovingFlying extends BaseAdapter {
                              * position-correction teleporting the server does, for
                              * the cases a plugin can handle.
                              */
-                            // TODO: Timeout -> either skip cancel or schedule a set back (to last valid pos or other).
-                            // TODO: Config?
-                            cancel = true;
+                             // See todo below on if (cancel) {...}
+                             cancel = true;
                         }
                     }
                     break;
                 }
                 case ACK: {
                     // Skip processing ACK packets, no cancel.
-                    skipFlyingFrequency = true;
+                    skipChecks = true;
                     if (pData.isDebugActive(this.checkType)) {
-                        debug(player, "Incoming packet, interpret as ACK for outgoing position.");
+                        debug(player, "Incoming flying packet, interpret as ACK for outgoing position. Skip checks.");
                     }
                 }
                 default: {
@@ -285,23 +282,17 @@ public class MovingFlying extends BaseAdapter {
 
         // Actual packet frequency check.
         // TODO: Consider using the NetStatic check.
-        if (!cancel && !skipFlyingFrequency 
+        if (!cancel && !skipChecks 
             && flyingFrequency.check(player, packetData, time, data, cc, pData)
             && !pData.hasBypass(CheckType.NET_FLYINGFREQUENCY, player)) {
             cancel = true;
-            // Also request a set back here
-            data.requestSetBack(player, this, plugin, CheckType.NET_FLYINGFREQUENCY);
         }
-        
         // More packet checks.
-        if (!cancel && !skipFlyingFrequency && pData.isCheckActive(CheckType.NET_MOVING, player) 
+        if (!cancel && !skipChecks && pData.isCheckActive(CheckType.NET_MOVING, player) 
             && moving.check(player, packetData, data, cc, pData, plugin)
             && !pData.hasBypass(CheckType.NET_MOVING, player)) {
             cancel = true;
-            // Also request a set back here
-            data.requestSetBack(player, this, plugin, CheckType.NET_MOVING);
         }
-        
         // Illegal pitch check
         if (!cancel && pData.isCheckActive(CheckType.NET_WRONGTURN, player) 
             && wrongTurn.check(player, packetData.getPitch(), data, cc)
@@ -311,6 +302,11 @@ public class MovingFlying extends BaseAdapter {
 
         // Process cancel and debug log.
         if (cancel) {
+            /*
+             * TODO: Test if this can fix packet fly exploits; it will also cause set backs on flying packets awaiting ACK(s)
+             *  Previously, NCP would simply cancel these flying packets out, without really restricting movement.
+             */
+            data.requestSetBack(player, this, plugin, CheckType.NET);
             event.setCancelled(true);
         }
         
@@ -318,9 +314,15 @@ public class MovingFlying extends BaseAdapter {
             debug(player, (packetData == null ? "(Incompatible data)" : packetData.toString()) + (event.isCancelled() ? " CANCEL" : ""));
         }
     }
-
-
-
+    
+    /**
+     * Checks if the given {@link DataPacketFlying} contains invalid position or look data. <br>
+     * Delegates to {@link LocUtil#isBadCoordinate(double...)} and {@link LocUtil#isBadCoordinate(float...)}.<br>
+     * If this returns true, invalid packets won't be added to the flying queue, and will be cancelled immediately.
+     *
+     * @param packetData the flying packet data to validate
+     * @return true if the packet contains invalid position or look data, false otherwise
+     */
     private boolean isInvalidContent(final DataPacketFlying packetData) {
         if (packetData.hasPos && LocUtil.isBadCoordinate(packetData.getX(), packetData.getY(), packetData.getZ())) {
             return true;

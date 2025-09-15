@@ -14,6 +14,8 @@
  */
 package fr.neatmonster.nocheatplus.checks.net.model;
 
+import org.bukkit.Location;
+
 import fr.neatmonster.nocheatplus.components.location.IGetPositionWithLook;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
 
@@ -52,8 +54,22 @@ public class DataLocation implements IGetPositionWithLook {
      * @param other
      * @return
      */
-    public boolean isSameLocation(final DataLocation other) {
+    public boolean isSamePosAndLook(final DataLocation other) {
         return getY() == other.getY() && getX() == other.getX() && getZ() == other.getZ() && getPitch() == other.getPitch() && getYaw() == other.getYaw();
+    }
+    
+    /**
+     * Quick test for same coordinates and looking direction.
+     *
+     * @param x
+     * @param y
+     * @param z
+     * @param yaw
+     * @param pitch
+     * @return
+     */
+    public boolean isSamePosAndLook(final double x, final double y, final double z, final float yaw, final float pitch) {
+        return x == this.getX() && y == this.getY() && z == this.getZ() && yaw == this.getYaw() && pitch == this.getPitch();
     }
 
     /**
@@ -62,22 +78,18 @@ public class DataLocation implements IGetPositionWithLook {
      * @param other
      * @return
      */
-    public boolean isSameLocOnly(final DataLocation other) {
+    public boolean isSamePos(final DataLocation other) {
         return getY() == other.getY() && getX() == other.getX() && getZ() == other.getZ();
     }
-
+    
     /**
-     * Quick test for same coordinates and looking direction.
+     * Quick test for match between packet and bukkit event (coordinates only)
      * 
-     * @param x
-     * @param y
-     * @param z
-     * @param yaw
-     * @param pitch
+     * @param bukkitLoc
      * @return
      */
-    public boolean isSameLocation(final double x, final double y, final double z, final float yaw, final float pitch) {
-        return x == this.getX() && y == this.getY() && z == this.getZ() && yaw == this.getYaw() && pitch == this.getPitch();
+    public boolean isSameBukkitPos(final Location bukkitLoc) {
+        return getX() == bukkitLoc.getX() && getY() == bukkitLoc.getY() && getZ() == bukkitLoc.getZ();
     }
 
     @Override

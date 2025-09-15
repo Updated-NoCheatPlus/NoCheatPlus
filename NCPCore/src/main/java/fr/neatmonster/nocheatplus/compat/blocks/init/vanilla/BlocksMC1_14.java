@@ -116,7 +116,7 @@ public class BlocksMC1_14 implements BlockPropertiesSetup{
 
         BlockProperties.setBlockProps("SCAFFOLDING", instant);
         BlockFlags.addFlags("SCAFFOLDING", 
-        BlockFlags.F_IGN_PASSABLE |  BlockFlags.F_CLIMBABLE | BlockFlags.F_GROUND | BlockFlags.F_GROUND_HEIGHT | BlockFlags.F_XZ100);
+        BlockFlags.F_IGN_PASSABLE |  BlockFlags.F_CLIMBABLE | BlockFlags.F_GROUND | BlockFlags.F_GROUND_HEIGHT);
 
         BlockProperties.setBlockProps("STONECUTTER", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3.5f, true));
         BlockFlags.addFlags("STONECUTTER", BlockFlags.SOLID_GROUND);

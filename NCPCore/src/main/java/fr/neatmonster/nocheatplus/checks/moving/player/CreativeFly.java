@@ -96,7 +96,7 @@ public class CreativeFly extends Check {
         // Lost ground, if set so.
         if (model.getGround()) {
             MovingUtil.prepareFullCheck(from, to, thisMove, Math.max(cc.yOnGround, cc.noFallyOnGround));
-            LostGround.runLostGroundChecks(player, from, to, hDistance, yDistance, sprinting, lastMove, data, cc, useBlockChangeTracker ? blockChangeTracker : null, tags);
+            LostGround.runLostGroundChecks(player, from, to, hDistance, yDistance, lastMove, data, cc, useBlockChangeTracker ? blockChangeTracker : null, tags);
         }
 
 

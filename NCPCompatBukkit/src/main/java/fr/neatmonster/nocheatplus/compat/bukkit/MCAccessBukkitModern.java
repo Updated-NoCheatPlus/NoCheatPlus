@@ -22,43 +22,7 @@ import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitAnvil;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitBamboo;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitBell;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCake;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCauldron;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitChorusPlant;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitCocoa;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDirectionalCentered;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDoor;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDripLeaf;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitDripStone;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitEndPortalFrame;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFence;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFetchableBound;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitFetchableBounds;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitGate;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitGrindStone;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitHopper;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLadder;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLantern;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitLevelled;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPiston;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPistonHead;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitPowderSnow;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitRail;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSeaPickle;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitShapeModel;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitShulkerBox;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSlab;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitSnow;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitStairs;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitStatic;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitTrapDoor;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitTurtleEgg;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWall;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWallHead;
-import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitWaterPlant;
+import fr.neatmonster.nocheatplus.compat.bukkit.model.*;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectBase;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectDamageSource;
 import fr.neatmonster.nocheatplus.compat.cbreflect.reflect.ReflectDamageSources;
@@ -144,6 +108,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_CAMPFIRE = new BukkitStatic(0.0, 0.4375);
     private static final BukkitShapeModel MODEL_BAMBOO = new BukkitBamboo();
     private static final BukkitShapeModel MODEL_POINTED_DRIPSTONE = new BukkitDripStone();
+    private static final BukkitShapeModel MODEL_SCAFFOLDING = new BukkitScaffolding();
     private static final BukkitShapeModel MODEL_WATER_PLANTS = new BukkitWaterPlant();
     private static final BukkitShapeModel MODEL_LILY_PAD = new BukkitStatic(0.0625, 0.09375);
     private static final BukkitShapeModel MODEL_FLOWER_POT = new BukkitStatic(0.3125, 0.375);
@@ -153,7 +118,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_SINGLE_CHEST = new BukkitStatic(0.0625, 0.875);
     private static final BukkitShapeModel MODEL_HONEY_BLOCK = new BukkitStatic(0.0625, 0.9375);
     private static final BukkitShapeModel MODEL_SCULK_SHRIEKER = new BukkitStatic(0.0, 0.5);
-    private static final BukkitShapeModel MODEL_DRIED_GHAST = new BukkitStatic(0.1875f, 0.8125f); // 0.1875F, 0.0F, 0.1875F, 0.8125F, 0.8125F, 0.8125F
+    private static final BukkitShapeModel MODEL_DRIED_GHAST = new BukkitStatic(0.1875f, 0.0f, 0.1875f, 0.8125f, 0.625f, 0.8125f); // NMS bounds: x1,y1,z1,x2,y2,y2 (y2 = 10/16 = 0.625)
 
     // Static blocks with full height sorted by inset.
     private static final BukkitShapeModel MODEL_INSET16_1_HEIGHT100 = new BukkitStatic(0.0625, 1.0);
@@ -234,9 +199,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             processedBlocks.add(mat);
         }
         for (final Material mat : BridgeMaterial.getAllBlocks(
-            "light", "glow_lichen", "big_dripleaf_stem",
-            // TODO: Not fully tested
-            "scaffolding")) {
+            "light", "glow_lichen", "big_dripleaf_stem")) {
             processedBlocks.add(mat);
         }
 
@@ -496,6 +459,10 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // Bamboo.      
         mt = BridgeMaterial.getBlock("bamboo");
         if (mt != null) addModel(mt, MODEL_BAMBOO);
+
+        // Scaffolding
+        mt = BridgeMaterial.getBlock("scaffolding");
+        if (mt != null) addModel(mt, MODEL_SCAFFOLDING);
 
         // Dripstone.      
         mt = BridgeMaterial.getBlock("pointed_dripstone");

@@ -35,10 +35,12 @@ import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerRiptideEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerToggleSprintEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckListener;
@@ -151,6 +153,14 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 }
             });
         }
+        if (Bridge1_13.hasPlayerRiptideEvent()) {
+            queuedComponents.add(new Listener() {
+                @EventHandler(priority = EventPriority.LOWEST)
+                public void onTridentRelease(final PlayerRiptideEvent event) {
+                    handleRiptide(event.getPlayer(), event.getVelocity().clone());
+                }
+           });
+        }
 
         // Register Data, Listener and Config.
         api.register(api.newRegistrationContext()
@@ -176,6 +186,19 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 .removeSubCheckData(CheckType.COMBINED, true)
                 .context() //
                 );
+    }
+    
+    /**
+     * Sets whether the player has released a trident with riptide on, which will propel the player in air or water.
+     *
+     * @param player 
+     * @param vel Riptide velocity.
+     */
+    public void handleRiptide(Player player, Vector vel) {
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        final MovingData data = pData.getGenericInstance(MovingData.class);
+        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
+        thisMove.tridentRelease = true;
     }
     
     /**

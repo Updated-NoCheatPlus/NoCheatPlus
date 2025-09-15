@@ -20,9 +20,52 @@ public interface ShapeModel<W> {
 
     // TODO: Rather fill in all into node directly (data as well), avoid redundant casting etc.
     // TODO: Best route passable workaround through here too (base on a flag), + getGroundMinHeight?.
-
     // TODO: Refine +- might have BukkitBlockCacheNode etc.
+    
+    /**
+     * Get the shape of the block at the given position. <br>
+     * <strong>Do note that this represents the <i>collision</i> shape, not necessarily the visual shape of the block, which can diverge from the former.</strong> <br>
+     * I.e.: A fence gate in the open position has no collision shape, but has a visual and interactable shape. The same goes for fences which have a collision shape with 1.5 height, 
+     * but a visual shape of 1.0 height and so on.<br>
+     * 
+     * @param blockCache The block cache to use.
+     * @param world The world object.
+     * @param x The x coordinate of the block.
+     * @param y The y coordinate of the block.
+     * @param z The z coordinate of the block.
+     * @return An array of doubles representing the shape, in the format
+     *         {minX, minY, minZ, maxX, maxY, maxZ, ...} for each box in the shape.
+     *         Coordinates are in the range [0.0, 1.0].
+     */
     public double[] getShape(BlockCache blockCache, W world, int x, int y, int z);
+    
+    // TODO: Implement later.
+    
+    /**
+     * Get the collision shape of the block at the given position. <br>
+     * This is the shape to be used for collision checks and can affect the player movement-wise <br>
+     * 
+     * @param blockCache
+     * @param world
+     * @param x
+     * @param y
+     * @param z
+     * @return
+     */
+    // public double[] getCollisionShape(BlockCache blockCache, W world, int x, int y, int z);
+    
+    /**
+     * Get the visual shape of the block at the given position. <br>
+     * This is the shape to be used for interaction checks/cases. <br>
+     * 
+     * @param blockCache
+     * @param world
+     * @param x
+     * @param y
+     * @param z
+     * @return
+     */
+    // public double[] getVisualShape(BlockCache blockCache, W world, int x, int y, int z);
 
     /**
      * Allow faking data.

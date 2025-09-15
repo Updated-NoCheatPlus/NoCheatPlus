@@ -22,6 +22,15 @@ import org.bukkit.util.VoxelShape;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
+/**
+ * Fetches the block's collision VoxelShape and returns one or more bounding boxes
+ * as a concatenated double[] containing {minX,minY,minZ,maxX,maxY,maxZ} for each
+ * box. Coordinates are expressed relative to the block position.
+ *
+ * Difference from BukkitFetchableBound: this class may return multiple boxes
+ * (preserving complex/multi-part collision geometry); BukkitFetchableBound
+ * returns a single BoundingBox from Block#getBoundingBox().
+ */
 public class BukkitFetchableBounds implements BukkitShapeModel {
 
     @Override

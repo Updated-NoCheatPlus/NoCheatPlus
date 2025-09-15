@@ -26,62 +26,75 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 
 /**
- * This check combines different other checks frequency and occurrences into one count.
- * (Intended for static access by other checks.) 
+ * Meta-check that aggregates suspicion weights from multiple checks over time
+ * and evaluates if the overall behavior is statistically unlikely
+ * ("improbable") for a legitimate player.
  *
- * @author asofold
+ * Intended for static access by other checks, which can feed weights into this
+ * aggregator.
  *
+ * Buckets are used internally to group suspicion scores into time slices,
+ * making it possible to detect both short-term bursts and long-term patterns.
  */
 public class Improbable extends Check implements IDisableListener {
 
     private static Improbable instance = null;
 
     /**
-     * Return if to cancel.
-     * @param player
-     * @param weights
-     * @param now
-     * @return
+     * Run the Improbable check for a given player with a new weight.
+     *
+     * @param player The player being checked.
+     * @param weight The suspicion weight to add (severity of the detected behavior).
+     * @param now    Current system time in ms.
+     * @param tags   Optional tags for additional context.
+     * @param pData 
+     * @return true if the action should be cancelled, false otherwise.
      */
     public static final boolean check(final Player player, final float weight, final long now, final String tags, final IPlayerData pData) {
         return instance.checkImprobable(player, weight, now, tags, pData);
     }
 
     /**
-     * Update time references only, no feeding and no violation.
-     * @param player
-     * @param now
-     * @param pData
+     * Advance the internal time window without adding new suspicion.
+     * Useful for keeping buckets aligned to the current time without
+     * incrementing scores or triggering violations.
+     *
+     * @param now   Current system time in ms.
+     * @param pData Player data container.
      */
     public static final void update(final long now, final IPlayerData pData) {
         pData.getGenericInstance(CombinedData.class).improbableCount.update(now);
     }
 
     /**
-     * Update time references only, no feeding and no violation (convenience method).
-     * @param player
-     * @param now
+     * Advance the internal time window for a given player without
+     * adding new suspicion.
+     *
+     * @param player The player.
+     * @param now    Current system time in ms.
      */
     public static final void update(final Player player, final long now) {
         update(now, DataManager.getPlayerData(player));
     }
 
     /**
-     * Feed the check but no violations processing (convenience method).
-     * @param player
-     * @param weight
-     * @param now
-     * @param pData
+     * Add suspicion weight to the player's current bucket without a violation.
+     *
+     * @param player The player.
+     * @param weight The suspicion weight to add.
+     * @param now    Current system time in ms.
+     * @param pData 
      */
     public static final void feed(final Player player, final float weight, final long now, final IPlayerData pData) {
         pData.getGenericInstance(CombinedData.class).improbableCount.add(now, weight);
     }
 
     /**
-     * Feed the check but no violations processing (convenience method).
-     * @param player
-     * @param weight
-     * @param now
+     * Add suspicion weight to the player's current bucket without a violation.
+     *
+     * @param player The player.
+     * @param weight The suspicion weight to add.
+     * @param now    Current system time in ms.
      */
     public static void feed(final Player player, final float weight, long now) {
         feed(player, weight, now, DataManager.getPlayerData(player));
@@ -97,14 +110,15 @@ public class Improbable extends Check implements IDisableListener {
     }
 
     /**
-     * Checks a player for improbable behaviour.
-     * @param player
-     * @param weight
-     * @param now
-     * @param tags
+     * Perform the full Improbable check for a player by adding a new weight
+     * and evaluating both short-term and long-term suspicion levels.
+     *
+     * @param player The player being checked.
+     * @param weight The suspicion weight to add.
+     * @param now    Current system time in ms.
+     * @param tags   Optional tags with context about the source of suspicion.
      * @param pData
-     * @return true if to cancel
-     * 
+     * @return true if the suspicious action should be cancelled, false otherwise.
      */
     private boolean checkImprobable(final Player player, final float weight, final long now, final String tags, final IPlayerData pData) {
         if (!pData.isCheckActive(type, player)) {
@@ -113,12 +127,12 @@ public class Improbable extends Check implements IDisableListener {
         final CombinedData data = pData.getGenericInstance(CombinedData.class);
         final CombinedConfig cc = pData.getGenericInstance(CombinedConfig.class);
         data.improbableCount.add(now, weight);
-        /** Score of the first 3 seconds (a bucket covers 3 secs)*/
+        // Score of the first bucket (covers ~3 seconds).
         final float shortTerm = data.improbableCount.bucketScore(0);
         double violation = 0.0;
         boolean violated = false;
         if (shortTerm * 0.8f > cc.improbableLevel / 20.0) {
-            /** Lag factor for the first window lag (3 seconds) */
+            // Lag adjustment factor for the short-term window (~3 seconds).
             final float lagFactor = pData.getCurrentWorldData().shouldAdjustToLag(type) ? TickTask.getLag(data.improbableCount.bucketDuration(), true) : 1f;
             // Re-check with lag adaptation.
             if (shortTerm / lagFactor > cc.improbableLevel / 20.0) {
@@ -126,10 +140,10 @@ public class Improbable extends Check implements IDisableListener {
                 violated = true;
             }
         }
-        /** Sum score of all buckets, no weight */
+        // Total score across all buckets (~1 minute span).
         final double fullTerm = data.improbableCount.score(1.0f);
         if (fullTerm > cc.improbableLevel) {
-            /** Full window lag factor, 1 minute */
+            // Lag adjustment factor for the full window (~1 minute).
             final float lagFactor = pData.getCurrentWorldData().shouldAdjustToLag(type) ? TickTask.getLag(data.improbableCount.bucketDuration() * data.improbableCount.numberOfBuckets(), true) : 1f;
             // Re-check with lag adaptation.
             if (fullTerm / lagFactor > cc.improbableLevel) {

@@ -140,7 +140,7 @@ public class TeleportQueue {
         }
         // Only register this location, if it matches the location from a Bukkit event.
         if (expectOutgoing != null) {
-            if (expectOutgoing.isSameLocation(x, y, z, yaw, pitch)) {
+            if (expectOutgoing.isSamePosAndLook(x, y, z, yaw, pitch)) {
                 // Add to queue.
                 if (!expectIncoming.isEmpty()) {
                     // Lazy expiration check.
@@ -159,7 +159,7 @@ public class TeleportQueue {
                     }
                     if (!expectIncoming.isEmpty()) {
                         final CountableLocation last = expectIncoming.getLast();
-                        if (last.isSameLocation(x, y, z, yaw, pitch)) {
+                        if (last.isSamePosAndLook(x, y, z, yaw, pitch)) {
                             last.time = time;
                             last.count ++;
                             last.teleportId = teleportId;
@@ -289,7 +289,7 @@ public class TeleportQueue {
             if (packetData.time - maxAge >= ref.time) {
                 it.remove();
             }
-            else if (packetData.isSameLocation(ref)) {
+            else if (packetData.isSamePosAndLook(ref)) {
                 // Match.
                 // Remove all preceding older entries.
                 while (ref != expectIncoming.getFirst()) {

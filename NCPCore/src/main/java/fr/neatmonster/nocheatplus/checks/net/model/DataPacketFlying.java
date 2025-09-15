@@ -14,6 +14,8 @@
  */
 package fr.neatmonster.nocheatplus.checks.net.model;
 
+import org.bukkit.Location;
+
 public class DataPacketFlying extends DataLocation {
 
     /**
@@ -21,7 +23,7 @@ public class DataPacketFlying extends DataLocation {
      * @author asofold
      *
      */
-    public static enum PACKET_CONTENT {
+    public enum PACKET_CONTENT {
         /** Neither position nor look, only ground. */
         GROUND_ONLY,
         /** Position and ground. */
@@ -43,6 +45,7 @@ public class DataPacketFlying extends DataLocation {
     public final boolean hasLook;
     public final long time;
     private long sequence = 0;
+    private boolean associatedWithBukkitEvent = false;
 
     public DataPacketFlying(boolean onGround, boolean horizontalCollision, long time) {
         super(0, 0, 0, 0, 0);
@@ -89,7 +92,7 @@ public class DataPacketFlying extends DataLocation {
      *         x/y/z/pitch/yaw differ, true if all of those match.
      */
     public boolean containsSameLocation(final DataPacketFlying other) {
-        return hasPos && other.hasPos && hasLook && other.hasLook && isSameLocation(other);
+        return hasPos && other.hasPos && hasLook && other.hasLook && isSamePosAndLook(other);
     }
 
     /**
@@ -98,16 +101,17 @@ public class DataPacketFlying extends DataLocation {
      * @return
      */
     public boolean containsSameLocation(final DataLocation other) {
-        return hasPos && hasLook && isSameLocation(other);
+        return hasPos && hasLook && isSamePosAndLook(other);
     }
 
     /**
-     * Test if this packet has the same coordinates, disregarding looking direction.
+     * Test if this packet has the same coordinates, disregarding the looking direction.
+     * 
      * @param other
      * @return
      */
     public boolean isSamePos(final DataPacketFlying other) {
-        return hasPos && other.hasPos && isSameLocOnly(other);
+        return hasPos && other.hasPos && this.isSamePos(other);
     }
 
     /**
@@ -121,7 +125,60 @@ public class DataPacketFlying extends DataLocation {
      * @return
      */
     public boolean matches(final double x, final double y, final double z, final float yaw, final float pitch) {
-        return hasPos && hasLook && isSameLocation(x, y, z, yaw, pitch);
+        return hasPos && hasLook && isSamePosAndLook(x, y, z, yaw, pitch);
+    }
+    
+    /**
+     * Quick test for match between packet and bukkit event (coordinates only) and if the packet has position
+     *
+     * @param bukkitLoc
+     * @return
+     */
+    public boolean matchesBukkitEvent(Location bukkitLoc) {
+        return hasPos && isSameBukkitPos(bukkitLoc);
+    }
+    
+    /**
+     * Associate this packet with a Bukkit moving event.
+     */
+    public void setTracked() {
+        this.associatedWithBukkitEvent = true;
+    }
+    
+    /**
+     * Whether this packet has been associated with a Bukkit moving event.
+     *
+     * @return If so.
+     */
+    public boolean isTracked() {
+        return associatedWithBukkitEvent;
+    }
+    
+    /**
+     * Whether the packet hasn't been associated with a Bukkit moving event.
+     * @return If so.
+     */
+    public boolean isUntracked() {
+        return !associatedWithBukkitEvent;
+    }
+    
+    /**
+     * Get the sequence number. This may or may not be set, depending on
+     * context.
+     *
+     * @return
+     */
+    public long getSequence() {
+        return sequence;
+    }
+    
+    public void setSequence(long sequence) {
+        this.sequence = sequence;
+    }
+    
+    public PACKET_CONTENT getSimplifiedContentType() {
+        return hasPos ? (hasLook ? PACKET_CONTENT.POS_LOOK : PACKET_CONTENT.POS)
+                : (hasLook ? PACKET_CONTENT.LOOK : PACKET_CONTENT.GROUND_ONLY);
     }
 
     @Override
@@ -149,24 +206,4 @@ public class DataPacketFlying extends DataLocation {
         builder.append(")");
         return builder.toString();
     }
-
-    /**
-     * Get the sequence number. This may or may not be set, depending on
-     * context.
-     * 
-     * @return
-     */
-    public long getSequence() {
-        return sequence;
-    }
-
-    public void setSequence(long sequence) {
-        this.sequence = sequence;
-    }
-
-    public PACKET_CONTENT getSimplifiedContentType() {
-        return hasPos ? (hasLook ? PACKET_CONTENT.POS_LOOK : PACKET_CONTENT.POS) 
-                : (hasLook ? PACKET_CONTENT.LOOK : PACKET_CONTENT.GROUND_ONLY);
-    }
-
 }

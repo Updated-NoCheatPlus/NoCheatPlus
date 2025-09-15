@@ -185,13 +185,7 @@ public class SurvivalFly extends Check {
         // Order of checking in EntityLiving.java water -> lava -> gliding -> air
         // TODO: Clean-up this left-over bit of the old implementation (respect MC's order)
         double yAllowedDistance, yDistanceAboveLimit;
-        if (from.isOnClimbable()) {
-            // They can technically be placed inside liquids.
-            final double[] res = vDistClimbable(player, from, to, pData, thisMove, lastMove, thisMove.yDistance, data, cc);
-            yAllowedDistance = res[0];
-            yDistanceAboveLimit = res[1];
-        }
-        else if (Bridge1_9.isGliding(player)) {
+        if (Bridge1_9.isGliding(player)) {
             yAllowedDistance = resGlide[2];
             yDistanceAboveLimit = resGlide[3];
             // If failed, try testing for after-failure conditions.
@@ -540,12 +534,12 @@ public class SurvivalFly extends Check {
         }
         // Yes, players can glide and riptide at the same time, increasing speed at a faster rate than chunks can load...
         // Surely a questionable decision on Mojang's part.
-        if (lastMove.slowedByUsingAnItem && !thisMove.slowedByUsingAnItem && thisMove.isRiptiding) {
-            Vector propellingForce = to.getTridentPropellingForce(false);
+        if (thisMove.tridentRelease) {
+            Vector riptideVelocity = to.getRiptideVelocity(false); // Cannot glide while on ground, so no need to check for it.
             // Fortunately, we do not have to account for onGround push here, as gliding does not work on ground.
-            thisMove.xAllowedDistance += propellingForce.getX();
-            thisMove.yAllowedDistance += propellingForce.getY();
-            thisMove.zAllowedDistance += propellingForce.getZ();
+            thisMove.xAllowedDistance += riptideVelocity.getX();
+            thisMove.yAllowedDistance += riptideVelocity.getY();
+            thisMove.zAllowedDistance += riptideVelocity.getZ();
         }
         // Collisions last.
         Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
@@ -1058,10 +1052,10 @@ public class SurvivalFly extends Check {
                 thisMove.zAllowedDistance *= (double) data.nextStuckInBlockHorizontal;
             }
             // Riptide works by propelling the player after releasing the trident (the effect only pushes the player, unless is on ground)
-            if (lastMove.slowedByUsingAnItem && !thisMove.slowedByUsingAnItem && thisMove.isRiptiding) {
-                Vector propellingForce = to.getTridentPropellingForce(lastMove.touchedGround);
-                thisMove.xAllowedDistance += propellingForce.getX();
-                thisMove.zAllowedDistance += propellingForce.getZ();
+            if (thisMove.tridentRelease) {
+                Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
+                thisMove.xAllowedDistance += riptideVelocity.getX();
+                thisMove.zAllowedDistance += riptideVelocity.getZ();
             }
             // Try to back off players from edges, if sneaking.
             // NOTE: this is after the riptiding propelling force.
@@ -1166,11 +1160,11 @@ public class SurvivalFly extends Check {
                 zTheoreticalDistance[i] *= (double) data.nextStuckInBlockHorizontal;
             }
         }
-        if (lastMove.slowedByUsingAnItem && !thisMove.slowedByUsingAnItem && thisMove.isRiptiding) {
-            Vector propellingForce = to.getTridentPropellingForce(lastMove.touchedGround);
+        if (thisMove.tridentRelease) {
+            Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
             for (i = 0; i < 9; i++) {
-                xTheoreticalDistance[i] += propellingForce.getX();
-                zTheoreticalDistance[i] += propellingForce.getZ();
+                xTheoreticalDistance[i] += riptideVelocity.getX();
+                zTheoreticalDistance[i] += riptideVelocity.getZ();
             }
         }
         if (!player.isFlying() && pData.isShiftKeyPressed() && from.isAboveGround() && thisMove.yDistance <= 0.0) {
@@ -1648,15 +1642,15 @@ public class SurvivalFly extends Check {
         }
         // *----------TridentItem.releaseUsing(), apply trident motion----------*
         // TODO: Needs to be adjusted for on ground pushing
-        if (lastMove.slowedByUsingAnItem && !thisMove.slowedByUsingAnItem && thisMove.isRiptiding) {
+        if (thisMove.tridentRelease) {
             // Riptide works by propelling the player in air after releasing the trident (the effect only pushes the player, unless is on ground)
-            final Vector riptideForce = to.getTridentPropellingForce(from.isOnGround());
+            final Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
             if (yTheoreticalDistance != null) {
                 for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                    yTheoreticalDistance[i] += riptideForce.getY();
+                    yTheoreticalDistance[i] += riptideVelocity.getY();
                 }
             }
-            else thisMove.yAllowedDistance += riptideForce.getY();
+            else thisMove.yAllowedDistance += riptideVelocity.getY();
             if (debug) {
                 player.sendMessage("Trident propel(v): " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
             }
@@ -1732,80 +1726,6 @@ public class SurvivalFly extends Check {
             player.sendMessage("y actual/predict: " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
         }
         return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
-    }
-    
-    
-    /**
-     * Legacy handling (pre-vdistrel rework) for vertical climbable speed checking (limit-based, non-predictive) 
-     *
-     * @return yAllowedDistance, yDistanceAboveLimit
-     */
-     @Deprecated
-    private double[] vDistClimbable(final Player player, final PlayerLocation from, final PlayerLocation to,
-                                    final IPlayerData pData,
-                                    final PlayerMoveData thisMove, final PlayerMoveData lastMove,
-                                    final double yDistance, final MovingData data, final MovingConfig cc) {
-        double yDistanceAboveLimit = 0.0;
-        double yDistAbs = Math.abs(yDistance);
-        final double maxJumpGain = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) + 0.0001;
-        /* Climbing a ladder in water and exiting water for whatever reason speeds up the player a lot in that one transition ... */
-        final boolean waterStep = lastMove.from.inLiquid && yDistAbs < PhysicsEnvelope.swimBaseSpeedV(Bridge1_13.hasIsSwimming());
-        // Quick, temporary fix for scaffolding block
-        final boolean scaffolding = from.isOnGround() && from.getBlockY() == Location.locToBlock(from.getY()) && yDistance > 0.0 && yDistance < maxJumpGain;
-        double yAllowedDistance = (waterStep || scaffolding) ? yDistAbs : yDistance < 0.0 ? Magic.climbSpeedDescend : Magic.climbSpeedAscend;
-        final double maxJumpHeight = LiftOffEnvelope.NORMAL.getMaxJumpHeight(0.0) + (data.jumpAmplifier > 0 ? (0.6 + data.jumpAmplifier - 1.0) : 0.0);
-        
-        // Workaround for ladders that have a much bigger collision box, but much smaller hitbox (We do not distinguish the two). 
-        if (yDistAbs > yAllowedDistance) {
-            if (from.isOnGround(BlockFlags.F_CLIMBABLE) && to.isOnGround(BlockFlags.F_CLIMBABLE)) {
-                // Stepping up a block (i.e.: stepping upstairs with vines/ladders on the side), allow this movement.
-                yDistanceAboveLimit = Math.max(yDistanceAboveLimit, yDistAbs - cc.sfStepHeight);
-                tags.add("climbstep");
-            } 
-            else if (from.isOnGround(maxJumpHeight, 0D, 0D, BlockFlags.F_CLIMBABLE)) {
-                // If ground is found within the allowed jump height, we check speed against jumping motion not climbing motion, in order to still catch extremely fast / instant modules.
-                // (We have to check for full height because otherwise the immediate move after jumping will yield a false positive, as air gravity will be applied, which is stll higher than climbing motion)
-                // In other words, this means that as long as ground is found within the allowed height, players will be able to speed up to 0.42 on climbables.
-                // The advantage is pretty insignificant while granting us some leeway with false positives and cross-versions compatibility issues.
-                if (yDistance > maxJumpGain) {
-                    // If the player managed to exceed the ordinary jumping motion while on a climbable, we know for sure they're cheating.
-                    yDistanceAboveLimit = Math.max(yDistanceAboveLimit, yDistAbs - yAllowedDistance);
-                    Improbable.check(player, (float) yDistAbs, System.currentTimeMillis(), "moving.survivalfly.instantclimb", pData);
-                    tags.add("instantclimb");
-                }
-                // Ground is within reach and speed is lower than 0.42. Allow the movement.
-                else tags.add("climbheight(" + StringUtil.fdec3.format(maxJumpHeight) + ")");
-            } 
-            else {
-                // Ground is out reach and motion is still higher than legit. We can safely throw a VL at this point.
-                yDistanceAboveLimit = Math.max(yDistanceAboveLimit, yDistAbs - yAllowedDistance);
-                tags.add("climbspeed");
-            }
-        }
-        
-        // Can't climb up with vine not attached to a solid block (legacy).
-        if (yDistance > 0.0 && !thisMove.touchedGround && !from.canClimbUp(maxJumpHeight)) {
-            yDistanceAboveLimit = Math.max(yDistanceAboveLimit, yDistance);
-            yAllowedDistance = 0.0;
-            tags.add("climbdetached");
-        }
-        
-        // Do allow friction with velocity.
-        // TODO: Actual friction or limit by absolute y-distance?
-        // TODO: Looks like it's only a problem when on ground?
-        if (yDistanceAboveLimit > 0.0 && thisMove.yDistance > 0.0 
-            && lastMove.yDistance - (Magic.GRAVITY_MAX + Magic.GRAVITY_MIN) / 2.0 > thisMove.yDistance) {
-            yDistanceAboveLimit = 0.0;
-            yAllowedDistance = yDistance;
-            tags.add("vfrict_climb");
-        }
-        
-        // Do allow vertical velocity.
-        // TODO: Looks like less velocity is used here (normal hitting 0.361 of 0.462).
-        if (yDistanceAboveLimit > 0.0 && !data.getOrUseVerticalVelocity(yDistance).isEmpty()) {
-            yDistanceAboveLimit = 0.0;
-        }
-        return new double[]{yAllowedDistance, yDistanceAboveLimit};
     }
     
     

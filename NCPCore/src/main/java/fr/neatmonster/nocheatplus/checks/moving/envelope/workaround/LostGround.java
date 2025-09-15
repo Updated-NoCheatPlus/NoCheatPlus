@@ -21,6 +21,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
@@ -103,6 +104,7 @@ public class LostGround {
         if (MathUtil.inRange(0.0, yDistance, cc.sfStepHeight) && lastMove.yDistance < 0.0) {
             if (from.isOnGround(1.0) && BlockProperties.isOnGroundShuffled(to.getWorld(), to.getBlockCache(), from.getX(), from_Y, from.getZ(), to.getX(), to.getY(), to.getZ(), horizontalMargin, to.getyOnGround(), 0.0)) {
                 thisMove.couldStepUp = true;
+                Improbable.feed(player, 0.001f, System.currentTimeMillis());
                 return applyLostGround(player, from, false, thisMove, data, "couldstep", tags);
             }
         }
