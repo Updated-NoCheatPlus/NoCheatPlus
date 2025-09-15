@@ -60,16 +60,14 @@ public class LostGround {
      * @param to
      * @param hDistance
      * @param yDistance
-     * @param sprinting
      * @param lastMove
      * @param data
      * @param cc
-
      * @param tags
      * @return True, if the ground collision was lost.
      */
     public static boolean runLostGroundChecks(final Player player, final PlayerLocation from, final PlayerLocation to,
-                                              final double hDistance, final double yDistance, final boolean sprinting,
+                                              final double hDistance, final double yDistance,
                                               final PlayerMoveData lastMove, final MovingData data, final MovingConfig cc,
                                               final BlockChangeTracker blockChangeTracker, final Collection<String> tags) {
         if (Bridge1_9.isGliding(player) || Bridge1_13.isRiptiding(player) || from.isResetCond() || from.isSlidingDown() || from.isOnGround() || player.isFlying() || hDistance < 0.001) {

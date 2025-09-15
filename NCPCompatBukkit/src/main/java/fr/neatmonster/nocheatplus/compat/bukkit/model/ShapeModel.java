@@ -28,8 +28,8 @@ public interface ShapeModel<W> {
      * I.e.: A fence gate in the open position has no collision shape, but has a visual and interactable shape. The same goes for fences which have a collision shape with 1.5 height, 
      * but a visual shape of 1.0 height and so on.<br>
      * 
-     * @param blockCache The block cache to use.
-     * @param world The world object.
+     * @param blockCache The block cache.
+     * @param world The world.
      * @param x The x coordinate of the block.
      * @param y The y coordinate of the block.
      * @param z The z coordinate of the block.

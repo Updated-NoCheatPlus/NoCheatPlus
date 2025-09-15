@@ -124,7 +124,7 @@ public class SurvivalFly extends Check {
         /* Moving off from anything that is not air (liquids, stuck-speed, ground, ALL). */
         final boolean resetFrom = fromOnGround || from.isResetCond();
         // Run lostground checks.
-        LostGround.runLostGroundChecks(player, from, to, thisMove.hDistance, thisMove.yDistance, pData.isSprinting(), lastMove, data, cc, useBlockChangeTracker ? blockChangeTracker : null, tags);
+        LostGround.runLostGroundChecks(player, from, to, thisMove.hDistance, thisMove.yDistance, lastMove, data, cc, useBlockChangeTracker ? blockChangeTracker : null, tags);
 
         // Set workarounds for the registry
         data.ws.setJustUsedIds(justUsedWorkarounds);

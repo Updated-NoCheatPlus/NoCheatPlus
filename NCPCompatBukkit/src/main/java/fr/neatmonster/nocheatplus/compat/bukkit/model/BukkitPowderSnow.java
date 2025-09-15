@@ -23,7 +23,9 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitPowderSnow implements BukkitShapeModel {
 
     double[] NO_COLLISION = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    
     double[] FULL_BLOCK = {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+    
     double[] REDUCED_HEIGHT = {0.0, 0.0, 0.0, 1.0, 0.9, 1.0};
 
     @Override

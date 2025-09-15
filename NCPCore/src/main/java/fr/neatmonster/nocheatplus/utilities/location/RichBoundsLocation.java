@@ -681,7 +681,6 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         IBlockCacheNode nodeAbove = blockCache.getBlockCacheNode(this.blockX, this.blockY + 1, this.blockZ);
         boolean airAbove = (nodeAbove == null) ? BlockProperties.isAir(world.getBlockAt(this.blockX, this.blockY + 1, this.blockZ).getType())
                                                : BlockProperties.isAir(nodeAbove.getType());
-
         boolean isDrag = false;
         BlockData data = world.getBlockAt(this.blockX, this.blockY, this.blockZ).getBlockData();
         if (data instanceof BubbleColumn) {
