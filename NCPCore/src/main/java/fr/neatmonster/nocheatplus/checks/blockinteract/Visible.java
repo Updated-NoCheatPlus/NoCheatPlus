@@ -160,7 +160,14 @@ public class Visible extends Check {
                 else if (Math.abs(face.getModZ()) > 0) {
                     axisData.priority = Axis.Z_AXIS;
                 }
-
+                /**
+                 * Origin version of updated Visible check, also implement for Fight.Visiable. 
+                 * After lots of reports telling that randomly flagged with old one, this was made.
+                 * Rather fixing look after interact packets, hidden micro-moves for in sight check.
+                 * This just check with obstacles from player's eyes to the block they are interacting. Is it possible at all?
+                 * Since it doesn't have correct line of sight, handle special blocks like stairs can be problematic.
+                 * Bedrock Edition compatible! Players playing on touch screen and interact blocks ~60 degree off from their look.
+                 */
                 do {
                     canContinue = false;
                     for (BlockCoord neighbor : MapUtil.getNeighborsInDirection(bc, direction, eyeX, eyeY, eyeZ, axisData)) {

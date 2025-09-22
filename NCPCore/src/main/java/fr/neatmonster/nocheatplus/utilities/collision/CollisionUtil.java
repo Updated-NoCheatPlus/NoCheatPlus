@@ -659,6 +659,8 @@ public class CollisionUtil {
     }
 
     /**
+     * Workaround to handle false positive and bypass of semi ray-tracing when processing through none full blocks
+     * Dirty validation due to not knowing correct line of sight
      *
      * @param rayTracing
      * @param blockCache
@@ -788,9 +790,8 @@ public class CollisionUtil {
         }
         
         // (Ray collided with something in the given direction. Check for special cases/workarounds.)
-        // TODO: Document why this is needed
         //////////////////////////////////
-        // 4: Handle stairs             //
+        // 4: Handle stairs (corner)    //
         //////////////////////////////////
         // Too headache to think out a perfect algorithm
         if ((nextFlags & BlockFlags.F_STAIRS) != 0) {
@@ -823,8 +824,12 @@ public class CollisionUtil {
                 }
             }
         }
-        
-        // TODO: Document why this is needed
+
+        /**
+        * Imagine fully surrounded by full blocks and a slab above
+        * In case bottom, you can't interact things outside slab, nor players outside interact back
+        * In case upper, there is window you can interact block nearby slab but not above the slab, this will false right away
+        */
         ///////////////////////////////////////////
         // 5: Handle slabs on each axis          //
         ///////////////////////////////////////////

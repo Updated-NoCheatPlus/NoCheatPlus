@@ -27,6 +27,7 @@ import fr.neatmonster.nocheatplus.checks.access.ACheckData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
+import fr.neatmonster.nocheatplus.checks.net.model.DataPacketInput;
 import fr.neatmonster.nocheatplus.checks.net.model.TeleportQueue;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
@@ -50,6 +51,7 @@ public class NetData extends ACheckData {
 
     // Reentrant lock.
     private final Lock lock = new ReentrantLock();
+    private final Lock locki = new ReentrantLock();
 
     // AttackFrequency
     public ActionFrequency attackFrequencySeconds = new ActionFrequency(16, 500); //16 buckets each with 500ms duration = 8 seconds
@@ -96,7 +98,8 @@ public class NetData extends ACheckData {
     // TODO: Might extend to synchronize with moving events.
     private final LinkedList<DataPacketFlying> flyingQueue = new LinkedList<DataPacketFlying>();
     /** Maximum amount of packets to store. */
-    private final int flyingQueueMaxSize = 20;
+    private final LinkedList<DataPacketInput> inputQueue = new LinkedList<DataPacketInput>();
+    private final int flyingQueueMaxSize = 20; // TODO: Might want to increase, what if the server-side lag then it can recover and receiving lots of packet? Like try pasting large structure using WorldEdit. 
     /** The maximum of so far already returned sequence values, altered under lock. */
     private long maxSequence = 0;
 
@@ -179,16 +182,42 @@ public class NetData extends ACheckData {
             res = true;
         }
         lock.unlock();
+        locki.lock();
+        inputQueue.addFirst(null);
+        if (inputQueue.size() > flyingQueueMaxSize + 1) {
+            inputQueue.removeLast();
+        }
+        locki.unlock();
         return res;
     }
 
     /**
-     * Clear the flying packet queue (under lock).
+     * Update packet to first entry the queue (under lock).
+     * 
+     * @param packetData
+     */
+    public void addInputQueue(final DataPacketInput packetData) {
+        locki.lock();
+        if (inputQueue.isEmpty()) {
+            inputQueue.add(packetData);
+            locki.unlock();
+            return;
+        }
+        inputQueue.set(0, packetData);
+        locki.unlock();
+    }
+
+    /**
+     * Clear the flying/input packet queue (under lock).
      */
     public void clearFlyingQueue() {
         lock.lock();
         flyingQueue.clear();
         lock.unlock();
+
+        locki.lock();
+        inputQueue.clear();
+        locki.unlock();
     }
 
     /**
@@ -205,6 +234,18 @@ public class NetData extends ACheckData {
          */
         final DataPacketFlying[] out = flyingQueue.toArray(new DataPacketFlying[flyingQueue.size()]);
         lock.unlock();
+        return out;
+    }
+
+    /**
+     * Copy the entire input queue (under lock).
+     * 
+     * @return
+     */
+    public DataPacketInput[] copyInputQueue() {
+        locki.lock();
+        final DataPacketInput[] out = inputQueue.toArray(new DataPacketInput[inputQueue.size()]);
+        locki.unlock();
         return out;
     }
 

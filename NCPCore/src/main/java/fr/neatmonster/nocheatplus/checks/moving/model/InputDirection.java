@@ -69,7 +69,7 @@ public class InputDirection {
         this.fdir = forward == 0.0f ? ForwardDirection.NONE : forward > 0.0 ? ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
         this.sdir = strafe == 0.0f ? StrafeDirection.NONE : strafe > 0.0 ? StrafeDirection.LEFT : StrafeDirection.RIGHT;
     }
-    
+
     /**
      * Composes a new InputDirection instance based on the dispatched {@link Input}.
      *
@@ -100,14 +100,14 @@ public class InputDirection {
     public float getForward() {
         return forward;
     }
-    
+
     /**
      * @return The input squared.
      */
     public double getInputSquared() {
         return MathUtil.square(strafe) + MathUtil.square(forward); // Cast to a double because the client does it
     }
-    
+
     /**
      * Performs an operation on the strafe and forward values using the given factors.
      *

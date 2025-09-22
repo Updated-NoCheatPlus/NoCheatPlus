@@ -28,10 +28,8 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.AutoWrapper;
 
-import fr.neatmonster.nocheatplus.checks.CheckType;
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
-import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
+import fr.neatmonster.nocheatplus.checks.net.NetData;
+import fr.neatmonster.nocheatplus.checks.net.model.DataPacketInput;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 
@@ -40,7 +38,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
  */
 public class InputsAdapter extends BaseAdapter {
     
-    private static AutoWrapper<Input7Bools> INPUT_WRAPPER; 
+    private static AutoWrapper<DataPacketInput> INPUT_WRAPPER; 
     
     private static PacketType[] initPacketTypes() {
         final List<PacketType> types = new LinkedList<PacketType>(Arrays.asList(PacketType.Play.Client.STEER_VEHICLE));
@@ -72,36 +70,14 @@ public class InputsAdapter extends BaseAdapter {
         final Player player = event.getPlayer();
         final PacketContainer packet = event.getPacket();
         final IPlayerData pData = DataManager.getPlayerData(player);
-        final MovingData data = pData.getGenericInstance(MovingData.class);
-        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
+        final NetData data = pData.getGenericInstance(NetData.class);
         // Instead of a primitive, we're being handed the full Input object from Mojang’s code. 
         StructureModifier<Object> objs = packet.getModifier().withType(Object.class);
         Object raw = objs.read(0);
         if (INPUT_WRAPPER == null) {
-            INPUT_WRAPPER = AutoWrapper.wrap(Input7Bools.class, raw.getClass());
+            INPUT_WRAPPER = AutoWrapper.wrap(DataPacketInput.class, raw.getClass());
         }
-        Input7Bools in = INPUT_WRAPPER.wrap(raw);
-        boolean forward = in.forward;
-        boolean backward = in.backward;
-        boolean left = in.left;
-        boolean right = in.right;
-        boolean jump = in.jump;
-        boolean shift = in.shift;
-        boolean sprint = in.sprint;
-        // Finally, set.
-        thisMove.input = new InputDirection(Boolean.compare(left, right), Boolean.compare(forward, backward));
-        if (pData.isDebugActive(CheckType.MOVING)) {
-            player.sendMessage("Strafe: " + thisMove.input.getStrafeDir() + " Frwd: " + thisMove.input.getForwardDir());
-        }
-    }
-    
-    public static class Input7Bools {
-        public boolean forward;
-        public boolean backward;
-        public boolean left;
-        public boolean right;
-        public boolean jump;
-        public boolean shift;
-        public boolean sprint;
+        final DataPacketInput in = INPUT_WRAPPER.wrap(raw);
+        data.addInputQueue(in);
     }
 }

@@ -4517,6 +4517,7 @@ public class BlockProperties {
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
         // TODO: nodeAbove + nodeAboveAbove ?? [don't want to implement a block cache for entire past state handling yet ...]
         // TODO: 1.49 might be obsolete !
+        // TODO: What is going on here?
         if (!collidesBlock(access, minX, minY, minZ, maxX, Math.max(maxY, 1.49 + y), maxZ, x, y + 1, z, nodeAbove, null, aboveFlags)) {
             // Does not collide with a block above, regard the block collision as ground
             return AlmostBoolean.YES;
@@ -4535,6 +4536,7 @@ public class BlockProperties {
         // TODO: Is this variable workaround still necessary ? Has this not been tested above already (passable workaround!)
         // TODO: This might be seen as a violation for many block types.
         // TODO: More distinction necessary here.
+        // TODO: Test to omit?
         if (variable) {
             // Simplistic hot fix attempt for same type + same shape.
             // TODO: Needs passable workaround check.

@@ -64,6 +64,7 @@ import fr.neatmonster.nocheatplus.checks.inventory.Open;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.BounceHandler;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.BounceType;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.player.CreativeFly;
@@ -78,6 +79,7 @@ import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
 import fr.neatmonster.nocheatplus.checks.net.FlyingQueueHandle;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
+import fr.neatmonster.nocheatplus.checks.net.model.DataPacketInput;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
@@ -879,48 +881,52 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // If these don't match, player#getLocation() will reflect a skipped move between from and to (for which no event was fired).
             TrigUtil.isSamePos(from, loc)
             // 0: Special case / bug? (Which/why, which version of MC/spigot?)
+            // TODO: Omit anyways?
             || lastMove.valid && TrigUtil.isSamePos(loc, lastMove.from.getX(), lastMove.from.getY(), lastMove.from.getZ())) {
-            // TODO: On pistons pulling the player back: -1.15 yDistance for split move 1 (untracked position > 0.5 yDistance!).
-            // Detect idle packet original design but now serve as look corrector for PlayerMoveEvent
+            // TODO: On pistons pulling the player back? Might check
+            /* From look doesn't corretly reported. Trying to search back. But this is already done in CraftBukkit internally.
+             * This code just to extra assurance. Zero trusted at that time(have not read the code yet)
+            */
             // Walks backwards through the flying packet queue to fix yaw/pitch.
             // - Update yaw/pitch from the most recent packet with look data.
             // - Apply these values when matching the "from" position.
             // - Stop once the "to" position is found.
-            // Ensures PlayerMoveEvent uses correct orientation even if Bukkit skipped packets.
-            final FlyingQueueHandle flyingHandle = new FlyingQueueHandle(pData);
-            final DataPacketFlying[] queue = flyingHandle.getHandle();
-            float currentYaw = from.getYaw();
-            float currentPitch = from.getPitch();
-            int count = 0;
-            boolean breakOnFound = false;
-            if (queue.length != 0) {
-                for (int queueIndex = queue.length -1; queueIndex >=0; queueIndex--) {
-                    final DataPacketFlying packetData = queue[queueIndex];
-                    if (packetData == null || (!packetData.hasPos && !packetData.hasLook)) {
-                        continue;
-                    }
-                    if (breakOnFound && packetData.hasPos) {
-                        break;
-                    }
-                    if (packetData.hasLook) {
-                        currentYaw = packetData.getYaw();
-                        currentPitch = packetData.getPitch();
-                        if (!packetData.hasPos) {
-                            continue;
-                        }
-                    }
-                    if (count < 1 && TrigUtil.isSamePos(from.getX(), from.getY(), from.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
-                        from.setYaw(currentYaw);
-                        from.setPitch(currentPitch);
-                        count++;
-                    } 
-                    else if (TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
-                        breakOnFound = true;
-                    }
-                }
-                to.setYaw(currentYaw);
-                to.setPitch(currentPitch);
-            }
+//            final FlyingQueueHandle flyingHandle = new FlyingQueueHandle(pData);
+//            final DataPacketFlying[] queue = flyingHandle.getHandle();
+//            float currentYaw = from.getYaw();
+//            float currentPitch = from.getPitch();
+//            int count = 0;
+//            boolean breakOnFound = false;
+//            if (queue.length != 0) {
+//                for (int queueIndex = queue.length -1; queueIndex >=0; queueIndex--) {
+//                    final DataPacketFlying packetData = queue[queueIndex];
+//                    if (packetData == null || (!packetData.hasPos && !packetData.hasLook)) {
+//                        continue;
+//                    }
+//                    if (breakOnFound && packetData.hasPos) {
+//                        break;
+//                    }
+//                    if (packetData.hasLook) {
+//                        currentYaw = packetData.getYaw();
+//                        currentPitch = packetData.getPitch();
+//                        if (!packetData.hasPos) {
+//                            continue;
+//                        }
+//                    }
+//                    if (count < 1 && TrigUtil.isSamePos(from.getX(), from.getY(), from.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
+//                        from.setYaw(currentYaw);
+//                        from.setPitch(currentPitch);
+//                        count++;
+//                    } 
+//                    else if (TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
+//                        breakOnFound = true;
+//                    }
+//                }
+//                // To location is always right
+//                //to.setYaw(currentYaw);
+//                //to.setPitch(currentPitch);
+//            }
+            
             // Normal move: fire from -> to
             moveInfo.set(player, from, to, cc.yOnGround);
             checkPlayerMove(player, from, to, 0, moveInfo, debug, data, cc, pData, event, true);
@@ -936,6 +942,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 /* Index of Bukkit's "to" location in the flying queue. -1 if already purged out of the queue or cannot be found for any other reason.*/
                 int toIndex = -1;
                 // 1: Locate Bukkit's 'from' and 'to' locations on packet-level in the flying queue.
+                final int minGap = 1; // Require at least this many packets strictly between to/from. Set 0 if adjacent is allowed.
                 // if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_13)) // Left-over from some testings... What were we doing here?
                 for (int queueIndex = 0; queueIndex < queue.length; queueIndex++) {
                     final DataPacketFlying packetData = queue[queueIndex];
@@ -944,7 +951,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     }
                     if (toIndex == -1 && TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
                         toIndex = queueIndex;
-                    } 
+                    }
                     else if (fromIndex == -1 && TrigUtil.isSamePos(from.getX(), from.getY(), from.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
                         fromIndex = queueIndex;
                     }
@@ -954,7 +961,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     }
                 }
                 // 1.1: Not found or too few moves were skipped, return to legacy split moves
-                if (fromIndex < 0 || toIndex < 0 || fromIndex - toIndex + 1 < 1) {
+                if (fromIndex < 0 || toIndex < 0 || fromIndex - toIndex <= minGap) {
                     bukkitSplitMove(player, moveInfo, from, loc, to, debug, data, cc, pData, event);
                     // Cleanup.
                     data.joinOrRespawn = false;
@@ -965,13 +972,31 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     return;
                 }
                 // 2: Filter out null and ground only packets
+                final DataPacketInput[] inputQueue = pData.getGenericInstance(NetData.class).copyInputQueue();
                 final DataPacketFlying[] queuePos = new DataPacketFlying[fromIndex - toIndex + 1]; // Array the size of packets skipped between bukkit locations
+                final DataPacketInput[] filteredInputQueue = new DataPacketInput[fromIndex - toIndex + 1];
                 int j = 0;
-                for (int i = fromIndex; i >= toIndex; i--) {
+                int t = 0, si = 0, ei = inputQueue.length; // Input re-mapping variables
+                // NOTE: Inverted from last versions for easier code
+                for (int i = toIndex; i <= fromIndex; i++) {
                     // (Let the early return above handle duplicate 1.17 packets)
                     if (queue[i] != null && (queue[i].hasPos || queue[i].hasLook)) {
                         // All valid packets are put in the array
                         queuePos[j] = queue[i];
+                        // Re-mapping input
+                        boolean found = false;
+                        si = i + 1; // Input happened before flying
+                        for (t = si; t < ei; t++) {
+                            if (inputQueue[t] != null) {
+                                filteredInputQueue[j] = inputQueue[t];
+                                ei = t;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            ei = i + 1;
+                        }
                         j++;
                     }
                 }
@@ -982,7 +1007,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 float currentYaw = from.getYaw();
                 float currentPitch = from.getPitch();
                 Location packet = null;
-                for (int i = 0; i < j; i++) {
+                // NOTE: Inverted from last versions to match logic
+                for (int i = j - 1; i >= 0; i--) {
                     if (queuePos[i].hasLook) {
                         // If a packet has look data, update yaw/pitch.
                         currentYaw = queuePos[i].getYaw();
@@ -996,6 +1022,10 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), queuePos[i].getX(), queuePos[i].getY(), queuePos[i].getZ(), currentYaw, currentPitch);
                             // Finally, set the moving data to be used by checks.
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
+                            if (filteredInputQueue[i] != null) {
+                                final PlayerMoveData newthisMove = data.playerMoves.getCurrentMove();
+                                newthisMove.input = new InputDirection(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward));
+                            }
                             if (debug) {
                                 final String s1 = count == 1 ? "from" : "loc";
                                 final String s2 = i == j - 1 || count >= maxSplit ? "to" : "loc";
@@ -1020,7 +1050,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                         packet = new Location(from.getWorld(), queuePos[i].getX(), queuePos[i].getY(), queuePos[i].getZ(), currentYaw, currentPitch);
                     }
                 }
-            } 
+            }
             else {
                 bukkitSplitMove(player, moveInfo, from, loc, to, debug, data, cc, pData, event);
                 if (debug) {
