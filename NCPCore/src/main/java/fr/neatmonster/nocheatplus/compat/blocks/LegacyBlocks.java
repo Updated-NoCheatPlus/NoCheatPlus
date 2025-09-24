@@ -24,6 +24,7 @@ import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.utilities.Validate;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
@@ -59,6 +60,9 @@ public class LegacyBlocks {
             );
         blocks.put(Material.SOUL_SAND, new BlockStatic(0.0, 0.0, 0.0, 1.0, 0.875, 1.0));
         blocks.put(Material.CACTUS, new BlockStatic(0.0625, 0.0, 0.0625, 0.9375, 0.9375, 0.9375));
+        blocks.put(BridgeMaterial.LILY_PAD, new BlockWaterLily());
+        blocks.put(BridgeMaterial.FARMLAND, new BlockFarmLand());
+        if (BridgeMaterial.GRASS_PATH != null) blocks.put(BridgeMaterial.GRASS_PATH, new BlockGrassPath());
         return blocks;
     }
 
@@ -102,6 +106,39 @@ public class LegacyBlocks {
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
             return bounds;
         }    
+    }
+
+    public static class BlockWaterLily implements Block {
+        public BlockWaterLily() {}
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            if (cache.getPlayerData().getClientVersion().isAtLeast(ClientVersion.V_1_13)) {
+                return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.09375, 0.9375};
+            }
+            return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375};
+        } 
+    }
+
+    public static class BlockFarmLand implements Block {
+        public BlockFarmLand() {}
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            if (cache.getPlayerData().getClientVersion().isLowerThan(ClientVersion.V_1_10)) {
+                return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+            }
+            return new double[] {0.0, 0.0, 0.0, 1.0, 0.9375, 1.0};
+        } 
+    }
+
+    public static class BlockGrassPath implements Block {
+        public BlockGrassPath() {}
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            if (cache.getPlayerData().getClientVersion().isLowerThan(ClientVersion.V_1_9)) {
+                return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+            }
+            return new double[] {0.0, 0.0, 0.0, 1.0, 0.9375, 1.0};
+        } 
     }
 
     public static class BlockTrapDoor implements Block {

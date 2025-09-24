@@ -69,7 +69,6 @@ public class BlocksMC1_5 implements BlockPropertiesSetup {
         BlockInit.setAs(BridgeMaterial.NETHER_QUARTZ_ORE, Material.COAL_ORE);
 
         BlockInit.setAs("HOPPER", Material.COAL_ORE);
-        BlockFlags.addFlags("HOPPER", BlockFlags.F_GROUND_HEIGHT | BlockFlags.F_MIN_HEIGHT8_5);
 
         BlockInit.setAs("QUARTZ_BLOCK", Material.SANDSTONE);
 

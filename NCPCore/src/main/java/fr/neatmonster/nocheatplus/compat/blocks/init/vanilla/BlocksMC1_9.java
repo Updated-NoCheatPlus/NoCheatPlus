@@ -73,7 +73,7 @@ public class BlocksMC1_9 implements BlockPropertiesSetup {
         BlockInit.setInstantPassable(BridgeMaterial.BEETROOTS);
 
         BlockProperties.setBlockProps(BridgeMaterial.GRASS_PATH, new BlockProps(BlockProperties.woodSpade, 0.65f));
-        BlockFlags.addFlags(BridgeMaterial.GRASS_PATH, BlockFlags.F_MIN_HEIGHT16_15 | BlockFlags.F_XZ100 | BlockFlags.SOLID_GROUND | BlockFlags.F_GROUND_HEIGHT);
+        BlockFlags.addFlags(BridgeMaterial.GRASS_PATH, BlockFlags.F_XZ100 | BlockFlags.SOLID_GROUND);
 
         // -> Leave flags as is (like air).
         BlockProperties.setBlockProps("END_GATEWAY", BlockProperties.indestructibleType);

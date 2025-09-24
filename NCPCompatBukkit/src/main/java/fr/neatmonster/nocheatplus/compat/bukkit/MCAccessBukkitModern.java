@@ -110,7 +110,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_POINTED_DRIPSTONE = new BukkitDripStone();
     private static final BukkitShapeModel MODEL_SCAFFOLDING = new BukkitScaffolding();
     private static final BukkitShapeModel MODEL_WATER_PLANTS = new BukkitWaterPlant();
-    private static final BukkitShapeModel MODEL_LILY_PAD = new BukkitStatic(0.0625, 0.09375);
+    private static final BukkitShapeModel MODEL_LILY_PAD = new BukkitLilyPad();
     private static final BukkitShapeModel MODEL_FLOWER_POT = new BukkitStatic(0.3125, 0.375);
     private static final BukkitShapeModel MODEL_LANTERN = new BukkitLantern();
     private static final BukkitShapeModel MODEL_CONDUIT = new BukkitStatic(0.3125, 0.3125, 0.3125, 0.6875, 0.6875, 0.6875);
@@ -129,7 +129,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_XZ100_HEIGHT8_3 = new BukkitStatic(0.375);
     private static final BukkitShapeModel MODEL_XZ100_HEIGHT16_9 = new BukkitStatic(0.5625);
     private static final BukkitShapeModel MODEL_XZ100_HEIGHT4_3 = new BukkitStatic(0.75);
-    private static final BukkitShapeModel MODEL_XZ100_HEIGHT16_15 = new BukkitStatic(0.9375);
+    private static final BukkitShapeModel MODEL_XZ100_HEIGHT16_15 = new BukkitDirtLike();
     private static final BukkitShapeModel MODEL_XZ100_HEIGHT8_7 = new BukkitStatic(0.875);
 
     public MCAccessBukkitModern() {

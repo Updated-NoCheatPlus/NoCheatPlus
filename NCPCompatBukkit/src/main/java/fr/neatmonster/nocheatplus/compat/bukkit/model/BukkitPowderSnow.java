@@ -22,7 +22,8 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitPowderSnow implements BukkitShapeModel {
 
-    double[] NO_COLLISION = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    // Powder snow have collision of full block most of the time, but it allow to move through. We keep full block for stuck in block speed!
+    //double[] NO_COLLISION = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     
     double[] FULL_BLOCK = {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     
@@ -31,18 +32,22 @@ public class BukkitPowderSnow implements BukkitShapeModel {
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
         IPlayerData pData = blockCache.getPlayerData();
+        //System.out.println("psnow 0");
         if (pData != null) {
             MovingData data = pData.getGenericInstance(MovingData.class);
             // TODO: Make NoFall no dealing damage on this block
-            if (data.lastY > (y + 1 - 1e-5) && data.hasLeatherBoots && !pData.isShiftKeyPressed()) {
-                return FULL_BLOCK;
-            }
+            //System.out.println("psnow 1 " + data.lastY + ">" + (y + 1 - 1e-5) + " " + data.hasLeatherBoots + " " + !pData.isShiftKeyPressed());
+            // Nothing to do with the shape, should be workarounds in onGround logic
+            //if (data.lastY > (y - 1e-5) && data.hasLeatherBoots && !pData.isShiftKeyPressed()) {
+            //    //System.out.println("psnow 2");
+            //    return FULL_BLOCK;
+            //}
             // Give up, too hard to properly implement, workaround instead
             //if (data.noFallFallDistance > 2.5) {
             //    return REDUCED_HEIGHT;
             //}
         }
-        return NO_COLLISION;
+        return FULL_BLOCK;
     }
 
     @Override

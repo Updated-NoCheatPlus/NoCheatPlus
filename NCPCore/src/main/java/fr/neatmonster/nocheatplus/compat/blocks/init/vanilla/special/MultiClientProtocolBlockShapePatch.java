@@ -30,7 +30,7 @@ import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 
 /**
  * Multi client protocol support since 1.7, roughly.
- * TODO: must get rid of in favour of direct modeling in getShape() methods in BukkitModels via ClientVersion
+ *
  * @author asofold
  *
  */
@@ -50,23 +50,11 @@ public class MultiClientProtocolBlockShapePatch extends AbstractBlockPropertiesP
 
     @Override
     public void setupBlockProperties(WorldConfigProvider<?> worldConfigProvider) {
-
-        // TODO: Rather not adding bunch of flags arbitrarily for compatibility, things could mess up for example isOnground(), use ClientVersion instead
         final List<String> done = new LinkedList<String>();
-
-        //This freaks out with 1.8 using viaversion
-        BlockFlags.addFlags(BridgeMaterial.LILY_PAD, BlockFlags.F_GROUND | BlockFlags.F_HEIGHT8_1 | BlockFlags.F_GROUND_HEIGHT);
         done.add("water_lily");
-
-        BlockFlags.addFlags(BridgeMaterial.FARMLAND, BlockFlags.F_MIN_HEIGHT16_15 | BlockFlags.F_HEIGHT100 | BlockFlags.F_GROUND_HEIGHT);
-        done.add("soil");
-
-        try {
-            BlockFlags.addFlags("HONEY_BLOCK", BlockFlags.F_MIN_HEIGHT16_15 | BlockFlags.F_GROUND_HEIGHT);
-            done.add("honey_block");
-        }
-        catch (Throwable t) {}
-
+        done.add("farmland");
+        if (BridgeMaterial.GRASS_PATH != null) done.add("grass_path");
+        done.add("honey_block");
 
         try {
             for (Material mat : MaterialUtil.SHULKER_BOXES) {

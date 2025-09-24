@@ -28,7 +28,7 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
  */
 public class BukkitScaffolding implements BukkitShapeModel {
 
-    // Stable shape (top slab + four posts)
+    // Stable visual shape (top slab + four posts)
     private static final double[] STABLE_SHAPE = new double[] {
         // top slab: 0,14,0 -> 16,16,16
         0.0, 0.875, 0.0, 1.0, 1.0, 1.0,
@@ -42,7 +42,7 @@ public class BukkitScaffolding implements BukkitShapeModel {
         0.875, 0.0, 0.875, 1.0, 1.0, 1.0
     };
 
-    // Unstable shape includes a thin bottom plate plus the stable parts
+    // Unstable visual shape includes a thin bottom plate plus the stable parts
     private static final double[] UNSTABLE_SHAPE = new double[] {
         // bottom full thin plate: 0,0,0 -> 16,2,16
         0.0, 0.0, 0.0, 1.0, 0.125, 1.0,
@@ -58,9 +58,10 @@ public class BukkitScaffolding implements BukkitShapeModel {
         0.0, 0.0, 0.875, 1.0, 0.125, 1.0,
         0.0, 0.0, 0.0, 1.0, 0.125, 0.125
     };
-
+    // Just define ground plate, no need full boxes as Minecraft handle climbable if player within 0.3125 inset to the center, and was handled by NCP somewhere else 
     private static final double[] BOTTOM_PLATE = new double[] {0.0, 0.0, 0.0, 1.0, 0.125, 1.0};
-
+    private static final double[] UPPER_PLATE = new double[] {0.0, 0.875, 0.0, 1.0, 1.0, 1.0};
+    private static final double[] ALL_PLATE = new double[] {0.0, 0.875, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.125, 1.0};
     // (empty box)
     private static final double[] NO_COLLISION = new double[] {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
@@ -74,25 +75,30 @@ public class BukkitScaffolding implements BukkitShapeModel {
             Scaffolding scaff = (Scaffolding) data;
             if (pData != null) {
                 MovingData mData = pData.getGenericInstance(MovingData.class);
+                boolean hasbottom = false;
+                // If scaffolding has distance != 0 and is bottom, and player is just above or within tolerance return bottom plate collision
+                if (scaff.getDistance() != 0 && scaff.isBottom()) {
+                    hasbottom = true;
+                }
                 // If player was above the block and not sneaking -> stable collision 
                 // Vanilla: return full stable collision only when the entity is above the block AND not descending.
                 // 'isDescending' in vanilla is actually the entity's "isShiftKeyDown" (sneak) flag, not a vertical-velocity test.
-                if (mData.lastY > y + 1 - 1e-5 // p_56071_.isAbove(Shapes.block(), p_56070_, true)
+                //System.out.println("scf 1 " + mData.lastY + ">" + (y + 1 - 1e-5) + " " + !pData.isShiftKeyPressed() + " " + y);
+                if (mData.lastY > (y + 1 - 1e-5) // p_56071_.isAbove(Shapes.block(), p_56070_, true)
                     && !pData.isShiftKeyPressed()) {
-                    return STABLE_SHAPE;
+                    return hasbottom ? ALL_PLATE : UPPER_PLATE;
                 }
-                // If scaffolding has distance != 0 and is bottom, and player is just above or within tolerance return bottom plate collision
-                if (scaff.getDistance() != 0 && scaff.isBottom()
-                    && mData.lastY > y - 1e-5) { // p_56071_.isAbove(SHAPE_BELOW_BLOCK, p_56070_, true)
+                if (hasbottom) {
+                    //System.out.println("scf 2");
                     return BOTTOM_PLATE;
                 }
+                //System.out.println("scf 3");
+                // TODO: Might just throw null for better performance? But might ensure it allows
                 return NO_COLLISION;
                 // TODO: This should be the VISUAL shape (aka: hitbox), not the COLLISION shape.
                 // We need to distinguish shapes from collision shapes in the API.
                 //  return scaff.isBottom() ? UNSTABLE_SHAPE : STABLE_SHAPE;
             }
-            // Fallback to a full block. Should never happen.
-            return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
         }
         // Fallback to a full block. Should never happen.
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};

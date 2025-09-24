@@ -412,6 +412,8 @@ public class AxisAlignedBBUtils {
         }
         if (blockAABB != null && sAABB != null) {
             for (int i = startIndex; i <= getNumberOfAABBs(blockAABB); i++) {
+                // TODO: Make null won't go this far, so this won't need!
+                if (blockAABB[i*6-3] <= 0.0 || blockAABB[i*6-1] <= 0.0) continue; // Outside AABB(NO_COLLISION Box)
                 if (sAABB[0] > blockAABB[i*6-3] + x 
                     || sAABB[3] < blockAABB[i*6-6] + x 
                     || sAABB[1] > blockAABB[i*6-2] + y 

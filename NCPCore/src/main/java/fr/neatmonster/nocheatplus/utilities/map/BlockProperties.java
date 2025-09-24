@@ -1493,12 +1493,12 @@ public class BlockProperties {
 
         // Water
         for (final Material mat : MaterialUtil.WATER) {
-            BlockFlags.setFlag(mat, BlockFlags.F_LIQUID | BlockFlags.F_HEIGHT_8SIM_DEC | BlockFlags.F_WATER | BlockFlags.F_FALLDIST_ZERO);
+            BlockFlags.setFlag(mat, BlockFlags.F_LIQUID | BlockFlags.F_HEIGHT_8SIM_DEC | BlockFlags.F_WATER);
         }
 
         // Lava
         for (final Material mat : MaterialUtil.LAVA) {
-            BlockFlags.setFlag(mat, BlockFlags.F_LIQUID | BlockFlags.F_LAVA | BlockFlags.F_FALLDIST_HALF | BlockFlags.F_HEIGHT_8SIM_DEC); // Minecraft 1.13 will remove this flag.
+            BlockFlags.setFlag(mat, BlockFlags.F_LIQUID | BlockFlags.F_LAVA | BlockFlags.F_HEIGHT_8SIM_DEC); // Minecraft 1.13 will remove this flag.
         }
 
         // Climbable
@@ -1855,7 +1855,7 @@ public class BlockProperties {
             BridgeMaterial.get("double_step"),}) {
             if (mat != null) setBlock(mat, brickType);
         }
-        BlockFlags.setBlockFlags(Material.CAULDRON, BlockFlags.SOLID_GROUND | BlockFlags.F_GROUND_HEIGHT | BlockFlags.F_MIN_HEIGHT16_5); // LEGACY
+        BlockFlags.setBlockFlags(Material.CAULDRON, BlockFlags.SOLID_GROUND); // LEGACY
         setBlock(BridgeMaterial.COBBLESTONE_WALL, brickType);
 
         // Chest types
@@ -3230,7 +3230,10 @@ public class BlockProperties {
         // TODO: Add a flag if a workaround exists (!), might store the type of workaround extra (generic!), or extra flags.
         final Material id = node.getType();
         final long flags = BlockFlags.getBlockFlags(id);
-        if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (access.getData(bx, by, bz) & 0x4) != 0) {
+        if ((flags & BlockFlags.F_POWDER_SNOW) != 0) {
+            return true;
+        } 
+        else if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (access.getData(bx, by, bz) & 0x4) != 0) {
             // (Allow checking further entries.)
             return true; 
         }
@@ -3463,54 +3466,54 @@ public class BlockProperties {
         }
         else if ((flags & BlockFlags.F_GROUND_HEIGHT) != 0) {
             // Subsequent min height flags.
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_1) != 0) {
-                // 1/16
-                return 0.0625;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT8_1) != 0) {
-                // 1/8
-                return 0.125;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT4_1) != 0) {
-                // 1/4
-                return 0.25;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_5) != 0) {
-                // 5/16
-                return 0.3125;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_7) != 0) {
-                // 7/16
-                return 0.4375;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_9) != 0) {
-                // 9/16
-                return 0.5625;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT8_5) != 0) {
-                // 10/16
-                return 0.625;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_11) != 0) {
-                // 11/16
-                return 0.6875;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_13) != 0) {
-                // 13/16
-                return 0.8125;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_14) != 0) {
-                // 14/16
-                return 0.875;
-            }
-            if ((flags & BlockFlags.F_MIN_HEIGHT16_15) != 0) {
-                // 15/16
-                return 0.9375;
-            }
-            // Default height is used.
-            if (id == BridgeMaterial.FARMLAND) {
-                return bounds[4];
-            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_1) != 0) {
+//                // 1/16
+//                return 0.0625;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT8_1) != 0) {
+//                // 1/8
+//                return 0.125;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT4_1) != 0) {
+//                // 1/4
+//                return 0.25;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_5) != 0) {
+//                // 5/16
+//                return 0.3125;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_7) != 0) {
+//                // 7/16
+//                return 0.4375;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_9) != 0) {
+//                // 9/16
+//                return 0.5625;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT8_5) != 0) {
+//                // 10/16
+//                return 0.625;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_11) != 0) {
+//                // 11/16
+//                return 0.6875;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_13) != 0) {
+//                // 13/16
+//                return 0.8125;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_14) != 0) {
+//                // 14/16
+//                return 0.875;
+//            }
+//            if ((flags & BlockFlags.F_MIN_HEIGHT16_15) != 0) {
+//                // 15/16
+//                return 0.9375;
+//            }
+//            // Default height is used.
+//            if (id == BridgeMaterial.FARMLAND) {
+//                return bounds[4];
+//            }
             // Assume open gates/trapdoors/things to only allow standing on to, if at all.
             if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (node.getData(access, x, y, z) & 0x04) != 0) {
                 return bounds[4];
@@ -4151,10 +4154,10 @@ public class BlockProperties {
             } 
             else bMaxY = LIQUID_HEIGHT_LOWERED;
         }
-        else if ((flags & BlockFlags.F_HEIGHT8_1) != 0) {
-            bMinY = 0.0;
-            bMaxY = 0.125;
-        }
+        //else if ((flags & BlockFlags.F_HEIGHT8_1) != 0) {
+        //    bMinY = 0.0;
+        //    bMaxY = 0.125;
+        //}
         else {
             // Auto-fill.
             bMinY = blockBounds[1]; // minY
@@ -4511,17 +4514,7 @@ public class BlockProperties {
         if (blockAABB_Above == null) {
             return AlmostBoolean.YES;
         }
-        
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Judge if the block above allows this block collision to be ground (against wall-climbing) ensure nodeAbove is set.  // 
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////        
-        // TODO: nodeAbove + nodeAboveAbove ?? [don't want to implement a block cache for entire past state handling yet ...]
-        // TODO: 1.49 might be obsolete !
-        // TODO: What is going on here?
-        if (!collidesBlock(access, minX, minY, minZ, maxX, Math.max(maxY, 1.49 + y), maxZ, x, y + 1, z, nodeAbove, null, aboveFlags)) {
-            // Does not collide with a block above, regard the block collision as ground
-            return AlmostBoolean.YES;
-        }
+
         // Check for passability(without the ignore flag) of the block above, if the player does collide with it.
         if (isPassableWorkaround(access, x, y + 1, z, minX - x, minY - (y + 1), minZ - z, 
                                  nodeAbove, maxX - minX, maxY - minY, maxZ - minZ,
@@ -4533,10 +4526,8 @@ public class BlockProperties {
             // This collision cannot be ground at this x - z position.
             return AlmostBoolean.NO;
         }
-        // TODO: Is this variable workaround still necessary ? Has this not been tested above already (passable workaround!)
         // TODO: This might be seen as a violation for many block types.
         // TODO: More distinction necessary here.
-        // TODO: Test to omit?
         if (variable) {
             // Simplistic hot fix attempt for same type + same shape.
             // TODO: Needs passable workaround check.
