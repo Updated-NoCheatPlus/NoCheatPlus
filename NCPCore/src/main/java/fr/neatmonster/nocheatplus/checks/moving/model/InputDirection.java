@@ -15,7 +15,6 @@
 package fr.neatmonster.nocheatplus.checks.moving.model;
 
 import org.bukkit.Input;
-import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
@@ -23,7 +22,7 @@ import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 /**
  * Carry information regarding the player's key presses (WASD)
  */
-public class InputDirection {
+public class InputDirection implements Cloneable {
     
     /** (A/D keys, left = 1, right = -1. A value of 0.0 means no strafe movement) */
     private float strafe;
@@ -51,24 +50,6 @@ public class InputDirection {
         fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
         sdir = strafe >= 0.0 ? strafe == 0.0 ? StrafeDirection.NONE : StrafeDirection.LEFT : StrafeDirection.RIGHT;
     }
-    
-    /**
-     * Composes a new InputDirection instance based on {@link Player#getCurrentInput()}.
-     *
-     * @param player The player whose input is being read.
-     * @throws UnsupportedOperationException if {@link Player#getCurrentInput()} is not available.
-     */
-    @SuppressWarnings("UnstableApiUsage")
-    public InputDirection(Player player) {
-        if (!BridgeMisc.hasInputGetterMethod()) {
-            throw new UnsupportedOperationException("getCurrentInput is not available.");
-        }
-        Input input = player.getCurrentInput();
-        this.strafe = input.isLeft() ? 1.0f : input.isRight() ? -1.0f : 0.0f;
-        this.forward = input.isForward() ? 1.0f : input.isBackward() ? -1.0f : 0.0f;
-        this.fdir = forward == 0.0f ? ForwardDirection.NONE : forward > 0.0 ? ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
-        this.sdir = strafe == 0.0f ? StrafeDirection.NONE : strafe > 0.0 ? StrafeDirection.LEFT : StrafeDirection.RIGHT;
-    }
 
     /**
      * Composes a new InputDirection instance based on the dispatched {@link Input}.
@@ -76,7 +57,6 @@ public class InputDirection {
      * @param input The given input read from the {@link org.bukkit.event.player.PlayerInputEvent}
      * @throws UnsupportedOperationException if {@link org.bukkit.event.player.PlayerInputEvent} is not available.
      */
-    @SuppressWarnings("UnstableApiUsage")
     public InputDirection(Input input) {
         if (!BridgeMisc.hasPlayerInputEvent()) {
             throw new UnsupportedOperationException("PlayerInputEvent is not available.");
@@ -99,6 +79,20 @@ public class InputDirection {
      */
     public float getForward() {
         return forward;
+    }
+
+    /**
+     * @return InputDirection
+     */
+    @Override
+    public InputDirection clone() {
+        InputDirection clonei;
+        try {
+            clonei = (InputDirection) super.clone();
+        } catch (CloneNotSupportedException e) {
+            clonei = new InputDirection(strafe, forward);
+        }
+        return clonei;
     }
 
     /**

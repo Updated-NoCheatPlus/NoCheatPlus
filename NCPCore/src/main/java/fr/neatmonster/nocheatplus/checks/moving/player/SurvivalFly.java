@@ -474,9 +474,6 @@ public class SurvivalFly extends Check {
                 thisMove.xAllowedDistance = thisMove.zAllowedDistance = 0.0;
             }
         }
-        // Reset speed if judged to be negligible.
-        checkNegligibleMomentum(pData, thisMove); 
-        checkNegligibleMomentumVertical(pData, thisMove);
         // TODO: Reduce verbosity (at least, make it easier to look at)
         Vector viewVector = TrigUtil.getLookingDirection(to, player);
         float radianPitch = to.getPitch() * TrigUtil.toRadians;
@@ -550,6 +547,9 @@ public class SurvivalFly extends Check {
         thisMove.xAllowedDistance = collisionVector.getX();
         thisMove.yAllowedDistance = collisionVector.getY();
         thisMove.zAllowedDistance = collisionVector.getZ();
+        // Reset speed if judged to be negligible.
+        checkNegligibleMomentum(pData, thisMove); 
+        checkNegligibleMomentumVertical(pData, thisMove);
 
         // Can a vertical workaround apply? If so, override the prediction.
         if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
@@ -851,7 +851,7 @@ public class SurvivalFly extends Check {
         /* Index for accessing speed combinations. If you need to perform an operation for/with each speed, set it to 0 and loop until it 8 */
         int i = 0;
         if (BridgeMisc.isWASDImpulseKnown(player)) {
-            input = new InputDirection(player);// thisMove.input;
+            input = thisMove.input.clone();
             // In EntityLiving.java -> aiStep() the game multiplies input values by 0.98 before dispatching them to the travel() function.
             input.operationToInt(0.98f, 0.98f, 1);
             // From KeyboardInput.java and LocalPlayer.java (MC-Reborn tool)
@@ -1005,8 +1005,7 @@ public class SurvivalFly extends Check {
             thisMove.xAllowedDistance += liquidFlowVector.getX();
             thisMove.zAllowedDistance += liquidFlowVector.getZ();
         }
-        // Before calculating the acceleration, check if momentum is below the negligible speed threshold and cancel it.
-        checkNegligibleMomentum(pData, thisMove);
+
         // Sprint-jumping...
         // IMPORTANT NOTE: when working **exclusively** with rotations (like in the following cases), you must use the TO location, not the FROM one, as TO contains the most recent rotation. Using FROM lags behind a few ticks, causing false positives when switching looking direction.
         if (PhysicsEnvelope.isBunnyhop(from, to, pData, fromOnGround, toOnGround, player, forceSetOffGround)) {
@@ -1078,6 +1077,8 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance = collisionVector.getZ();
             // More edge data...
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
+            // After calculating, check if momentum is below the negligible speed threshold and cancel it.
+            checkNegligibleMomentum(pData, thisMove);
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
@@ -1175,6 +1176,7 @@ public class SurvivalFly extends Check {
                 zTheoreticalDistance[i] = backOff.getZ();
             }
         }
+        boolean newNegligible = pData.getClientVersion().isAtLeast(ClientVersion.V_1_9);
         // TODO: Optimize. Brute forcing collisions with all 9 speed combinations will tank performance.
         for (i = 0; i < 9; i++) {
             Vector collisionVector = from.collide(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), onGround, from.getBoundingBox());
@@ -1188,6 +1190,9 @@ public class SurvivalFly extends Check {
             }
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
+            // After calculating, check if momentum is below the negligible speed threshold and cancel it.
+            xTheoreticalDistance[i] = Math.abs(xTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : xTheoreticalDistance[i];
+            zTheoreticalDistance[i] = Math.abs(zTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : zTheoreticalDistance[i];
         }
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         if (cc.trackBlockMove) {
