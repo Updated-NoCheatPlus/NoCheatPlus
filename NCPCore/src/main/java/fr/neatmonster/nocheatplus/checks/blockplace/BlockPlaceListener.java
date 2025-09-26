@@ -199,15 +199,14 @@ public class BlockPlaceListener extends CheckListener {
             placedMat = BlockProperties.isAir(event.getItemInHand()) ? Material.AIR : event.getItemInHand().getType();
         }
         else placedMat = Bridge1_9.getItemInMainHand(player).getType(); // Safety first.
-    
         boolean cancelled = false;
         int skippedRedundantChecks = 0;
         final IPlayerData pData = DataManager.getPlayerData(player);
         final BlockPlaceData data = pData.getGenericInstance(BlockPlaceData.class);
         final BlockPlaceConfig cc = pData.getGenericInstance(BlockPlaceConfig.class);
-        final BlockInteractData bdata = pData.getGenericInstance(BlockInteractData.class);
+        final BlockInteractData biData = pData.getGenericInstance(BlockInteractData.class);
         // isInteractBlock - the block placed against is the block last interacted with.
-        final boolean isInteractBlock = !bdata.getLastIsCancelled() && bdata.matchesLastBlock(TickTask.getTick(), blockAgainst);
+        final boolean isInteractBlock = !biData.getLastIsCancelled() && biData.matchesLastBlock(TickTask.getTick(), blockAgainst);
         final BlockFace placedFace = event.getBlock().getFace(blockAgainst);
         final Block blockPlaced = event.getBlockPlaced();
         final boolean shouldSkipSome;
@@ -260,18 +259,15 @@ public class BlockPlaceListener extends CheckListener {
             }
             // Check for Improbable, whatever FastPlace says, provided the feature is enabled at all.
             if (cc.fastPlaceImprobableWeight > 0.0f) {
-                // Check only if frequency is decently high.
-                if (data.fastPlaceVL > 20) {
-                    // Don't check if set to only feed.
-                    if (!cc.fastPlaceImprobableFeedOnly) {
-                        if (Improbable.check(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis(), "blockplace.fastplace", pData)) {
-                            cancelled = true;
-                        }
-                    }
-                    else Improbable.feed(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis()); 
+                if (cc.fastPlaceImprobableFeedOnly) {
+                    Improbable.feed(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis());
                 }
-                // Feed only for lower frequencies.
-                else Improbable.feed(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis()); 
+                else if (data.fastPlaceVL > 25 && Improbable.check(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis(), "blockplace.fastplace", pData)) {
+                    // Only check on decently high frequencies
+                    cancelled = true;
+                }
+                // Feed for lower frequencies.
+                else Improbable.feed(player, cc.fastPlaceImprobableWeight, System.currentTimeMillis());
             }
         }
 
@@ -316,7 +312,7 @@ public class BlockPlaceListener extends CheckListener {
             final double eyeHeight = MovingUtil.getEyeHeight(player);
             // Reach check (distance).
             if (!cancelled && !shouldSkipSome) {
-                if (isInteractBlock && bdata.isPassedCheck(CheckType.BLOCKINTERACT_REACH)) {
+                if (isInteractBlock && biData.isPassedCheck(CheckType.BLOCKINTERACT_REACH)) {
                     skippedRedundantChecks++;
                 }
                 else if (reachCheck && reach.check(player, eyeHeight, block, data, cc)) {
@@ -325,7 +321,7 @@ public class BlockPlaceListener extends CheckListener {
             }
             // Direction check.
             if (!cancelled && !shouldSkipSome) {
-                if (isInteractBlock && bdata.isPassedCheck(CheckType.BLOCKINTERACT_DIRECTION)) {
+                if (isInteractBlock && biData.isPassedCheck(CheckType.BLOCKINTERACT_DIRECTION)) {
                     skippedRedundantChecks++;
                 }
                 else if (directionCheck) {

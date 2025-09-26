@@ -153,7 +153,7 @@ public class BridgeMisc {
         final MovingData data = pData.getGenericInstance(MovingData.class);
         // TODO: getOrUseVerticalVelocity or peekVerticalVelocity?
         // TODO: How exactly does ViaVersion provide?
-        return data.getOrUseVerticalVelocity(data.playerMoves.getCurrentMove().yDistance) != null;
+        return data.getOrUseVerticalVelocity(data.playerMoves.getCurrentMove().yDistance).isEmpty();
     }
     
     /**

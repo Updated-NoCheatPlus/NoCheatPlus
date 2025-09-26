@@ -32,7 +32,6 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.SfLegacy;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.LostGround;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.MagicWorkarounds;
@@ -1233,6 +1232,9 @@ public class SurvivalFly extends Check {
                 }
             }
             
+            /*
+               True it will force a violation even if there's a matching theoretical speed.
+             */
             boolean forceViolation = false;
             if (found) {
                 // These checks must be performed ex-post because they rely on data that is set after the prediction.
@@ -1367,16 +1369,6 @@ public class SurvivalFly extends Check {
         final boolean yDirectionSwitch = lastMove.toIsValid && lastMove.yDistance != yDistance && (yDistance <= 0.0 && lastMove.yDistance >= 0.0 || yDistance >= 0.0 && lastMove.yDistance <= 0.0);
         /* Not on ground, not on climbable, not in liquids, not in stuck-speed, no lostground (...) */
         final boolean fullyInAir = !thisMove.touchedGroundWorkaround && !resetFrom && !resetTo;
-        
-        ////////////////////////////////////////////////////////
-        // Test for specific cheat implementation types first //
-        ////////////////////////////////////////////////////////
-        if (SfLegacy.checkOnChangeOfYDirection(tags, now, player, yDistance, lastMove, data, pData, fullyInAir, yDirectionSwitch, thisMove)) {
-            Improbable.check(player, (float) 1.0, System.currentTimeMillis(), "moving.survivalfly.airjump", pData);
-            yDistanceAboveLimit = Math.max(1.0, thisMove.yDistance);
-            thisMove.yAllowedDistance = 0.0;
-            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
-        }
         
         
         //////////////////////////////////////////////////////////////////////////////
@@ -1530,8 +1522,6 @@ public class SurvivalFly extends Check {
         //////////////////////////////////
         // Last client-tick/move        //
         //////////////////////////////////
-        // *----------LivingEntity.aiStep(), negligible speed----------*
-        checkNegligibleMomentumVertical(pData, thisMove);
         // *----------LivingEntity.travel(), handleRelativeFrictionAndCalculateMovement() -> handleOnClimbable()----------*
         // TODO: Is it correct to put here?
         if (!from.isInLiquid() && from.isOnClimbable()) {
@@ -1681,8 +1671,11 @@ public class SurvivalFly extends Check {
                 tags.add("gravity_reiterate");
             } 
             else thisMove.yAllowedDistance = collisionVector.getY();
+            // *----------LivingEntity.aiStep(), negligible speed----------*
+            checkNegligibleMomentumVertical(pData, thisMove);
         }
         else {
+            boolean newNegligible = pData.getClientVersion().isAtLeast(ClientVersion.V_1_9);
             for (int i = 0; i < yTheoreticalDistance.length; i++) {
                 Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yTheoreticalDistance[i], thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
                 if (yTheoreticalDistance[i] != collisionVector.getY()) {
@@ -1691,6 +1684,7 @@ public class SurvivalFly extends Check {
                 }
                 yTheoreticalDistance[i] = collisionVector.getY();
                 thisMove.headObstructed = yTheoreticalDistance[i] != collisionVector.getY() && thisMove.yDistance >= 0.0 && from.seekCollisionAbove() && !fromOnGround;
+                yTheoreticalDistance[i] = Math.abs(yTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : yTheoreticalDistance[i];
             }
         }
         
@@ -1811,7 +1805,7 @@ public class SurvivalFly extends Check {
          * TODO: Not good. Performance will be affected, as we already brute force the player's input with horizontal motion.
          *  Confine lostground-use with horizontal motion further, so that we don't need to brute force this as well.
          */
-        if ((thisMove.touchedGroundWorkaround || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.touchedGroundWorkaround) && hDistanceAboveLimit > 0.0) {
+        if ((thisMove.fromLostGround || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.fromLostGround) && hDistanceAboveLimit > 0.0) {
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, true, false);
             hAllowedDistance = res[0];
             hDistanceAboveLimit = res[1];

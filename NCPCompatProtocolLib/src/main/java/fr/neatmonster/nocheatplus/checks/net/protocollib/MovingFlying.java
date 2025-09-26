@@ -51,6 +51,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.time.monotonic.Monotonic;
 import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
+import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
 
@@ -227,8 +228,9 @@ public class MovingFlying extends BaseAdapter {
         if (packetData != null) {
             // Prevent processing packets with obviously malicious content.
             if (isInvalidContent(packetData)) {
-                // TODO: extra actions: log and kick (cancel state is not evaluated)
                 event.setCancelled(true);
+                // Do request and improbable update here for good measure.
+                TickTask.requestImprobableUpdate(player.getUniqueId(), 1.0f);
                 if (pData.isDebugActive(this.checkType)) {
                     debug(player, "Incoming flying packet, cancel due to malicious content: " + packetData.toString());
                 }

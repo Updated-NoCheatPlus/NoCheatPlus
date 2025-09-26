@@ -135,7 +135,7 @@ public class NetData extends ACheckData {
      */
     public void requestSetBack(final Player player, final IDebugPlayer idp, final Plugin plugin, final CheckType checkType) {
         final IPlayerData pData = DataManager.getPlayerData(player);
-        /** Last known location of the server that has been registered by Bukkit. */
+        /** Last known location that has been registered by Bukkit. */
         final Location knownLocation = player.getLocation();
         final MovingData mData = pData.getGenericInstance(MovingData.class);
         Object task = null;

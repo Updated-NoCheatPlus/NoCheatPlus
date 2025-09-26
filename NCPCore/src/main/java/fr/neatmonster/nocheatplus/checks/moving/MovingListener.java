@@ -400,7 +400,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
     /** Reset data on using a portal. Monitor level */
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    public void onPlayerPortal(final PlayerPortalEvent event) {
+    public void onPlayerPortalMonitor(final PlayerPortalEvent event) {
         final Location to = event.getTo();
         final IPlayerData pData = DataManager.getPlayerData(event.getPlayer());
         final MovingData data = pData.getGenericInstance(MovingData.class);
@@ -510,7 +510,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
     /** HIGHEST: Revert cancel on set back. Done before MONITOR */
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGHEST)
-    public void onPlayerTeleport(final PlayerTeleportEvent event) {
+    public void onPlayerTeleportHighest(final PlayerTeleportEvent event) {
         if (!event.isCancelled()) {
             // Only check cancelled events.
             return;
@@ -856,14 +856,14 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         
         // (newTo should be null here)
         // TODO: Abstract away this mechanic.
-        ////////////////////////////////////////////////////////////////////////////////////////////
-        // Split the event into separate moves, or correct the looking data, if suitable          //
-        ////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Split the event into separate moves and re-map inputs, or correct the looking data, if suitable.          //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
         // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet:
         // 1) In some cases, a single PlayerMoveEvent can be the result of multiple flying packets.
-        // 2) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction). 
+        // 2) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction - PlayerConnection.java). 
         //    This will result in movements that don't have a significant change to be skipped. 
-        //    With anticheating, this means that micro and very slow moves cannot be checked accurately (or at all, for that matter), as coordinates will not be reported correctly.
+        //    With anticheating, this means that micro and very slow moves cannot be checked accurately (or at all, for that matter), as coordinates will not be reported correctly for the subsequent event.
         // 3) On MC 1.19.4 and later, PlayerMoveEvents are skipped altogether upon entering a minecart and fired normally when exiting.
         // 4) Even on regular movements, the player's look information (pitch/yaw) can be incorrect (idle packet).
         // In fact, one could argue that the event's nomenclature is misleading: Bukkit's PlayerMoveEvent doesn't actually monitor move packets but rather *changes* of movement between packets.
@@ -971,7 +971,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     }
                     return;
                 }
-                // 2: Filter out null and ground only packets
+                // 2: Filter out null and ground only packets; synchronize the input change with the correct flying packet on when it happened
                 final DataPacketInput[] inputQueue = pData.getGenericInstance(NetData.class).copyInputQueue();
                 final DataPacketFlying[] queuePos = new DataPacketFlying[fromIndex - toIndex + 1]; // Array the size of packets skipped between bukkit locations
                 final DataPacketInput[] filteredInputQueue = new DataPacketInput[fromIndex - toIndex + 1];
@@ -981,7 +981,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 for (int i = toIndex; i <= fromIndex; i++) {
                     // (Let the early return above handle duplicate 1.17 packets)
                     if (queue[i] != null && (queue[i].hasPos || queue[i].hasLook)) {
-                        // All valid packets are put in the array
+                        // All valid flying packets are put in their array
                         queuePos[j] = queue[i];
                         // Re-mapping input
                         boolean found = false;
@@ -1527,7 +1527,9 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // TODO: More simple: UUID keys or a data flag instead?
             if (processingEvents.containsKey(playerName)) {
                 data.playerMoves.finishCurrentMove();
-                data.playerMoves.getCurrentMove().input = thisMove.input; // Fundamental for the correct queueing of the input in the moving trace (needs to be carried onto the next move and kept until the next input change)
+                // Fundamental for the correct queueing of the input in the moving trace.
+                // When the input of the player changes, it has to be set in the current move and carried forward onto the next moves, until it changes again.
+                data.playerMoves.getCurrentMove().input = thisMove.input; 
             }
             // Teleport during violation processing, just invalidate thisMove.
             else thisMove.invalidate();

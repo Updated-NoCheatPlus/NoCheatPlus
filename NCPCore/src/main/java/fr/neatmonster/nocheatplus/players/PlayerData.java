@@ -791,7 +791,7 @@ public class PlayerData implements IPlayerData {
     }
 
     @Override
-    public void setIsInCrouchingPoseState(final boolean sneaking) {
+    public void setCrouching(final boolean sneaking) {
         this.sneaking = sneaking;
     }
 

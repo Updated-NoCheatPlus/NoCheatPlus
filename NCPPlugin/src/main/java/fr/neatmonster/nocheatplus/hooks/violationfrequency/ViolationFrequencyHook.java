@@ -25,6 +25,7 @@ import fr.neatmonster.nocheatplus.utilities.StringUtil;
  * Need to set the survivalfly.actions always cancel at vl 0 to make this hook work properly
  * 
  * @author xaw3ep
+ * TODO: Review its usefulness as of the new rework.
  *
  */
 public class ViolationFrequencyHook implements NCPHook, IFirst {

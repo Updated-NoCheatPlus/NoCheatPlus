@@ -35,6 +35,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 
 /**
  * Listen to the Steer_vehicle packet for extrapolating input information sent by the player (1.21.2+)
+ * The packet is actually named "Player_Input" in the Minecraft protocol, but ProtocolLib uses the former name for compatibility.
  */
 public class InputsAdapter extends BaseAdapter {
     

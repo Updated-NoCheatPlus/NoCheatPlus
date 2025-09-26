@@ -154,6 +154,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         if (BridgeMisc.hasPlayerInputEvent()) {
             register("fr.neatmonster.nocheatplus.checks.net.protocollib.InputsAdapter", plugin);
         }
+        
         if (!registeredPacketAdapters.isEmpty()) {
             List<String> names = new ArrayList<String>(registeredPacketAdapters.size());
             for (PacketAdapter adapter : registeredPacketAdapters) {
@@ -287,7 +288,6 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onPlayerTeleport(final PlayerTeleportEvent event) {
         if (!registeredPacketAdapters.isEmpty()) {
-            // TODO: Might move to MovingListener.
             // TODO: Might still add cancelled UNKNOWN events. TEST IT
             final Location to = event.getTo();
             if (to == null) {

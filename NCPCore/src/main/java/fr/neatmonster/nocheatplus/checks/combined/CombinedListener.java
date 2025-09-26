@@ -121,7 +121,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
             // If -for whatever reason- the event is not available, handle toggle gliding with PMEs
             queuedComponents.add(new Listener() {
                 // We can ignore the event here, if cancelled, since the player will not be able to move anyway
-                @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+                @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
                 public void onEventlessToggleGlide(final PlayerMoveEvent event) {
                     final PlayerMoveData lastMove = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(MovingData.class).playerMoves.getFirstPastMove();
                     final PlayerMoveData thisMove = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(MovingData.class).playerMoves.getCurrentMove();
@@ -136,7 +136,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         }
         if (BridgeMisc.hasEntityChangePoseEvent()) {
             queuedComponents.add(new Listener() {
-                @EventHandler(priority = EventPriority.LOWEST)
+                @EventHandler(priority = EventPriority.MONITOR)
                 public void onChangingPose(final EntityPoseChangeEvent event) {
                     handlePoseChangeEvent(event.getEntity(), event.getPose());
                 }
@@ -148,7 +148,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                  * See {@link PlayerMoveData#input} as for why we listen to this event.
                  * @param event the input event
                  */
-                @EventHandler(priority = EventPriority.LOWEST)
+                @EventHandler(priority = EventPriority.MONITOR)
                 public void onInputChange(final PlayerInputEvent event) {
                     handleInputs(event.getInput(), event.getPlayer());
                 }
@@ -156,7 +156,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         }
         if (Bridge1_13.hasPlayerRiptideEvent()) {
             queuedComponents.add(new Listener() {
-                @EventHandler(priority = EventPriority.LOWEST)
+                @EventHandler(priority = EventPriority.MONITOR)
                 public void onTridentRelease(final PlayerRiptideEvent event) {
                     handleRiptide(event.getPlayer(), event.getVelocity().clone());
                 }
@@ -203,8 +203,10 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
     }
     
     /**
-     * Sets the input in this normal move(no split moves).
-     * 
+     * Sets the input data in this move.
+     * Do note that: 1) this is called only when the player toggles on/of a specific input (i.e.: press/release keys);
+     * 2) the input set here will be re-mapped in case of split moves.
+     *
      * @param bukkitInput Input from the event.
      * @param player
      */
@@ -333,16 +335,16 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         if (newPose.equals(Pose.SWIMMING) && !BlockProperties.isInWater(player, player.getLocation(), cc.yOnGround)) {
             // isVisuallyCrawling()...
-            pData.setIsInCrouchingPoseState(true);
+            pData.setCrouching(true);
             return;
         }
         if (newPose.equals(Pose.SNEAKING)) {
             // Sneaking...
-            pData.setIsInCrouchingPoseState(true);
+            pData.setCrouching(true);
             return;
         }
         // Entered another pose...
-        pData.setIsInCrouchingPoseState(false);
+        pData.setCrouching(false);
     }
     
     @Override
@@ -370,11 +372,11 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         if (BridgeMisc.hasEntityChangePoseEvent()) {
             if (player.getPose().equals(Pose.SWIMMING) && !BlockProperties.isInWater(player, player.getLocation(), mCC.yOnGround)) {
                 // isVisuallyCrawling()...
-                pData.setIsInCrouchingPoseState(true);
+                pData.setCrouching(true);
             } 
             else if (player.getPose().equals(Pose.SNEAKING)) {
                 // Sneaking...
-                pData.setIsInCrouchingPoseState(true);
+                pData.setCrouching(true);
             }
         }
     }
@@ -397,7 +399,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         final CombinedData data = pData.getGenericInstance(CombinedData.class);
         data.resetImprobableData();
         pData.setSprintingState(false);
-        pData.setIsInCrouchingPoseState(false);
+        pData.setCrouching(false);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -430,16 +432,16 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         // TODO: Actually, do legacy players (i.e.: 1.9 player) fire EntityPoseChangeEvent on newer servers?
         if (!event.isSneaking()) {
             // Player was sneaking and they now toggled it off.
-            pData.setIsInCrouchingPoseState(false);
+            pData.setCrouching(false);
             return;
         }
         if (Bridge1_13.isSwimming(event.getPlayer()) || Bridge1_9.isGliding(event.getPlayer()) || Bridge1_13.isRiptiding(event.getPlayer())) {
             // Bukkit's ambiguous "isSneaking()" method would return true for all these cases, but like we've said above, sneaking is determined by player poses, not shift key presses. Just ignore.
-            pData.setIsInCrouchingPoseState(false);
+            pData.setCrouching(false);
             return;
         }
         // Legacy clients can only enter the CROUCHING pose if they press the shift key, so in this case shifting does equal sneaking.
-        pData.setIsInCrouchingPoseState(true);
+        pData.setCrouching(true);
     }
 
     /** NOTE: Cancelling does nothing. It won't stop players from sprinting. So, don't ignore cancelled events. */

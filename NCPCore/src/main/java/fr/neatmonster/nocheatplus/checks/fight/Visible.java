@@ -55,16 +55,25 @@ public class Visible extends Check {
     }
     
     /**
-     * Perform a visibility check to determine whether the player can see the target entity.<br>
-     * The check uses a ray tracing mechanism combined with neighbor block analysis to ascertain visibility, in order to workaround issues with packet inversion and de-synchronization.
-     * 
+     * Perform a visibility check to determine whether the player can see the target entity.
+     * This check is look-agnostic: it only uses world geometry and the attacker's eye position; it does not consider yaw/pitch in any way.<br>
+     * The reason for this is to workaround issues with packet-inversion and de-synchronization.<p>
+     * The check performs a direct straight ray trace from the target entity (or its block) to the
+     * attacker's eye. If that ray is unobstructed, the hit is allowed.<br>
+     * If the direct ray is obstructed, the code attempts to find an alternative path by walking
+     * through neighbouring block coordinates. The search has been implemented in an opportunistic way: in each iteration, it picks a single neighbour that appears passable, updates the
+     * ray to originate from that neighbour and proceeds from there, thus, the neighbour walk is NOT exhaustive. There is no backtracking or branch
+     * enumeration. In fact, a visited set prevents re-checking the same block and {@link fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.RayTracing.getMaxSteps()}
+     * bounds the search further. Because of these constraints, the algorithm may fail to discover some
+     * valid alternative paths (false positives), but the limit keeps the check performant.
+     *
      * @param player The attacking player.
      * @param loc The location of the player's eye position.
      * @param damaged The entity being attacked.
-     * @param damagedIsFake Indicates whether the damaged entity is a fake entity.
+     * @param damagedIsFake Indicates whether the damaged entity is a fake entity (NPC).
      * @param dLoc The location of the damaged entity.
-     * @param data Fight data.
-     * @param cc Fight config.
+     * @param data
+     * @param cc
      * @return True if the hit is considered invalid due to visibility obstructions, false otherwise.
      */
     public boolean check(final Player player, final Location loc, 

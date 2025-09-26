@@ -14,7 +14,9 @@
  */
 package fr.neatmonster.nocheatplus.checks.moving.model;
 
+import org.bukkit.Input;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
@@ -52,15 +54,6 @@ public class MoveData {
      * Always set on setPositions call.
      */
     public boolean toIsValid = false; // Must initialize.
-    
-    /**
-     * Inputs are typically read during player movement (in other words, on PlayerMoveEvents).<br>
-     * Calling {@link Player#getCurrentInput()} only provides the current input state
-     * at the time the move event is fired. It does not indicate when the input changed,
-     * thus any input changes that occurred between events are lost, and we need to accurately keep track of them for moving checks.
-     * Do note that this field is updated only on input changes (meaning, only when keys are pressed or released)
-     */
-    public InputDirection input = new InputDirection();
 
 
     /////////////////////////////////////////////////////////////////////
@@ -135,6 +128,18 @@ public class MoveData {
      * apply.
      */
     public ModelFlying modelFlying;
+    
+    /**
+     * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
+     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#handleInputs(Input, Player)}).<p>
+     * This field is the one you should use to read input information during a PlayerMoveEvent, as it is kept synchronized with the correct movement on when the change of inputs happens.<br>
+     * Calling {@link org.bukkit.entity.Player#getCurrentInput()} on PlayerMoveEvents is unreliable, as it only provides the current input state
+     * at the time the move event is fired. It does not indicate when the input changed,
+     * thus, any change that occurred between events is lost, and we need to accurately keep track of them for moving checks. <p>
+     * The field is also re-mapped in the case a split move happens during PlayerMoveEvents (without it, the change of input would be out of sync with the actual movement).<br>
+     * See comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}.<p>
+     */
+    public InputDirection input = new InputDirection();
 
     private void setPositions(final IGetLocationWithLook from, final IGetLocationWithLook to) {
         this.from.setLocation(from);

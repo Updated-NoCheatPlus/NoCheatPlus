@@ -26,15 +26,14 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 
 /**
- * Meta-check that aggregates suspicion weights from multiple checks over time
+ * Meta-check that aggregates suspicion weights from multiple checks over time,
  * and evaluates if the overall behavior is statistically unlikely
  * ("improbable") for a legitimate player.
  *
  * Intended for static access by other checks, which can feed weights into this
  * aggregator.
  *
- * Buckets are used internally to group suspicion scores into time slices,
- * making it possible to detect both short-term bursts and long-term patterns.
+ * Buckets are used internally to group suspicion scores into time slices.
  */
 public class Improbable extends Check implements IDisableListener {
 

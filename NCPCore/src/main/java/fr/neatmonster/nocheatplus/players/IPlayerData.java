@@ -392,7 +392,7 @@ public interface IPlayerData extends IData, IBaseDataAccess, IGetGenericInstance
      * 
      * @param isInCrouchPose
      */
-    public void setIsInCrouchingPoseState(final boolean isInCrouchPose);
+    public void setCrouching(final boolean isInCrouchPose);
 
     /**
      * Test if the player is in its crouching pose, as set by the EntityChangePoseEvent or PlayerToggleSneakEvent <br>
