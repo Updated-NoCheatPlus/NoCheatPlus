@@ -64,7 +64,6 @@ public enum CheckType {
 
     COMBINED(CheckTypeType.GROUP, CheckType.ALL, Permissions.COMBINED),
     COMBINED_IMPROBABLE(CheckTypeType.CHECK, COMBINED, Permissions.COMBINED_IMPROBABLE),
-    COMBINED_MUNCHHAUSEN(CheckTypeType.CHECK, COMBINED, Permissions.COMBINED_MUNCHHAUSEN),
     /** Rather for data removal and exemption. */
     COMBINED_YAWRATE(CheckTypeType.CHECK, COMBINED),
 

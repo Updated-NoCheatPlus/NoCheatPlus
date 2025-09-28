@@ -85,8 +85,6 @@ permissions:
         default: false
     nocheatplus.checks.combined.improbable.silent:
         default: false
-    nocheatplus.checks.combined.munchhausen.silent:
-        default: false
     nocheatplus.checks.fight.angle.silent:
         default: false
     nocheatplus.checks.fight.critical.silent:
@@ -224,8 +222,6 @@ permissions:
                 children:
                      nocheatplus.checks.combined.improbable:
                          description: Allow the player to bypass the Improbable check.
-                     nocheatplus.checks.combined.munchhausen:
-                         description: Allow flying with fishing rods! The check is deactivated by default, though.
             nocheatplus.checks.fight:
                 description: Allow the player to bypass all Fight checks.
                 children:

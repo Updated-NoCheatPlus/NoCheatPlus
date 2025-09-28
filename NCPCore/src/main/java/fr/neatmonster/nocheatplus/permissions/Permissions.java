@@ -132,7 +132,6 @@ public class Permissions {
 
     public static final RegisteredPermission  COMBINED                     = add(CHECKS + ".combined");
     public static final RegisteredPermission  COMBINED_IMPROBABLE          = add(COMBINED + ".improbable");
-    public static final RegisteredPermission  COMBINED_MUNCHHAUSEN         = add(COMBINED + ".munchhausen");
 
     public static final RegisteredPermission  FIGHT                        = add(CHECKS + ".fight");
     public static final RegisteredPermission  FIGHT_ANGLE                  = add(FIGHT + ".angle");

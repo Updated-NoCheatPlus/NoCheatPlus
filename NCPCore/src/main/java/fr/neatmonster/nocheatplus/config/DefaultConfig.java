@@ -306,9 +306,7 @@ public class DefaultConfig extends ConfigFile {
         set(ConfPaths.COMBINED_INVULNERABLE_INITIALTICKS_JOIN, -1, 154);
         set(ConfPaths.COMBINED_INVULNERABLE_IGNORE, Arrays.asList("FALL"), 154);
         set(ConfPaths.COMBINED_INVULNERABLE_MODIFIERS + ".all", 0, 154);
-        // Munchhausen
-        set(ConfPaths.COMBINED_MUNCHHAUSEN_CHECK, "default", 154);
-        set(ConfPaths.COMBINED_MUNCHHAUSEN_ACTIONS, "cancel vl>100 cancel log:munchhausen:0:60:if", 154);
+        
         // YawRate settings
         set(ConfPaths.COMBINED_YAWRATE_RATE , 290, 154); // 360
         set(ConfPaths.COMBINED_YAWRATE_PENALTY_FACTOR, 2.0, 154); 
@@ -660,7 +658,6 @@ public class DefaultConfig extends ConfigFile {
         set(ConfPaths.STRINGS + ".morepackets", start + "sent too many moves (&cPackets&7/&cVL [packets]&7)", 154);
         set(ConfPaths.STRINGS + ".moving", start + "tried to send improbable position updates" + end, 154);
         set(ConfPaths.STRINGS + ".msgtempdenylogin", "You are temporarily denied to join this server.", 154);
-        set(ConfPaths.STRINGS + ".munchhausen", start + "tried to hit themeselves with a fishing rod too many times (the knockback can be potentially abused for bypasses)" + end, 154);
         set(ConfPaths.STRINGS + ".nofall", start + "tried to alter fall damage or fall distance (Tags: &6[tags]&7)" + end, 154);
         set(ConfPaths.STRINGS + ".noswing", start + "didn't swing arm before performing their action" + end, 154);
         set(ConfPaths.STRINGS + ".passable", start + "tried to move into a block (bugged player or phase cheat)" + end, 154);
@@ -671,7 +668,7 @@ public class DefaultConfig extends ConfigFile {
         set(ConfPaths.STRINGS + ".tellchatnormal", tell + "Too many messages, slow down...", 154);
         set(ConfPaths.STRINGS + ".tempkick1", "ncp tempkick [player] 1 &c&l(!)&7 You have to wait 1 minute before joining this server again.", 154);
         set(ConfPaths.STRINGS + ".tempkick5", "ncp tempkick [player] 5 &c&l(!)&7 You have to wait 5 minutes before joining this server again.", 154);
-        set(ConfPaths.STRINGS + ".togglefrequency", start + "tried to toggle sneak/sprint too quicly" + end, 154);
+        set(ConfPaths.STRINGS + ".togglefrequency", start + "tried to toggle sneak/sprint too quickly" + end, 154);
         set(ConfPaths.STRINGS + ".vehicleenvelope", start + "tried to move a vehicle unexpectedly (Tags/Vehicle: &6[tags]&7)" + end, 154);
         set(ConfPaths.STRINGS + ".wrongturn", start + "tried to send an impossible pitch rotation (&6>90 &7or&6 <-90&7)" + end, 154);
         // Clear a check data  

@@ -51,9 +51,7 @@ public class CombinedConfig extends ACheckConfig {
     public final int                        invulnerableModifierDefault;
     public final boolean                    invulnerableTriggerAlways;
     public final boolean                    invulnerableTriggerFallDistance;
-
-    public final ActionList 	munchHausenActions;
-
+    
     // Last yaw tracking 
     public final float      yawRate;
     public final boolean    yawRateImprobableFeedOnly;
@@ -108,9 +106,7 @@ public class CombinedConfig extends ACheckConfig {
         if (error) StaticLog.logInfo("Damage causes can be: " + StringUtil.join(Arrays.asList(DamageCause.values()), ", "));
         invulnerableTriggerAlways = config.getBoolean(ConfPaths.COMBINED_INVULNERABLE_TRIGGERS_ALWAYS);
         invulnerableTriggerFallDistance = config.getBoolean(ConfPaths.COMBINED_INVULNERABLE_TRIGGERS_FALLDISTANCE);
-
-        munchHausenActions = config.getOptimizedActionList(ConfPaths.COMBINED_MUNCHHAUSEN_ACTIONS, Permissions.COMBINED_MUNCHHAUSEN);
-
+        
         yawRate = config.getInt(ConfPaths.COMBINED_YAWRATE_RATE);
         yawRateImprobableFeedOnly = config.getBoolean(ConfPaths.COMBINED_YAWRATE_IMPROBABLE_FEEDONLY);
         yawRateImprobableWeight = (float) config.getDouble(ConfPaths.COMBINED_YAWRATE_IMPROBABLE_WEIGHT);

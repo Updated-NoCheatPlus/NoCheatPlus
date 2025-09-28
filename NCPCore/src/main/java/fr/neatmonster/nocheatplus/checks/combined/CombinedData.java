@@ -26,7 +26,6 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
 
     // VLs
     public double improbableVL = 0;
-    public double munchHausenVL = 0;
 
     // Invulnerable management:
     /** This is the tick from which on the player is vulnerable again. */
@@ -87,9 +86,6 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
                     break;
                 case COMBINED_YAWRATE:
                     yawFreq.clear(System.currentTimeMillis()); // TODO: Document there, which to use.
-                    break;
-                case COMBINED_MUNCHHAUSEN:
-                    munchHausenVL = 0;
                     break;
                 case COMBINED:
                     return true;

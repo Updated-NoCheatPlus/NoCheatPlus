@@ -30,7 +30,6 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -82,9 +81,7 @@ import fr.neatmonster.nocheatplus.worlds.WorldFactoryArgument;
 public class CombinedListener extends CheckListener implements JoinLeaveListener {
 
     protected final Improbable improbable = addCheck(new Improbable());
-
-    protected final MunchHausen munchHausen = addCheck(new MunchHausen());
-
+    
     private final Counters counters = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstance(Counters.class);
 
     private final int idFakeInvulnerable = counters.registerKey("fakeinvulnerable");
@@ -566,15 +563,5 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         // Still invulnerable.
         event.setCancelled(true);
         counters.addPrimaryThread(idFakeInvulnerable, 1);
-    }
-    
-    /** We listen for player fishing for the VERY critical and super important munch hausen check */
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onFishing(final PlayerFishEvent event) {
-        // Check also in case of cancelled events.
-        final Player player = event.getPlayer();
-        if (munchHausen.isEnabled(player) && munchHausen.checkFish(player, event.getCaught(), event.getState())) {
-            event.setCancelled(true);
-        }
     }
 }

@@ -446,10 +446,6 @@ public abstract class ConfPaths {
     public static final String  COMBINED_INVULNERABLE_TRIGGERS_ALWAYS       = COMBINED_INVULNERABLE_TRIGGERS + "always";
     public static final String  COMBINED_INVULNERABLE_TRIGGERS_FALLDISTANCE = COMBINED_INVULNERABLE_TRIGGERS + "falldistance";
 
-    public static final String COMBINED_MUNCHHAUSEN                         = COMBINED + "munchhausen.";
-    public static final String COMBINED_MUNCHHAUSEN_CHECK                   = COMBINED_MUNCHHAUSEN + SUB_ACTIVE;
-    public static final String COMBINED_MUNCHHAUSEN_ACTIONS                 = COMBINED_MUNCHHAUSEN + "actions";
-
     private static final String COMBINED_YAWRATE                         = COMBINED + "yawrate.";
     public static final String  COMBINED_YAWRATE_RATE                    = COMBINED_YAWRATE + "rate";
     private static final String COMBINED_YAWRATE_IMPROBABLE              = COMBINED_YAWRATE + "improbable.";
@@ -836,6 +832,12 @@ public abstract class ConfPaths {
     public static final String  MOVING_MOREPACKETSVEHICLE_ACTIONS        = "checks.moving.morepacketsvehicle.actions";
 
     // Deprecated paths (just removed).
+    @Deprecated
+    public static final String COMBINED_MUNCHHAUSEN                         = COMBINED + "munchhausen.";
+    @Deprecated
+    public static final String COMBINED_MUNCHHAUSEN_CHECK                   = COMBINED_MUNCHHAUSEN + SUB_ACTIVE;
+    @Deprecated
+    public static final String COMBINED_MUNCHHAUSEN_ACTIONS                 = COMBINED_MUNCHHAUSEN + "actions";
     @Deprecated
     public static final String FIGHT_SELFHIT_EXCLUDEPROJECTILE           = FIGHT_SELFHIT + "exclude-projectile";
     @Deprecated
