@@ -53,7 +53,7 @@ public class CreativeFly extends Check {
 
     private final List<String> tags = new LinkedList<String>();
     private final BlockChangeTracker blockChangeTracker;
-    private IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
+    private final IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
 
 
    /**
@@ -103,7 +103,6 @@ public class CreativeFly extends Check {
         //////////////////////////
         // Horizontal move.
         //////////////////////////
-
         double[] resH = hDist(player, from, to, hDistance, yDistance, sprinting, flying, thisMove, lastMove, time, model, data, cc);
         double limitH = resH[0];
         double resultH = resH[1];
@@ -290,7 +289,6 @@ public class CreativeFly extends Check {
 
         // Modifiers.
         double fSpeed;
-
         // TODO: Make this configurable ! [Speed effect should not affect flying if not on ground.]
         if (model.getApplyModifiers()) {
             final double speedModifier = mcAccess.getHandle().getFasterMovementAmplifier(player);
@@ -319,13 +317,6 @@ public class CreativeFly extends Check {
         // The horizontal limit is now set. 
         double limitH = model.getHorizontalModSpeed() / 100.0 * ModelFlying.HORIZONTAL_SPEED * fSpeed;
         
-        // Do apply dolphinsgrace modifier
-        // if (from.isInWater() || to.isInWater()) {
-        //     if (!Double.isInfinite(Bridge1_13.getDolphinGraceAmplifier(player))) {
-        //         limitH *= Magic.modDolphinsGrace;
-        //         tags.add("hdolphinsgrace");
-        //     }
-        // }
 
         // Ordinary friction
         // TODO: Use last friction (as well)?

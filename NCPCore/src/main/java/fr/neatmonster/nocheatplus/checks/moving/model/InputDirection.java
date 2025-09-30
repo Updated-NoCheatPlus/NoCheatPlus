@@ -28,6 +28,7 @@ public class InputDirection implements Cloneable {
     private float strafe;
     /** (W/S keys, forward = 1, backward = -1. A value of 0.0 means not moving backward nor forward) */
     private float forward;
+    private boolean isSpaceBarPressed; 
     /** Enum direction of the forward value */
     private ForwardDirection fdir;
     /** Enum direction of the strafe value */
@@ -80,9 +81,17 @@ public class InputDirection implements Cloneable {
     public float getForward() {
         return forward;
     }
+    
+    /**
+     * Whether the space bar is pressed.
+     * @return True if so.
+     */
+    public boolean isSpaceBarPressed() {
+        return isSpaceBarPressed;
+    }
 
     /**
-     * @return InputDirection
+     * @return A clone of this InputDirection
      */
     @Override
     public InputDirection clone() {

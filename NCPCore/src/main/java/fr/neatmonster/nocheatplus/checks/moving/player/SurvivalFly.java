@@ -473,6 +473,9 @@ public class SurvivalFly extends Check {
                 thisMove.xAllowedDistance = thisMove.zAllowedDistance = 0.0;
             }
         }
+        // Reset speed if judged to be negligible.
+        checkNegligibleMomentum(pData, thisMove);
+        checkNegligibleMomentumVertical(pData, thisMove);
         // TODO: Reduce verbosity (at least, make it easier to look at)
         Vector viewVector = TrigUtil.getLookingDirection(to, player);
         float radianPitch = to.getPitch() * TrigUtil.toRadians;
@@ -546,9 +549,6 @@ public class SurvivalFly extends Check {
         thisMove.xAllowedDistance = collisionVector.getX();
         thisMove.yAllowedDistance = collisionVector.getY();
         thisMove.zAllowedDistance = collisionVector.getZ();
-        // Reset speed if judged to be negligible.
-        checkNegligibleMomentum(pData, thisMove); 
-        checkNegligibleMomentumVertical(pData, thisMove);
 
         // Can a vertical workaround apply? If so, override the prediction.
         if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
@@ -826,16 +826,11 @@ public class SurvivalFly extends Check {
         }
         // If impulses don't need to be inferred from the prediction, illegal sprinting checks can be performed here.
         if (BridgeMisc.isWASDImpulseKnown(player) && pData.isSprinting()
-            && (
-                // Moving sideways or backwards...
-                (player.getCurrentInput().isLeft() || player.getCurrentInput().isRight() || player.getCurrentInput().isBackward())
-                // Sprinting can only work if you're also moving forward.
-                && !player.getCurrentInput().isForward() 
-                || player.getFoodLevel() <= 5 // must be checked here as well (besides on toggle sprinting) because players will immediately lose the ability to sprint if food level drops below 5
-            )) { 
+            && (thisMove.input.getForwardDir() != ForwardDirection.FORWARD 
+                || player.getFoodLevel() <= 5) // must be checked here as well (besides on toggle sprinting) because players will immediately lose the ability to sprint if food level drops below 5
+            ) { 
             // || inputs[i].getForward() < 0.8 // hasEnoughImpulseToStartSprinting, in LocalPlayer,java -> aiStep()
             tags.add("illegalsprint");
-            pData.setSprintingState(false);
             Improbable.check(player, (float) thisMove.hDistance, System.currentTimeMillis(), "moving.survivalfly.illegalsprint", pData);
             data.resetHorizontalData();
             return true;
@@ -1004,7 +999,8 @@ public class SurvivalFly extends Check {
             thisMove.xAllowedDistance += liquidFlowVector.getX();
             thisMove.zAllowedDistance += liquidFlowVector.getZ();
         }
-
+        // Before calculating the acceleration, check if momentum is below the negligible speed threshold and cancel it.
+        checkNegligibleMomentum(pData, thisMove);
         // Sprint-jumping...
         // IMPORTANT NOTE: when working **exclusively** with rotations (like in the following cases), you must use the TO location, not the FROM one, as TO contains the most recent rotation. Using FROM lags behind a few ticks, causing false positives when switching looking direction.
         if (PhysicsEnvelope.isBunnyhop(from, to, pData, fromOnGround, toOnGround, player, forceSetOffGround)) {
@@ -1076,8 +1072,6 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance = collisionVector.getZ();
             // More edge data...
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
-            // After calculating, check if momentum is below the negligible speed threshold and cancel it.
-            checkNegligibleMomentum(pData, thisMove);
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
@@ -1189,9 +1183,6 @@ public class SurvivalFly extends Check {
             }
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
-            // After calculating, check if momentum is below the negligible speed threshold and cancel it.
-            xTheoreticalDistance[i] = Math.abs(xTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : xTheoreticalDistance[i];
-            zTheoreticalDistance[i] = Math.abs(zTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : zTheoreticalDistance[i];
         }
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         if (cc.trackBlockMove) {
@@ -1239,14 +1230,8 @@ public class SurvivalFly extends Check {
             if (found) {
                 // These checks must be performed ex-post because they rely on data that is set after the prediction.
                 if (pData.isSprinting() 
-                    && ((theorInputs[i].getForwardDir().equals(ForwardDirection.BACKWARD) 
-                        || theorInputs[i].getStrafeDir().equals(StrafeDirection.RIGHT) 
-                        || theorInputs[i].getStrafeDir().equals(StrafeDirection.LEFT))
-                        && !theorInputs[i].getForwardDir().equals(ForwardDirection.FORWARD)
-                        || player.getFoodLevel() <= 5)
-                    ) { 
+                    && (theorInputs[i].getForwardDir() != ForwardDirection.FORWARD || player.getFoodLevel() <= 5)) { 
                     tags.add("illegalsprint");
-                    pData.setSprintingState(false);
                     Improbable.check(player, (float) thisMove.hDistance, System.currentTimeMillis(), "moving.survivalfly.illegalsprint", pData);
                     // Keep looping
                     forceViolation = true;
@@ -1522,6 +1507,8 @@ public class SurvivalFly extends Check {
         //////////////////////////////////
         // Last client-tick/move        //
         //////////////////////////////////
+        // *----------LivingEntity.aiStep(), negligible speed----------*
+        checkNegligibleMomentumVertical(pData, thisMove);
         // *----------LivingEntity.travel(), handleRelativeFrictionAndCalculateMovement() -> handleOnClimbable()----------*
         // TODO: Is it correct to put here?
         if (!from.isInLiquid() && from.isOnClimbable()) {
@@ -1646,9 +1633,6 @@ public class SurvivalFly extends Check {
                 }
             }
             else thisMove.yAllowedDistance += riptideVelocity.getY();
-            if (debug) {
-                player.sendMessage("Trident propel(v): " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
-            }
         }
         // *----------Entity.move(), call the collide() function----------*
         // Include horizontal motion to account for stepping: there are cases where NCP's isStep definition fails to catch it.
@@ -1671,11 +1655,8 @@ public class SurvivalFly extends Check {
                 tags.add("gravity_reiterate");
             } 
             else thisMove.yAllowedDistance = collisionVector.getY();
-            // *----------LivingEntity.aiStep(), negligible speed----------*
-            checkNegligibleMomentumVertical(pData, thisMove);
         }
         else {
-            boolean newNegligible = pData.getClientVersion().isAtLeast(ClientVersion.V_1_9);
             for (int i = 0; i < yTheoreticalDistance.length; i++) {
                 Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yTheoreticalDistance[i], thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
                 if (yTheoreticalDistance[i] != collisionVector.getY()) {
@@ -1684,7 +1665,6 @@ public class SurvivalFly extends Check {
                 }
                 yTheoreticalDistance[i] = collisionVector.getY();
                 thisMove.headObstructed = yTheoreticalDistance[i] != collisionVector.getY() && thisMove.yDistance >= 0.0 && from.seekCollisionAbove() && !fromOnGround;
-                yTheoreticalDistance[i] = Math.abs(yTheoreticalDistance[i]) < (newNegligible ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) ? 0.0 : yTheoreticalDistance[i];
             }
         }
         
@@ -1801,7 +1781,16 @@ public class SurvivalFly extends Check {
             }
         }
         /*
-         * 1: Player failed with a concurrent lost ground case: force-set the ground status and re-estimate.
+         * 1: See {@link MoveData#mightComeToAStop()}
+         *  Because this move is not sent by the client and cannot be predicted through normal means, we have to brute force it.
+         */
+        if (lastMove.mightComeToAStop() && hDistanceAboveLimit > 0.0) {
+            double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
+            hAllowedDistance = res[0];
+            hDistanceAboveLimit = res[1];
+        }
+        /*
+         * 2: Player failed with a concurrent lost ground case: force-set the ground status and re-estimate.
          * TODO: Not good. Performance will be affected, as we already brute force the player's input with horizontal motion.
          *  Confine lostground-use with horizontal motion further, so that we don't need to brute force this as well.
          */
@@ -1811,7 +1800,7 @@ public class SurvivalFly extends Check {
             hDistanceAboveLimit = res[1];
         }
         /*
-         * 2: Undetectable jump (must brute force here): player failed with the onGround flag, lets try with off-ground then.
+         * 3: Undetectable jump (must brute force here): player failed with the onGround flag, lets try with off-ground then.
          */
         if (PhysicsEnvelope.isVerticallyConstricted(from, to, pData) && hDistanceAboveLimit > 0.0) {
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, true);
@@ -1819,7 +1808,7 @@ public class SurvivalFly extends Check {
             hDistanceAboveLimit = res[1];
         }
         /*
-         * 3: Above limit again? Check for past onGround states caused by block changes (i.e.: ground was pulled off from the player's feet)
+         * 4: Above limit again? Check for past onGround states caused by block changes (i.e.: ground was pulled off from the player's feet)
          */
         if (useBlockChangeTracker && hDistanceAboveLimit > 0.0) {
             // Be sure to test this only if the player is seemingly off ground

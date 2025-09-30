@@ -23,6 +23,7 @@ import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.components.location.IGetLocationWithLook;
 import fr.neatmonster.nocheatplus.utilities.location.RichBoundsLocation;
 import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 
 /**
  * Carry data of a move, involving from- and to- locations. This is for
@@ -131,7 +132,7 @@ public class MoveData {
     
     /**
      * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
-     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#handleInputs(Input, Player)}).<p>
+     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#onChangeOfInput(Input, Player)}).<p>
      * This field is the one you should use to read input information during a PlayerMoveEvent, as it is kept synchronized with the correct movement on when the change of inputs happens.<br>
      * Calling {@link org.bukkit.entity.Player#getCurrentInput()} on PlayerMoveEvents is unreliable, as it only provides the current input state
      * at the time the move event is fired. It does not indicate when the input changed,
@@ -244,6 +245,21 @@ public class MoveData {
         toIsValid = false;
         from.extraPropertiesValid = false;
         to.extraPropertiesValid = false;
+    }
+    
+    /**
+     * Heuristic check to test if the player is likely to come to a full stop with the next move(s). <br>
+     * When the client is coming to a full stop, lots of micro moves will be sent to the server (which are handled by the split move mechanism),
+     * but the actual stop of 0.0 distance won't be sent. <br>
+     * @return True, if the player has hDistance < 0.0071 and vertical distance smaller than the negligible speed threshold (legacy). 
+     *          In this case, toIsValid is set to false, so that further checks will not consider this move any longer.
+     */
+    public boolean mightComeToAStop() {
+        if (toIsValid && hDistance < 0.0071 && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
+            toIsValid = false;
+            return true;
+        }
+        return false;
     }
 
     public void addExtraProperties(final StringBuilder builder, final String prefix) {

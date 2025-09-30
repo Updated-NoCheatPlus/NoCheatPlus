@@ -884,7 +884,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // TODO: Omit anyways?
             || lastMove.valid && TrigUtil.isSamePos(loc, lastMove.from.getX(), lastMove.from.getY(), lastMove.from.getZ())) {
             // TODO: On pistons pulling the player back? Might check
-            /* From look doesn't corretly reported. Trying to search back. But this is already done in CraftBukkit internally.
+            /* From look doesn't correctly reported. Trying to search back. But this is already done in CraftBukkit internally.
              * This code just to extra assurance. Zero trusted at that time(have not read the code yet)
             */
             // Walks backwards through the flying packet queue to fix yaw/pitch.
@@ -935,25 +935,26 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // Something happened: there was a mismatch between the player's location, and the event's location(s)
             // Peek into ProtocolLib to recover the movement's actual locations.
             final FlyingQueueHandle flyingHandle = new FlyingQueueHandle(pData);
-            final DataPacketFlying[] queue = flyingHandle.getHandle();
-            if (queue.length != 0) {
+            final DataPacketFlying[] flyingQueue = flyingHandle.getHandle();
+            // 1: Locate Bukkit's 'from' and 'to' locations on packet-level in the flying queue.
+            if (flyingQueue.length != 0) {
                 /* Index of Bukkit's "from" location in the flying queue. -1 if already purged out of the queue or cannot be found for any other reason. */
                 int fromIndex = -1;
                 /* Index of Bukkit's "to" location in the flying queue. -1 if already purged out of the queue or cannot be found for any other reason.*/
                 int toIndex = -1;
-                // 1: Locate Bukkit's 'from' and 'to' locations on packet-level in the flying queue.
-                final int minGap = 1; // Require at least this many packets strictly between to/from. Set 0 if adjacent is allowed.
+                // Require at least this many packets strictly between to/from. Set 0 if adjacent is allowed.
+                final int minGap = 1; 
                 // if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_13)) // Left-over from some testings... What were we doing here?
-                for (int queueIndex = 0; queueIndex < queue.length; queueIndex++) {
-                    final DataPacketFlying packetData = queue[queueIndex];
+                for (int idx = 0; idx < flyingQueue.length; idx++) {
+                    final DataPacketFlying packetData = flyingQueue[idx];
                     if (packetData == null || !packetData.hasPos) {
                         continue;
                     }
                     if (toIndex == -1 && TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
-                        toIndex = queueIndex;
+                        toIndex = idx;
                     }
                     else if (fromIndex == -1 && TrigUtil.isSamePos(from.getX(), from.getY(), from.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
-                        fromIndex = queueIndex;
+                        fromIndex = idx;
                     }
                     if (fromIndex > 0 && toIndex >= 0) {
                         // Found both (NOTE: toIndex MUST be checked for equality).
@@ -973,16 +974,18 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 }
                 // 2: Filter out null and ground only packets; synchronize the input change with the correct flying packet on when it happened
                 final DataPacketInput[] inputQueue = pData.getGenericInstance(NetData.class).copyInputQueue();
-                final DataPacketFlying[] queuePos = new DataPacketFlying[fromIndex - toIndex + 1]; // Array the size of packets skipped between bukkit locations
+                // Prepare array to hold the filtered packets between fromIndex and toIndex (inclusive). 
+                final DataPacketFlying[] filteredFlyingQueue = new DataPacketFlying[fromIndex - toIndex + 1]; 
+                // Prepare array to hold the input packets that happened during the filtered flying packets.
                 final DataPacketInput[] filteredInputQueue = new DataPacketInput[fromIndex - toIndex + 1];
                 int j = 0;
                 int t = 0, si = 0, ei = inputQueue.length; // Input re-mapping variables
                 // NOTE: Inverted from last versions for easier code
                 for (int i = toIndex; i <= fromIndex; i++) {
                     // (Let the early return above handle duplicate 1.17 packets)
-                    if (queue[i] != null && (queue[i].hasPos || queue[i].hasLook)) {
+                    if (flyingQueue[i] != null && (flyingQueue[i].hasPos || flyingQueue[i].hasLook)) {
                         // All valid flying packets are put in their array
-                        queuePos[j] = queue[i];
+                        filteredFlyingQueue[j] = flyingQueue[i];
                         // Re-mapping input
                         boolean found = false;
                         si = i + 1; // Input happened before flying
@@ -1002,26 +1005,27 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 }
                 // 3: Actual split
                 int count = 1;
-                // Maximum amount by which a single PlayerMoveEvent can be split.
+                // The maximum amount by which a single PlayerMoveEvent can be split.
                 int maxSplit = 14;
                 float currentYaw = from.getYaw();
                 float currentPitch = from.getPitch();
                 Location packet = null;
                 // NOTE: Inverted from last versions to match logic
                 for (int i = j - 1; i >= 0; i--) {
-                    if (queuePos[i].hasLook) {
+                    if (filteredFlyingQueue[i].hasLook) {
                         // If a packet has look data, update yaw/pitch.
-                        currentYaw = queuePos[i].getYaw();
-                        currentPitch = queuePos[i].getPitch();
+                        currentYaw = filteredFlyingQueue[i].getYaw();
+                        currentPitch = filteredFlyingQueue[i].getPitch();
                     }
                     // If a packet has position data, we can split.
-                    if (queuePos[i].hasPos) {
+                    if (filteredFlyingQueue[i].hasPos) {
                         // If from was set...
                         if (packet != null) {
                             /* The 'to' location skipped/lost by Bukkit in the flying queue. Use Bukkit's "to" if the maximum split was reached */
-                            Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), queuePos[i].getX(), queuePos[i].getY(), queuePos[i].getZ(), currentYaw, currentPitch);
+                            Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
                             // Finally, set the moving data to be used by checks.
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
+                            // Finally, remap the input for this move, if any.
                             if (filteredInputQueue[i] != null) {
                                 final PlayerMoveData newthisMove = data.playerMoves.getCurrentMove();
                                 newthisMove.input = new InputDirection(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward));
@@ -1047,7 +1051,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             }
                         }
                         /* The 'from' location skipped/lost by Bukkit in the flying queue */
-                        packet = new Location(from.getWorld(), queuePos[i].getX(), queuePos[i].getY(), queuePos[i].getZ(), currentYaw, currentPitch);
+                        packet = new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
                     }
                 }
             }
@@ -1066,7 +1070,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
     /**
      * Split the incoming move event into two different moves, by using player#getLocation() exclusively. <br>
-     * This is a really inaccurate split, as without ProtocolLib, we cannot tell how many moves have been skipped between the event#getFrom/To() and player#getLocation().
+     * This is a really rough split, as without ProtocolLib, we cannot tell how many moves have been skipped between the event#getFrom/To() and player#getLocation().
      * (Which can be much more than 2)
      * So, checking for anything that requires high-precision (like a prediction implementation) during these phases should be avoided.
      */
