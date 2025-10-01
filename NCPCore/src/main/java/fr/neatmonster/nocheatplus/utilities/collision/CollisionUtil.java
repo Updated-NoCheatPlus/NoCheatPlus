@@ -1015,8 +1015,11 @@ public class CollisionUtil {
                         && (edgeCount != 2 || mat == BridgeMaterial.MOVING_PISTON)) {
                         // Don't add to a list if we only care if the player intersects with the block
                         if (!onlyCheckCollide) {
-                            double[] multiAABB = AxisAlignedBBUtils.move(blockCache.fetchBounds(x, y, z), x, y, z);
-                            collisionBoxes.addAll(AxisAlignedBBUtils.splitIntoSingle(multiAABB));
+                            final double[] originAABB = blockCache.fetchBounds(x, y, z);
+                            if (originAABB != null) {
+                                final double[] multiAABB = AxisAlignedBBUtils.move(originAABB, x, y, z);
+                                collisionBoxes.addAll(AxisAlignedBBUtils.splitIntoSingle(multiAABB));
+                            }
                         } 
                         else if (AxisAlignedBBUtils.isCollided(blockCache.getBounds(x, y, z), x, y, z, AABB, true)) {
                             return true;

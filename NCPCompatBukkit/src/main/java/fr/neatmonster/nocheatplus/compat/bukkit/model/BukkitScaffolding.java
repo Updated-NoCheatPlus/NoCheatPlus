@@ -51,19 +51,14 @@ public class BukkitScaffolding implements BukkitShapeModel {
         0.0, 0.0, 0.0, 0.125, 1.0, 0.125,
         0.875, 0.0, 0.0, 1.0, 1.0, 0.125,
         0.0, 0.0, 0.875, 0.125, 1.0, 1.0,
-        0.875, 0.0, 0.875, 1.0, 1.0, 1.0,
-        // extra thin bars (redundant when bottom present, but mirror vanilla union)
-        0.0, 0.0, 0.0, 0.125, 0.125, 1.0,
-        0.875, 0.0, 0.0, 1.0, 0.125, 1.0,
-        0.0, 0.0, 0.875, 1.0, 0.125, 1.0,
-        0.0, 0.0, 0.0, 1.0, 0.125, 0.125
+        0.875, 0.0, 0.875, 1.0, 1.0, 1.0
     };
     // Just define ground plate, no need full boxes as Minecraft handle climbable if player within 0.3125 inset to the center, and was handled by NCP somewhere else 
     private static final double[] BOTTOM_PLATE = new double[] {0.0, 0.0, 0.0, 1.0, 0.125, 1.0};
     private static final double[] UPPER_PLATE = new double[] {0.0, 0.875, 0.0, 1.0, 1.0, 1.0};
     private static final double[] ALL_PLATE = new double[] {0.0, 0.875, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.125, 1.0};
     // (empty box)
-    private static final double[] NO_COLLISION = new double[] {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    private static final double[] NO_COLLISION = null;
 
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
@@ -88,17 +83,18 @@ public class BukkitScaffolding implements BukkitShapeModel {
                     && !pData.isShiftKeyPressed()) {
                     return hasbottom ? ALL_PLATE : UPPER_PLATE;
                 }
-                if (hasbottom) {
+                if (hasbottom && mData.lastY > y + 0.125 - 1e-5) {
                     //System.out.println("scf 2");
                     return BOTTOM_PLATE;
                 }
                 //System.out.println("scf 3");
-                // TODO: Might just throw null for better performance? But might ensure it allows
                 return NO_COLLISION;
                 // TODO: This should be the VISUAL shape (aka: hitbox), not the COLLISION shape.
                 // We need to distinguish shapes from collision shapes in the API.
                 //  return scaff.isBottom() ? UNSTABLE_SHAPE : STABLE_SHAPE;
             }
+            // Shortcut Visible haven't set pData...
+            return (scaff.getDistance() != 0 && scaff.isBottom()) ? UNSTABLE_SHAPE : STABLE_SHAPE;
         }
         // Fallback to a full block. Should never happen.
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};

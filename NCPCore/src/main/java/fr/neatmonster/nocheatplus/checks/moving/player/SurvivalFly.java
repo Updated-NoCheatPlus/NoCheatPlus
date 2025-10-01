@@ -610,7 +610,13 @@ public class SurvivalFly extends Check {
      * @param thisMove
      */
     private void checkNegligibleMomentum(IPlayerData pData, PlayerMoveData thisMove) {
-        if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_9)) {
+        if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_21_5)) {
+            if (thisMove.hDistance < Magic.NEGLIGIBLE_SPEED_THRESHOLD) {
+                thisMove.xAllowedDistance = 0.0;
+                thisMove.zAllowedDistance = 0.0;
+            }
+        }
+        else if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_9)) {
             if (Math.abs(thisMove.xAllowedDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD) {
                 thisMove.xAllowedDistance = 0.0;
             }
@@ -1784,7 +1790,7 @@ public class SurvivalFly extends Check {
          * 1: See {@link MoveData#mightComeToAStop()}
          *  Because this move is not sent by the client and cannot be predicted through normal means, we have to brute force it.
          */
-        if (lastMove.mightComeToAStop() && hDistanceAboveLimit > 0.0) {
+        if (hDistanceAboveLimit > 0.0 && lastMove.mightComeToAStop(pData.getClientVersion())) {
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
             hAllowedDistance = res[0];
             hDistanceAboveLimit = res[1];

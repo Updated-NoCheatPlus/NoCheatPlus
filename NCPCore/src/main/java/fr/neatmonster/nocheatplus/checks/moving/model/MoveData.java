@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.location.IGetLocationWithLook;
 import fr.neatmonster.nocheatplus.utilities.location.RichBoundsLocation;
 import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
@@ -254,10 +255,13 @@ public class MoveData {
      * @return True, if the player has hDistance < 0.0071 and vertical distance smaller than the negligible speed threshold (legacy). 
      *          In this case, toIsValid is set to false, so that further checks will not consider this move any longer.
      */
-    public boolean mightComeToAStop() {
-        if (toIsValid && hDistance < 0.0071 && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
-            toIsValid = false;
-            return true;
+    public boolean mightComeToAStop(final ClientVersion pVersion) {
+        if (pVersion.isAtLeast(ClientVersion.V_1_9)) {
+            // TODO: Find maximum possible value that can be before one more friction with input None, None
+            if (toIsValid && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY : 0.0071) && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
+                toIsValid = false;
+                return true;
+            }
         }
         return false;
     }
