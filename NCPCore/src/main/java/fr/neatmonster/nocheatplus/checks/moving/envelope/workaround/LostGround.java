@@ -119,10 +119,6 @@ public class LostGround {
             || Math.abs(thisMove.yDistance - lastMove.yDistance) > Magic.PREDICTION_EPSILON && lastMove.toLostGround)
             && lastMove.yDistance < 0.0) {
             // Acceleration changed: player was falling with a certain speed and now decelerates (or goes up).
-            if (to.isOnGround()) {
-                // No need for interpolation in this case: the player has likely just landed on the ground, though there may be cases with missed "from", but detected "to".
-                return false;
-            }
             // Try interpolating the ground collision from last-from to this-from.
             // Usually, this corresponds to a missed "fromOnGround" position with this move (with last missing a ground collision too, but with the "to" position).
             // (In other words= lastMove: AIR -> TO LOST GROUND[see below](AIR)   -   thisMove: FROM LOST GROUND(AIR) -> AIR
@@ -132,7 +128,7 @@ public class LostGround {
                 return true;
             }
             // Try interpolating the ground collision from this-from to this-to.
-            if (interpolateGround(player, to.getBlockCache(), to.getWorld(), to.getMCAccess(), tags, "_to", data,
+            if (!to.isOnGround() && interpolateGround(player, to.getBlockCache(), to.getWorld(), to.getMCAccess(), tags, "_to", data,
                                   to.getX(), to.getY(), to.getZ(), from.getX(), from.getY(), from.getZ(), thisMove.hDistance, to.getBoxMarginHorizontal(), to.getyOnGround())) {
                 thisMove.toLostGround = true;
                 return true;
@@ -165,6 +161,7 @@ public class LostGround {
      * the horizontal move. Needs last move data.
      * @See <a href="https://gyazo.com/5613ce5ab7bbb88b760c6b6e67fe35f4">
      * This screenshot for a visual representation of what's happening. </a> 
+     * @See <a href="https://gyazo.com/744b4bbd1e5e118ef99d4435df4490a1">Also this.</a> 
      * 
      * @param player
      * @param blockCache
