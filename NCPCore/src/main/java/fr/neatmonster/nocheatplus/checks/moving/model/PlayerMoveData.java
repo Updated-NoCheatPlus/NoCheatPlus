@@ -37,15 +37,6 @@ public class PlayerMoveData extends MoveData {
     // Reset with set, could be lazily set during checking.
     //////////////////////////////////////////////////////////
     // Properties of the player.
-    /** Whether this move has the levitation effect active */
-    public boolean hasLevitation;
-    
-    /** Whether this move has the slowfall effect active */
-    public boolean hasSlowfall;
-    
-    /** Whether this movement is influenced by gravity, as reported by {@link fr.neatmonster.nocheatplus.compat.BridgeMisc#hasGravity(LivingEntity)} */
-    public boolean hasGravity;
-    
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. NOTE: this is NOT the toggle glide moment, but the entire gliding phase. */
     public boolean isGliding;
     
@@ -54,27 +45,8 @@ public class PlayerMoveData extends MoveData {
     
     /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedWaterHeight;
-
-    /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. */
-    public boolean slowedByUsingAnItem;
     
     public boolean tridentRelease;
-    
-    /** 
-     * Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. 
-     * NOTE: this is NOT the propelling moment triggered by {@link org.bukkit.event.player.PlayerRiptideEvent}, 
-     * it is the entire riptide phase (for which the game activates its tick counter (See ItemTrident.java, entityHuman.startAutoSpinAttack(20))
-     */
-    public boolean isRiptiding;
-    
-    /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent} */
-    public boolean isSprinting;
-    
-    /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent} */
-    public boolean isCrouching;
-    
-    /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent} */
-    public boolean isSwimming;
     
     /**
      * The distance covered by a move from the setback point to the to.getY() point.
@@ -202,7 +174,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public InputDirection.StrafeDirection strafeImpulse;
+    public InputState.StrafeDirection strafeImpulse;
     
     /**
      * Indicates the forward movement direction (FORWARD, BACKWARD, or NONE).
@@ -210,7 +182,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public InputDirection.ForwardDirection forwardImpulse;
+    public InputState.ForwardDirection forwardImpulse;
     
     /**
      * Judge if this horizontal collision ({@link PlayerMoveData#collideX} or {@link PlayerMoveData#collideZ}) is to be considered as minor.
@@ -233,21 +205,13 @@ public class PlayerMoveData extends MoveData {
     @Override
     protected void resetBase() {
         // Properties of the player.
-        hasLevitation = false;
-        hasSlowfall = false;
-        hasGravity = true; // Assume one to have gravity rather than the opposite... :)
         hasAttackSlowDown = false;
         submergedLavaHeight = 0.0;
         submergedWaterHeight = 0.0;
         isGliding = false;
-        isRiptiding = false;
-        isSprinting = false;
-        isCrouching = false;
-        isSwimming = false;
-        slowedByUsingAnItem = false;
         tridentRelease = false;
-        forwardImpulse = InputDirection.ForwardDirection.NONE;
-        strafeImpulse = InputDirection.StrafeDirection.NONE;
+        forwardImpulse = InputState.ForwardDirection.NONE;
+        strafeImpulse = InputState.StrafeDirection.NONE;
         // Properties involving the environment.
         bunnyHop = false;
         isStepUp = false;

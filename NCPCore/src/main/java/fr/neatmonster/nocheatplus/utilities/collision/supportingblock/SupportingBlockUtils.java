@@ -76,8 +76,11 @@ public class SupportingBlockUtils {
                                     ((z == minBlockZ || z == maxBlockZ) ? 1 : 0);
                     if (edgeCount != 3 && (edgeCount != 1 || (BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0) // isShapeExceedsCube...
                         && (edgeCount != 2 || mat == BridgeMaterial.MOVING_PISTON)) {
-                        if (AxisAlignedBBUtils.isIntersected(blockCache.getBounds(x, y, z), eAABB)) {
-                            collisionsLoc.add(new Vector(x, y, z));
+                        final double[] originAABB = blockCache.fetchBounds(x, y, z);
+                        if (originAABB != null) {
+                            if (AxisAlignedBBUtils.isIntersected(originAABB, eAABB)) {
+                                collisionsLoc.add(new Vector(x, y, z));
+                            }
                         }
                     }
                 }

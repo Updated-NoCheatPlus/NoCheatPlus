@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.checks.moving.envelope.workaround;
 
 import org.bukkit.entity.Player;
 
+import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
@@ -97,6 +98,7 @@ public class MagicWorkarounds {
         final IPlayerData pData = DataManager.getPlayerData(player);
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
+        final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         return  
 
                /*
@@ -120,7 +122,7 @@ public class MagicWorkarounds {
                      && thisMove.yDistance < data.liftOffEnvelope.getJumpGain(Bridge1_9.getLevitationAmplifier(player) - 1, data.nextStuckInBlockVertical) * data.lastFrictionVertical
                      // 1: Don't know what's going on here: when receiving levitation, the client "stalls" server-side for a tick. They'll begin to levitate on the next tick.
                      // https://gyazo.com/9ea2d76301bcfd5bc10dca2c6db77e63
-                     || thisMove.hasLevitation && !lastMove.hasLevitation && fromOnGround && toOnGround && thisMove.yDistance == 0.0
+                     || !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) && !cData.wasLevitating && fromOnGround && toOnGround && thisMove.yDistance == 0.0
                 )
                 && data.ws.use(WRPT.W_M_SF_FIRST_MOVE_ASCNEDING_FROM_GROUND)
                /*
@@ -164,7 +166,7 @@ public class MagicWorkarounds {
         if (Bridge1_9.isGliding(player)) {
             return oddGliding(data, player, from, fromOnGround, to, toOnGround, isNormalOrPacketSplitMove);
         }
-        if (lastMove.hasLevitation) {
+        if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))) {
             return oddLevitation(data, player, from, fromOnGround, isNormalOrPacketSplitMove, toOnGround);
         }
         if (from.isInLiquid()) {

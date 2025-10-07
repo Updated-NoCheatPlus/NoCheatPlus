@@ -141,7 +141,7 @@ public class MoveData {
      * The field is also re-mapped in the case a split move happens during PlayerMoveEvents (without it, the change of input would be out of sync with the actual movement).<br>
      * See comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}.<p>
      */
-    public InputDirection input = new InputDirection();
+    public InputState input = new InputState();
 
     private void setPositions(final IGetLocationWithLook from, final IGetLocationWithLook to) {
         this.from.setLocation(from);
@@ -253,12 +253,14 @@ public class MoveData {
      * When the client is coming to a full stop, lots of micro moves will be sent to the server (which are handled by the split move mechanism),
      * but the actual stop of 0.0 distance won't be sent. <br>
      * @return True, if the player has hDistance < 0.0071 and vertical distance smaller than the negligible speed threshold (legacy). 
-     *          In this case, toIsValid is set to false, so that further checks will not consider this move any longer.
+     *         In this case, toIsValid is set to false, so that further checks will not consider this move any longer.
      */
-    public boolean mightComeToAStop(final ClientVersion pVersion) {
+    public boolean isPossibleStoppingMotion(final ClientVersion pVersion) {
         if (pVersion.isAtLeast(ClientVersion.V_1_9)) {
             // TODO: Find maximum possible value that can be before one more friction with input None, None
-            if (toIsValid && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY : 0.0071) && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
+            if (toIsValid 
+                && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY : 0.0071) 
+                && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
                 toIsValid = false;
                 return true;
             }

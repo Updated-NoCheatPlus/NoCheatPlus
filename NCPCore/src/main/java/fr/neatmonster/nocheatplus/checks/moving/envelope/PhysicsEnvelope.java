@@ -8,6 +8,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
+import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.modifier.IAttributeAccess;
@@ -162,7 +163,7 @@ public class PhysicsEnvelope {
         ////////////////////////////////
         // 0: Early return conditions.
         ////////////////////////////////
-        if (thisMove.hasLevitation || thisMove.isRiptiding || thisMove.isGliding || from.isInLiquid()) {
+        if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) || Bridge1_13.isRiptiding(player) || thisMove.isGliding || from.isInLiquid()) {
             // Cannot jump for sure under these conditions
             return false;
         }
@@ -215,12 +216,6 @@ public class PhysicsEnvelope {
          final MovingData data = pData.getGenericInstance(MovingData.class);
          final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
          // Step-up is handled by the collide() function in Minecraft, which is called on every move, so one could technically step up even while ripdiing or gliding.
-         if (thisMove.isRiptiding) {
-             return false;
-         }
-         if (thisMove.isGliding) {
-             return false;
-         }
          return  
                 fromOnGround && toOnGround && MathUtil.almostEqual(thisMove.yDistance, attributeAccess.getHandle().getMaxStepUp(player), Magic.PREDICTION_EPSILON)
                 // 0: Wildcard couldstep

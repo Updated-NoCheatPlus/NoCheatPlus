@@ -15,6 +15,7 @@
 package fr.neatmonster.nocheatplus.checks.moving.envelope.workaround;
 
 import java.util.Collection;
+import java.util.Locale;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -70,7 +71,7 @@ public class LostGround {
                                               final double hDistance, final double yDistance,
                                               final PlayerMoveData lastMove, final MovingData data, final MovingConfig cc,
                                               final BlockChangeTracker blockChangeTracker, final Collection<String> tags) {
-        if (Bridge1_9.isGliding(player) || Bridge1_13.isRiptiding(player) || from.isResetCond() || from.isSlidingDown() || from.isOnGround() || player.isFlying() || hDistance < 0.001) {
+        if (Bridge1_9.isGliding(player) || Bridge1_13.isRiptiding(player) || from.isResetCond() || from.isSlidingDown() || from.isOnGround() || player.isFlying()) {
             // Cannot happen under these conditions.
             return false;
         }
@@ -90,8 +91,8 @@ public class LostGround {
             && (MaterialUtil.LANTERNS.contains(from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() + 2.0), from.getBlockZ())) || data.joinOrRespawn)) {
             return applyLostGround(player, from, true, thisMove, data, "0.03", tags);
         }
-        if (!MathUtil.inRange(0.1, hDistance, 1.5)) { 
-            // Lost ground only happens with enough horizontal motion.
+        if (!MathUtil.inRange(0.0001, hDistance, 1.5)) { 
+            // Lost ground only happens with enough horizontal motion and not too much either.
             return false;
         }
         
@@ -102,7 +103,7 @@ public class LostGround {
         if (MathUtil.inRange(0.0, yDistance, cc.sfStepHeight) && lastMove.yDistance < 0.0) {
             if (from.isOnGround(1.0) && BlockProperties.isOnGroundShuffled(to.getWorld(), to.getBlockCache(), from.getX(), from_Y, from.getZ(), to.getX(), to.getY(), to.getZ(), horizontalMargin, to.getyOnGround(), 0.0)) {
                 thisMove.couldStepUp = true;
-                Improbable.feed(player, 0.001f, System.currentTimeMillis());
+                Improbable.feed(player, 0.5f, System.currentTimeMillis());
                 return applyLostGround(player, from, false, thisMove, data, "couldstep", tags);
             }
         }
@@ -112,8 +113,12 @@ public class LostGround {
             return false;
         }
 
-        // Acceleration changed: player might have collided with something.
-        if (thisMove.yDistance > lastMove.yDistance && lastMove.yDistance < 0.0) {
+        if ((thisMove.yDistance > lastMove.yDistance 
+            // The condition above is not always enough: sometimes the player can suddenly speed up to the ground, leading to a smaller number than last y-distance.
+            // Has been observed when stepping down slabs; it is also almost always preeceded by a to-lost-ground
+            || Math.abs(thisMove.yDistance - lastMove.yDistance) > Magic.PREDICTION_EPSILON && lastMove.toLostGround)
+            && lastMove.yDistance < 0.0) {
+            // Acceleration changed: player was falling with a certain speed and now decelerates (or goes up).
             if (to.isOnGround()) {
                 // No need for interpolation in this case: the player has likely just landed on the ground, though there may be cases with missed "from", but detected "to".
                 return false;
@@ -268,7 +273,7 @@ public class LostGround {
 
         final IPlayerData pData = DataManager.getPlayerData(player);
         if (pData.isDebugActive(CheckType.MOVING_SURVIVALFLY) || pData.isDebugActive(CheckType.MOVING_CREATIVEFLY)) {
-            player.sendMessage("lostground_" + tag);
+            player.sendMessage("[Moving] Ground collision interpolated for: " + tag.toUpperCase(Locale.ROOT) + " position.");
         }
         return true;
     }

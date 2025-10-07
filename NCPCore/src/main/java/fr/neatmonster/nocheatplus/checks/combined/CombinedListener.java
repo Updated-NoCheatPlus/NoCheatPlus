@@ -46,7 +46,7 @@ import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
@@ -212,7 +212,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         final IPlayerData pData = DataManager.getPlayerData(player);
         final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
-        thisMove.input = new InputDirection(bukkitInput);
+        thisMove.input = new InputState(bukkitInput);
     }
 
     /** 
@@ -433,7 +433,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
             return;
         }
         if (Bridge1_13.isSwimming(event.getPlayer()) || Bridge1_9.isGliding(event.getPlayer()) || Bridge1_13.isRiptiding(event.getPlayer())) {
-            // Bukkit's ambiguous "isSneaking()" method would return true for all these cases, but like we've said above, sneaking is determined by player poses, not shift key presses. Just ignore.
+            // Bukkit's ambiguous "isShift()" method would return true for all these cases, but like we've said above, sneaking is determined by player poses, not shift key presses. Just ignore.
             pData.setCrouching(false);
             return;
         }

@@ -64,7 +64,7 @@ import fr.neatmonster.nocheatplus.checks.inventory.Open;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.BounceHandler;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.BounceType;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.player.CreativeFly;
@@ -1027,8 +1027,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
                             // Finally, remap the input for this move, if any.
                             if (filteredInputQueue[i] != null) {
-                                final PlayerMoveData newthisMove = data.playerMoves.getCurrentMove();
-                                newthisMove.input = new InputDirection(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward));
+                                final PlayerMoveData remappedMove = data.playerMoves.getCurrentMove();
+                                remappedMove.input = new InputState(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward), filteredInputQueue[i].jump, filteredInputQueue[i].shift, filteredInputQueue[i].sprint);
                             }
                             if (debug) {
                                 final String s1 = count == 1 ? "from" : "loc";
@@ -1207,17 +1207,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         thisMove.set(pFrom, pTo);
         thisMove.multiMoveCount = multiMoveCount;
         thisMove.setBackYDistance = pTo.getY() - data.getSetBackY();
-        thisMove.hasLevitation = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player));
-        thisMove.hasSlowfall = !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player));
-        thisMove.hasGravity = BridgeMisc.hasGravity(player);
         thisMove.isGliding = Bridge1_9.isGliding(player);
-        thisMove.isRiptiding = Bridge1_13.isRiptiding(player);
-        thisMove.isSprinting = pData.isSprinting();
-        thisMove.isCrouching = pData.isInCrouchingPose();
-        thisMove.isSwimming = Bridge1_13.isSwimming(player);
-        thisMove.slowedByUsingAnItem = BridgeMisc.isUsingItem(player);
-        if (BridgeMisc.isSpaceBarImpulseKnown(player)) thisMove.isSpaceBarImpulse = player.getCurrentInput().isJump();
-
 
         ////////////////////////////
         // Potion effect "Jump".  //

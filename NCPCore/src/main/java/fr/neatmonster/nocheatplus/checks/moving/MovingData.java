@@ -30,7 +30,7 @@ import fr.neatmonster.nocheatplus.checks.access.ACheckData;
 import fr.neatmonster.nocheatplus.checks.moving.location.setback.DefaultSetBackStorage;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.TraceEntryPool;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputDirection;
+import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
 import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveConsistency;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveTrace;
@@ -159,7 +159,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         public PlayerMoveData call() throws Exception {
             return new PlayerMoveData();
         }
-    }, 6); 
+    }, 4); 
     /** Keep track of currently processed (if) and past moves for vehicle moving. Stored moves can be altered by modifying the int. */
     // TODO: There may be need to store such data with vehicles, or detect tandem abuse in a different way.
     public final MoveTrace <VehicleMoveData> vehicleMoves = new MoveTrace<VehicleMoveData>(new Callable<VehicleMoveData>() {
@@ -428,8 +428,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         thisMove.zAllowedDistance = 0.0;
         thisMove.hAllowedDistance = 0.0;
         thisMove.hasImpulse = AlmostBoolean.NO;
-        thisMove.strafeImpulse = InputDirection.StrafeDirection.NONE;
-        thisMove.forwardImpulse = InputDirection.ForwardDirection.NONE;
+        thisMove.strafeImpulse = InputState.StrafeDirection.NONE;
+        thisMove.forwardImpulse = InputState.ForwardDirection.NONE;
     }
 
 

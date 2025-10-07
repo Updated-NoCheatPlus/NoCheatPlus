@@ -18,7 +18,9 @@ import java.util.Collection;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.access.ACheckData;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.components.data.IDataOnRemoveSubCheckData;
+import fr.neatmonster.nocheatplus.players.PlayerData;
 import fr.neatmonster.nocheatplus.utilities.PenaltyTime;
 import fr.neatmonster.nocheatplus.utilities.ds.count.ActionFrequency;
 
@@ -30,6 +32,23 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
     // Invulnerable management:
     /** This is the tick from which on the player is vulnerable again. */
     public int invulnerableTick = Integer.MIN_VALUE;
+    
+    /** 
+     * Last sprinting state of the player as set by {@link PlayerData#isSprinting()}. Set in SurvivalFly.
+     * If the server and client are capable of reading and sending inputs respectively, {@link PlayerMoveData#input}should be used instead.
+     */
+    public boolean wasSprinting;
+     /** 
+      * Last shift state of the player as set by {@link PlayerData#isShiftKeyPressed()}. Set in SurvivalFly.
+      * If the server and client are capable of reading and sending inputs respectively, {@link PlayerMoveData#input}should be used instead.
+      */
+    public boolean wasPressingShift;
+    
+    /** Last time the player was levitating */
+    public boolean wasLevitating;
+    
+    /** Last time the player was slow falling */
+    public boolean wasSlowFalling;
 
     // Yawrate check.
     public float lastYaw;
@@ -56,8 +75,6 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
     public long releaseItemTime = 0;
     /** Detection flag */
     public boolean isHackingRI = false;
-    /** Detection flag */
-    public boolean invalidItemUse = false;
     
     /**
      * Reduce Improbable's data by the given amount, capped at a minimum of 0.

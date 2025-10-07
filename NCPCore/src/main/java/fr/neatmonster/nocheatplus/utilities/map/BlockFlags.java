@@ -295,7 +295,9 @@ public class BlockFlags {
     public static final long F_FAKEBOUNDS                   = f_flag();
     
     /** Like powder snow: climbable and ground with leather shoes on. */
-    public static final long F_POWDER_SNOW = f_flag();
+    public static final long F_POWDER_SNOW                  = f_flag();
+    
+    public static final long F_SCAFFOLDING                 = f_flag();
 
     /** Explicitly set full bounds. */
     public static final long FULL_BOUNDS                    = F_XZ100 | F_HEIGHT100;
