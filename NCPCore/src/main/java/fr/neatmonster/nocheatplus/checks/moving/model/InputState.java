@@ -25,6 +25,8 @@ public class InputState implements Cloneable {
     private float strafe;
     /** (W/S keys, forward = 1, backward = -1. A value of 0.0 means not moving backward nor forward) */
     private float forward;
+    /** The last strafe value */
+    private float lastStrafe;
     /** The last forward value */
     private float lastForward;
     /** Space bar pressing; usually represents jumping, but can also represent flying up, or swimming up */
@@ -73,6 +75,7 @@ public class InputState implements Cloneable {
      * @param isSprinting Sprinting status.
      */
     public void set(float strafe, float forward, boolean isSpaceBarPressed, boolean isShift, boolean isSprinting) {
+        lastStrafe = this.strafe
         lastForward = this.forward;
         wasSprinting = this.isSprinting;
         wasShifting = this.isShift;
@@ -183,20 +186,10 @@ public class InputState implements Cloneable {
     public InputState clone() {
         try {
             InputState clone = (InputState) super.clone();
-            clone.strafe = this.strafe;
-            clone.forward = this.forward;
-            clone.lastForward = this.lastForward;
-            clone.isSpaceBarPressed = this.isSpaceBarPressed;
-            clone.wasSpaceBarPressed = this.wasSpaceBarPressed;
-            clone.wasSprinting = this.wasSprinting;
-            clone.wasShifting = this.wasShifting;
-            clone.isShift = this.isShift;
-            clone.isSprinting = this.isSprinting;
-            clone.fdir = this.fdir;
-            clone.sdir = this.sdir;
             return clone;
         } catch (CloneNotSupportedException e) {
             InputState clone = new InputState(this.strafe, this.forward);
+            clone.lastStrafe = this.lastStrafe;
             clone.lastForward = this.lastForward;
             clone.isSpaceBarPressed = this.isSpaceBarPressed;
             clone.wasSpaceBarPressed = this.wasSpaceBarPressed;
