@@ -974,31 +974,14 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 // 2: Filter out null and ground only packets; synchronize the input change with the correct flying packet on when it happened
                 final DataPacketInput[] inputQueue = pData.getGenericInstance(NetData.class).copyInputQueue();
                 // Prepare array to hold the filtered packets between fromIndex and toIndex (inclusive). 
-                final DataPacketFlying[] filteredFlyingQueue = new DataPacketFlying[fromIndex - toIndex + 1]; 
-                // Prepare array to hold the input packets that happened during the filtered flying packets.
-                final DataPacketInput[] filteredInputQueue = new DataPacketInput[fromIndex - toIndex + 1];
+                final DataPacketFlying[] filteredFlyingQueue = new DataPacketFlying[fromIndex - toIndex + 1];
                 int j = 0;
-                int t = 0, si = 0, ei = inputQueue.length; // Input re-mapping variables
                 // NOTE: Inverted from last versions for easier code
                 for (int i = toIndex; i <= fromIndex; i++) {
                     // (Let the early return above handle duplicate 1.17 packets)
                     if (flyingQueue[i] != null && (flyingQueue[i].hasPos || flyingQueue[i].hasLook)) {
                         // All valid flying packets are put in their array
                         filteredFlyingQueue[j] = flyingQueue[i];
-                        // Re-mapping input
-                        boolean found = false;
-                        si = i + 1; // Input happened before flying
-                        for (t = si; t < ei; t++) {
-                            if (inputQueue[t] != null) {
-                                filteredInputQueue[j] = inputQueue[t];
-                                ei = t;
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            ei = i + 1;
-                        }
                         j++;
                     }
                 }
@@ -1024,9 +1007,10 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
                             // Finally, set the moving data to be used by checks.
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
-                            // Finally, remap the input for this move, if any.
-                            if (filteredInputQueue[i] != null) {
-                                data.input.set(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward), filteredInputQueue[i].jump, filteredInputQueue[i].shift, filteredInputQueue[i].sprint);
+                            // Finally, remap the input for this move.
+                            final int inputIdx = i + 1;
+                            if (inputQueue[inputIdx] != null) {
+                                data.input.set(Boolean.compare(inputQueue[inputIdx].left, inputQueue[inputIdx].right), Boolean.compare(inputQueue[inputIdx].forward, inputQueue[inputIdx].backward), inputQueue[inputIdx].jump, inputQueue[inputIdx].shift, inputQueue[inputIdx].sprint);
                             }
                             if (debug) {
                                 final String s1 = count == 1 ? "from" : "loc";

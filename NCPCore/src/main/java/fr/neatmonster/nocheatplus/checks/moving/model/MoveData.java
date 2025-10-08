@@ -244,7 +244,7 @@ public class MoveData {
         if (pVersion.isAtLeast(ClientVersion.V_1_9)) {
             // TODO: Find maximum possible value that can be before one more friction with input None, None
             if (toIsValid 
-                && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY : 0.0071) 
+                && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? 0.006 : 0.0071) 
                 && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
                 toIsValid = false;
                 return true;
