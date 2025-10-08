@@ -64,7 +64,6 @@ import fr.neatmonster.nocheatplus.checks.inventory.Open;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.BounceHandler;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.BounceType;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.player.CreativeFly;
@@ -82,16 +81,16 @@ import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketInput;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEntityType;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgePotionEffect;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
 import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker.BlockChangeEntry;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker.Direction;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEntityType;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgePotionEffect;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
@@ -1028,7 +1027,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             // Finally, remap the input for this move, if any.
                             if (filteredInputQueue[i] != null) {
                                 final PlayerMoveData remappedMove = data.playerMoves.getCurrentMove();
-                                remappedMove.input = new InputState(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward), filteredInputQueue[i].jump, filteredInputQueue[i].shift, filteredInputQueue[i].sprint);
+                                data.input.set(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward), filteredInputQueue[i].jump, filteredInputQueue[i].shift, filteredInputQueue[i].sprint);
                             }
                             if (debug) {
                                 final String s1 = count == 1 ? "from" : "loc";
@@ -1521,9 +1520,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // TODO: More simple: UUID keys or a data flag instead?
             if (processingEvents.containsKey(playerName)) {
                 data.playerMoves.finishCurrentMove();
-                // Fundamental for the correct queueing of the input in the moving trace.
-                // When the input of the player changes, it has to be set in the current move and carried forward onto the next moves, until it changes again.
-                data.playerMoves.getCurrentMove().input = thisMove.input; 
             }
             // Teleport during violation processing, just invalidate thisMove.
             else thisMove.invalidate();

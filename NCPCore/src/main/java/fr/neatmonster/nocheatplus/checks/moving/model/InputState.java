@@ -14,8 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.checks.moving.model;
 
-import org.bukkit.Input;
-
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
@@ -28,8 +26,16 @@ public class InputState implements Cloneable {
     private float strafe;
     /** (W/S keys, forward = 1, backward = -1. A value of 0.0 means not moving backward nor forward) */
     private float forward;
+    /** The last forward value */
+    private float lastForward;
     /** Space bar pressing; usually represents jumping, but can also represent flying up, or swimming up */
     private boolean isSpaceBarPressed; 
+    /** The last space bar pressing */
+    private boolean wasSpaceBarPressed;
+    /** The last sprinting status */
+    private boolean wasSprinting;
+    /** The last shift status */
+    private boolean wasShifting;
     /** The shift key, usually represents sneaking */
     private boolean isShift;
     /** The sprint key */
@@ -40,64 +46,49 @@ public class InputState implements Cloneable {
     private StrafeDirection sdir;
     
     /**
-     * Empty constructor to let it fail.
+     * Default constructor for serialization/deserialization purposes.
      */
     public InputState() {}
     
     /**
-     * Composes a new InputState instance based on the given strafe and forward values.
-     * Use this constructor only if you don't have access to the {@link org.bukkit.event.player.PlayerInputEvent}, or if you only need horizontal movement.
-     * 
+     * Composes a new InputState instance based on the given strafe, forward only.<br>
+     * To be used for in a input loop for horizontal movement only.<br>
+     *
      * @param strafe Represents sideways movement.
      * @param forward Represents forward and backward movement.
      */
     public InputState(float strafe, float forward) {
-        this.forward = forward;
-        this.strafe = strafe;
-        fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
-        sdir = strafe >= 0.0 ? strafe == 0.0 ? StrafeDirection.NONE : StrafeDirection.LEFT : StrafeDirection.RIGHT;
-    }
-    
-    /**
-     * Composes a new InputState instance based on the given strafe, forward, space bar, sneaking, and sprinting states.
-     * Use this constructor only if you have access to player input states (1.21.2+)
-     * 
-     * @param strafe Represents sideways movement.
-     * @param forward Represents forward and backward movement.
-     * @param isSpaceBarPressed Whether the space bar is pressed.
-     * @param isShift Whether the player is sneaking.
-     * @param isSprinting Whether the player is sprinting.
-     */
-    public InputState(float strafe, float forward, boolean isSpaceBarPressed, boolean isShift, boolean isSprinting) {
         if (!BridgeMisc.hasPlayerInputEvent()) {
             throw new UnsupportedOperationException("PlayerInputEvent is not available.");
         }
         this.strafe = strafe;
         this.forward = forward;
+        fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
+        sdir = strafe >= 0.0 ? strafe == 0.0 ? StrafeDirection.NONE : StrafeDirection.LEFT : StrafeDirection.RIGHT;
+    }
+    
+    /**
+     * Sets the input state values in MovingData.
+     * 
+     * @param strafe Strafe value as a float
+     * @param forward Forward value as a float
+     * @param isSpaceBarPressed Space bar status
+     * @param isShift Shift status
+     * @param isSprinting Sprinting status.
+     */
+    public void set(float strafe, float forward, boolean isSpaceBarPressed, boolean isShift, boolean isSprinting) {
+        lastForward = this.forward;
+        wasSprinting = this.isSprinting;
+        wasShifting = this.isShift;
+        wasSpaceBarPressed = this.isSpaceBarPressed;
+        // do others store here
+        this.forward = forward;
+        this.strafe = strafe;
         this.isSpaceBarPressed = isSpaceBarPressed;
         this.isShift = isShift;
         this.isSprinting = isSprinting;
         fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
         sdir = strafe >= 0.0 ? strafe == 0.0 ? StrafeDirection.NONE : StrafeDirection.LEFT : StrafeDirection.RIGHT;
-    }
-
-    /**
-     * Composes a new InputState instance based on the dispatched {@link Input}.
-     *
-     * @param input The given input read from the {@link org.bukkit.event.player.PlayerInputEvent}
-     * @throws UnsupportedOperationException if {@link org.bukkit.event.player.PlayerInputEvent} is not available.
-     */
-    public InputState(Input input) {
-        if (!BridgeMisc.hasPlayerInputEvent()) {
-            throw new UnsupportedOperationException("Cannot read inputs.");
-        }
-        this.strafe = input.isLeft() ? 1.0f : input.isRight() ? -1.0f : 0.0f;
-        this.forward = input.isForward() ? 1.0f : input.isBackward() ? -1.0f : 0.0f;
-        this.isSpaceBarPressed = input.isJump();
-        this.isShift = input.isSneak();
-        this.isSprinting = input.isSprint();
-        this.fdir = forward == 0.0f ? ForwardDirection.NONE : forward > 0.0 ? ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
-        this.sdir = strafe == 0.0f ? StrafeDirection.NONE : strafe > 0.0 ? StrafeDirection.LEFT : StrafeDirection.RIGHT;
     }
     
     /**
@@ -115,11 +106,25 @@ public class InputState implements Cloneable {
     }
     
     /**
+     * @return the last forward value
+     */
+    public float getLastForward() {
+        return lastForward;
+    }
+    
+    /**
      * Whether the player is moving (either strafe or forward).
      * @return True if so.
      */
     public boolean hasHorizontalImpulse() {
         return sdir != StrafeDirection.NONE || fdir != ForwardDirection.NONE;
+    }
+    
+    /**
+     * @return The input squared.
+     */
+    public double getHorizontalInputSquared() {
+        return MathUtil.square(strafe) + MathUtil.square(forward); // Cast to a double because the client does it
     }
     
     /**
@@ -131,11 +136,27 @@ public class InputState implements Cloneable {
     }
     
     /**
+     * Whether the space bar was pressed in the last tick.
+     * @return True if so.
+     */
+    public boolean wasSpaceBarPressed() {
+        return wasSpaceBarPressed;
+    }
+    
+    /**
      * Whether the player is sneaking.
      * @return True if so.
      */
     public boolean isShift() {
         return isShift;
+    }
+    
+    /**
+     * Whether the player was sneaking in the last tick.
+     * @return True if so.
+     */
+    public boolean wasShifting() {
+        return wasShifting;
     }
     
     /**
@@ -145,27 +166,54 @@ public class InputState implements Cloneable {
     public boolean isSprinting() {
         return isSprinting;
     }
-
+    
     /**
-     * @return A clone of this InputDirection
+     * Whether the player was sprinting in the last tick.
+     * @return True if so.
+     */
+    public boolean wasSprinting() {
+        return wasSprinting;
+    }
+
+    /** 
+     * Creates and returns a copy of this {@code InputState} instance.
+     * <p>
+     * All field values (including directions and key states) are copied to the new
+     * instance. 
+     *
+     * @return a new {@code InputState} object containing identical values to this instance
      */
     @Override
     public InputState clone() {
-        InputState clonei;
         try {
-            clonei = (InputState) super.clone();
+            InputState clone = (InputState) super.clone();
+            clone.strafe = this.strafe;
+            clone.forward = this.forward;
+            clone.lastForward = this.lastForward;
+            clone.isSpaceBarPressed = this.isSpaceBarPressed;
+            clone.wasSpaceBarPressed = this.wasSpaceBarPressed;
+            clone.wasSprinting = this.wasSprinting;
+            clone.wasShifting = this.wasShifting;
+            clone.isShift = this.isShift;
+            clone.isSprinting = this.isSprinting;
+            clone.fdir = this.fdir;
+            clone.sdir = this.sdir;
+            return clone;
         } catch (CloneNotSupportedException e) {
-            clonei = new InputState(strafe, forward, isSpaceBarPressed, isShift, isSprinting);
+            InputState clone = new InputState(this.strafe, this.forward);
+            clone.lastForward = this.lastForward;
+            clone.isSpaceBarPressed = this.isSpaceBarPressed;
+            clone.wasSpaceBarPressed = this.wasSpaceBarPressed;
+            clone.wasSprinting = this.wasSprinting;
+            clone.wasShifting = this.wasShifting;
+            clone.isShift = this.isShift;
+            clone.isSprinting = this.isSprinting;
+            clone.fdir = this.fdir;
+            clone.sdir = this.sdir;
+            return clone;
         }
-        return clonei;
     }
-
-    /**
-     * @return The input squared.
-     */
-    public double getHorizontalInputSquared() {
-        return MathUtil.square(strafe) + MathUtil.square(forward); // Cast to a double because the client does it
-    }
+    
 
     /**
      * Performs an operation on the strafe and forward values using the given factors.

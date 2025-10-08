@@ -46,7 +46,6 @@ import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
@@ -211,8 +210,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         // TODO: Consider using packet input to tell which normal move change the input? But it require looping through packets. This should perform better on changing dir in normal moves
         final IPlayerData pData = DataManager.getPlayerData(player);
         final MovingData data = pData.getGenericInstance(MovingData.class);
-        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
-        thisMove.input = new InputState(bukkitInput);
+        data.input.set(Boolean.compare(bukkitInput.isLeft(), bukkitInput.isRight()), Boolean.compare(bukkitInput.isForward(), bukkitInput.isBackward()), bukkitInput.isJump(), bukkitInput.isSneak(), bukkitInput.isSprint());
     }
 
     /** 

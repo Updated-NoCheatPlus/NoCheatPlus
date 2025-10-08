@@ -837,7 +837,7 @@ public class SurvivalFly extends Check {
         }
         // If impulses don't need to be inferred from the prediction, illegal sprinting checks can be performed here.
         if (BridgeMisc.isWASDImpulseKnown(player) && pData.isSprinting()
-            && (thisMove.input.getForwardDir() != ForwardDirection.FORWARD 
+            && (data.input.getForwardDir() != ForwardDirection.FORWARD 
                 || player.getFoodLevel() <= 5) // must be checked here as well (besides on toggle sprinting) because players will immediately lose the ability to sprint if food level drops below 5
             ) { 
             // || inputs[i].getForward() < 0.8 // hasEnoughImpulseToStartSprinting, in LocalPlayer,java -> aiStep()
@@ -856,7 +856,7 @@ public class SurvivalFly extends Check {
         /* Index for accessing speed combinations. If you need to perform an operation for/with each speed, set it to 0 and loop until it 8 */
         int i = 0;
         if (BridgeMisc.isWASDImpulseKnown(player)) {
-            input = thisMove.input.clone();
+            input = data.input;
             // In EntityLiving.java -> aiStep() the game multiplies input values by 0.98 before dispatching them to the travel() function.
             input.operationToInt(0.98f, 0.98f, 1);
             // From KeyboardInput.java and LocalPlayer.java (MC-Reborn tool)
@@ -1375,6 +1375,7 @@ public class SurvivalFly extends Check {
         // After completing a "touch-down" (toOnGround), the next move should always come *from* ground
         // Thus, such cases can be generalised by checking for negative motion and last move landing on ground, but this move not *starting back* from a ground position.
         boolean touchDownIsLost = !thisMove.couldStepUp && thisMove.yDistance < 0.0 && (lastMove.toLostGround || lastMove.to.onGround) && !thisMove.from.onGround;
+        boolean isShiftKeyPressed = BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.isShift() : pData.isShiftKeyPressed();
         
         
         //////////////////////////////////////////////////////////////////////////////
@@ -1429,7 +1430,7 @@ public class SurvivalFly extends Check {
         // *----------updateEntityAfterFallOn()----------*
         // NOTE: pressing space bar on a bouncy block will override the bounce (in that case, vdistrel will fall back to the jump check above).
         // updateEntityAfterFallOn(), this function is called on the next move
-        if ((BridgeMisc.isSpaceBarImpulseKnown(player) ? thisMove.input.isShift() : pData.isShiftKeyPressed()) && lastMove.collideY) { 
+        if ((BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.isShift() : pData.isShiftKeyPressed()) && lastMove.collideY) { 
             if (lastMove.yAllowedDistance < 0.0) { // NOTE: Must be the allowed distance, not the actual one (exploit)
                 if (lastMove.to.onBouncyBlock) {
                     // The effect works by inverting the distance.
@@ -1460,7 +1461,7 @@ public class SurvivalFly extends Check {
             // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.getInBlockState().is(Blocks.POWDER_SNOW) && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.wasInPowderSnow && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // TODO: We have to loop the jumping state for 1.21.1 and below... No other way to put it unfortunately. This will make the code an ugly mess than it already is.
-            final boolean jumpedOrCollided = lastMove.collidesHorizontally || lastMove.input.isSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
+            final boolean jumpedOrCollided = lastMove.collidesHorizontally || data.input.isSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
             if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.inPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { // this.wasInPowderSnow. The living entity field already checks for the past state, does that mean we need to check for the second last move?
                 thisMove.yAllowedDistance = 0.2;
             }
@@ -1477,7 +1478,7 @@ public class SurvivalFly extends Check {
             // Water applies friction before calling the fluidFalling function.
             thisMove.yAllowedDistance *= data.lastFrictionVertical;
             // Fluidfalling(...). For water only, this is done after applying friction.
-            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? lastMove.input.isSprinting() : cData.wasSprinting);
+            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.wasSprinting() : cData.wasSprinting);
             thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             tags.add("v_water");
         }
@@ -1486,7 +1487,7 @@ public class SurvivalFly extends Check {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
                 // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
-                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? lastMove.input.isSprinting() : cData.wasSprinting);
+                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.wasSprinting() : cData.wasSprinting);
                 thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             }
             else {
@@ -1531,7 +1532,7 @@ public class SurvivalFly extends Check {
             // Should replicate the condition: !this.getInBlockState().is(Blocks.SCAFFOLDING)
             final Material typeId = from.getBlockType();
             final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            if (thisMove.yAllowedDistance < 0.0 && pData.isShiftKeyPressed() && from.getEntity() instanceof Player
+            if (thisMove.yAllowedDistance < 0.0 && isShiftKeyPressed && from.getEntity() instanceof Player
                 && (theseFlags & BlockFlags.F_SCAFFOLDING) == 0 && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
                 thisMove.yAllowedDistance = 0.0;
             }
@@ -1540,7 +1541,7 @@ public class SurvivalFly extends Check {
         // *----------EntityLiving.aiStep(), apply liquid motion----------*
         if (from.isInLiquid()) {
             // *----------LocalPlayer.aiStep(), goDownInWater()----------*
-            if (pData.isShiftKeyPressed() && from.isInWater()) {
+            if (isShiftKeyPressed && from.isInWater()) {
                 thisMove.yAllowedDistance -= Magic.LIQUID_SPEED_GAIN;
             }
             // *----------------------------------------------------------------------------------------------------------------------------*
@@ -1551,7 +1552,7 @@ public class SurvivalFly extends Check {
             // *----------------------------------------------------------------------------------------------------------------------------* 
             if (BridgeMisc.isSpaceBarImpulseKnown(player)) {
                 // From: EntityLiving.java -> aiStep() and KeyboardInput.java.
-                if (thisMove.input.isSpaceBarPressed()) {
+                if (data.input.isSpaceBarPressed()) {
                     boolean isSubmergedInWater = from.isInWater() && thisMove.submergedWaterHeight > 0.0;
                     double fluidJumpThreshold = from.getEyeHeight() < 0.4D ? 0.0D : 0.4D;
                     if (isSubmergedInWater && (!from.isOnGround() || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
@@ -1581,7 +1582,7 @@ public class SurvivalFly extends Check {
                 if (Bridge1_13.isSwimming(player) && from.getEntity() instanceof Player) { // inside vehicle checking would always return false, since Sf doesn't run for vehicles, but in the future, we might merge vehicle checks
                     Vector lookVector = TrigUtil.getLookingDirection(to, player);
                     double swimmingScalar = lookVector.getY() < -0.2 ? 0.085 : 0.06;
-                    if (lookVector.getY() <= 0.0 || thisMove.input.isSpaceBarPressed()
+                    if (lookVector.getY() <= 0.0 || data.input.isSpaceBarPressed()
                         || BlockProperties.getLiquidHeightAt(from.getBlockCache(), Location.locToBlock(from.getX()), Location.locToBlock(from.getY() + 1.0 - 0.1), Location.locToBlock(from.getZ()), BlockFlags.F_WATER, true) != 0.0) {
                         thisMove.yAllowedDistance += (lookVector.getY() - thisMove.yAllowedDistance) * swimmingScalar;
                     }

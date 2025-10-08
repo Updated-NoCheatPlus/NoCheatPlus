@@ -18,11 +18,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.bukkit.Input;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerMoveEvent;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
@@ -168,6 +170,13 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
             return new VehicleMoveData();
         }
     }, 2);
+    /**
+     * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
+     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#onChangeOfInput(Input, Player)}).<p>
+     * This field is the one you should use to read input information during a PlayerMoveEvent instead of {@link Player#getCurrentInput()}, as it is kept synchronized with the correct movement, in case Bukkit happens to skip PlayerMoveEvents, 
+     * causing a de-synchronization between inputs and movements (see comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<br>
+     */
+    public InputState input = new InputState();
 
     // *----------Velocity handling----------* 
     /** Tolerance value for using vertical velocity (the client sends different values than received with fight damage). */
