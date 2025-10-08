@@ -75,7 +75,7 @@ public class InputState implements Cloneable {
      * @param isSprinting Sprinting status.
      */
     public void set(float strafe, float forward, boolean isSpaceBarPressed, boolean isShift, boolean isSprinting) {
-        lastStrafe = this.strafe
+        lastStrafe = this.strafe;
         lastForward = this.forward;
         wasSprinting = this.isSprinting;
         wasShifting = this.isShift;
