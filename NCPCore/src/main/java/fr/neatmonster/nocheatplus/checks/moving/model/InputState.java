@@ -14,7 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.checks.moving.model;
 
-import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
 /**
@@ -58,9 +57,6 @@ public class InputState implements Cloneable {
      * @param forward Represents forward and backward movement.
      */
     public InputState(float strafe, float forward) {
-        if (!BridgeMisc.hasPlayerInputEvent()) {
-            throw new UnsupportedOperationException("PlayerInputEvent is not available.");
-        }
         this.strafe = strafe;
         this.forward = forward;
         fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;

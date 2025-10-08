@@ -1026,7 +1026,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
                             // Finally, remap the input for this move, if any.
                             if (filteredInputQueue[i] != null) {
-                                final PlayerMoveData remappedMove = data.playerMoves.getCurrentMove();
                                 data.input.set(Boolean.compare(filteredInputQueue[i].left, filteredInputQueue[i].right), Boolean.compare(filteredInputQueue[i].forward, filteredInputQueue[i].backward), filteredInputQueue[i].jump, filteredInputQueue[i].shift, filteredInputQueue[i].sprint);
                             }
                             if (debug) {
