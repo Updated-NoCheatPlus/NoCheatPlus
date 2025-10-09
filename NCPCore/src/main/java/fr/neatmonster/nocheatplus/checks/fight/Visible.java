@@ -27,6 +27,7 @@ import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker.Direction;
+import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis.RichAxisData;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
@@ -111,6 +112,7 @@ public class Visible extends Check {
         
         final BlockCache blockCache = this.wrapBlockCache.getBlockCache();
         blockCache.setAccess(loc.getWorld());
+        blockCache.setPlayerData(DataManager.getPlayerData(player));
         rayTracing.setBlockCache(blockCache);
         // Perform a first ray trace check between the location of the damaged player and attacker's eye position.
         rayTracing.set(dLoc.getX(), dLoc.getY(), dLoc.getZ(), eyeX, eyeY, eyeZ);

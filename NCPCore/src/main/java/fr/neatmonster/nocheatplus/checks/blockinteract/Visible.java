@@ -138,6 +138,7 @@ public class Visible extends Check {
             // Initialize.
             final BlockCache blockCache = this.wrapBlockCache.getBlockCache();
             blockCache.setAccess(loc.getWorld());
+            blockCache.setPlayerData(pData);
             rayTracing.setBlockCache(blockCache);
             //collides = !checker.checkFlyingQueue(eyeX, eyeY, eyeZ, loc.getYaw(), loc.getPitch(), 
             //        blockX, blockY, blockZ, flyingHandle, face, tags, debug, player);
