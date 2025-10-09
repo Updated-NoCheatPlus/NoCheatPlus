@@ -98,6 +98,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public double lastY = -64.0;
     /** Delay (in ticks) from jump to back on ground */
     public int jumpDelay;
+    /** Last levitation level, for levitation motion calculation */
     public double lastLevitationLevel;
     /** Count set back (re-) setting. */
     private int playerMoveCount = 0;
@@ -131,7 +132,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public float lastFrictionHorizontal = 0.6f;
     /** Horizontal friction factor from NMS.*/
     public float nextFrictionHorizontal = 0.0f;
-    /** Inertia: friction * 0.91 */
+    /** Last Inertia: friction * 0.91 */
     public float lastInertia = 0.0f;
     /** Inertia: friction * 0.91 */
     public float nextInertia = 0.0f;
@@ -151,7 +152,9 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public double nextFrictionVertical = 0.0;
     /** Ordinary vertical friction factor (lava, water, air) */
     public double lastFrictionVertical = 0.0;
+    /** Current gravity (normal, slowfall, custom)*/
     public double nextGravity = 0.0;
+    /** Last gravity (normal, slowfall, custom)*/
     public double lastGravity = 0.0;
 
     // *----------Move / Vehicle move tracking----------*
@@ -174,7 +177,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
      * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#onChangeOfInput(Input, Player)}).<p>
      * This field is the one you should use to read input information during a PlayerMoveEvent instead of {@link Player#getCurrentInput()}, as it is kept synchronized with the correct movement, in case Bukkit happens to skip PlayerMoveEvents, 
-     * causing a de-synchronization between inputs and movements (see comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<br>
+     * causing a de-synchronization between inputs and movements (see comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<p>
+     * This data is stored in MovingData instead of the Moving trace, as the latter may be invalidated, overridden or otherwise wiped out, while the input state is still valid and needed for the next move(s); it is not suitable for long-term storage.
      */
     public InputState input = new InputState();
 
@@ -238,9 +242,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public int sfVLMoveCount = 0;
     /** Count in air events for this jumping phase, resets when landing on ground, with set-backs and similar. */
     public int sfJumpPhase = 0;
-    /** "Dirty" flag, for receiving velocity and similar while in air. */
-    @Deprecated
-    private boolean sfDirty = false;
     /** Basic envelope constraints/presets for lifting off ground. */
     public LiftOffEnvelope liftOffEnvelope = defaultLiftOffEnvelope;
     /** Counting while the player is not on ground and not moving. A value < 0 means not hovering at all. */
@@ -347,7 +348,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         removeAllPlayerSpeedModifiers();
         clearWindChargeImpulse();
         sfHoverTicks = sfHoverLoginTicks = -1;
-        sfDirty = false;
         liftOffEnvelope = defaultLiftOffEnvelope;
         vehicleConsistency = MoveConsistency.INCONSISTENT;
         verticalBounce = null;
@@ -377,7 +377,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         // Keep jump amplifier
         // keep jump phase.
         sfHoverTicks = -1; // 0 ?
-        sfDirty = false;
         liftOffEnvelope = defaultLiftOffEnvelope;
         removeAllPlayerSpeedModifiers();
         vehicleConsistency = MoveConsistency.INCONSISTENT; // Not entirely sure here.
@@ -501,7 +500,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      */
     private void resetPlayerPositions() {
         playerMoves.invalidate();
-        sfDirty = false;
         liftOffEnvelope = defaultLiftOffEnvelope;
         verticalBounce = null;
         blockChangeRef.valid = false;
@@ -864,9 +862,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         if (vx != 0.0 || vz != 0.0) {
             horVel.add(new PairEntry(tick, vx, vz, cc.velocityActivationCounter));
         }
-
-        // Set dirty flag here.
-        sfDirty = true; // TODO: Set on using the velocity, due to latency !
     }
 
 
@@ -876,7 +871,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public void removeAllVelocity() {
         horVel.clear();
         verVel.clear();
-        sfDirty = false;
     }
 
 
@@ -916,11 +910,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         //horVel.tick();
 
         // (Vertical velocity does not tick.)
-
-        // Renew the dirty phase.
-        if (!sfDirty && horVel.hasQueued()) {
-            sfDirty = true;
-        }
     }
 
 
@@ -1014,9 +1003,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      */
     public List<PairEntry> useHorizontalVelocity(final double x, final double z) {
         final List<PairEntry> available = horVel.use(x, z, 0.001);
-        if (!available.isEmpty()) {
-            sfDirty = true;
-        }
         return available;
     }
 
@@ -1106,7 +1092,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         final List<SimpleEntry> available = verVel.use(amount, Magic.PREDICTION_EPSILON);
         if (available != null) {
             playerMoves.getCurrentMove().verVelUsed = available;
-            sfDirty = true;
         }
         return available;
     }

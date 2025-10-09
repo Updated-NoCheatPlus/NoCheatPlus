@@ -98,6 +98,13 @@ public class InputState implements Cloneable {
     }
     
     /**
+     * @return the last strafe value
+     */
+    public float getLastStrafe() {
+        return lastStrafe;
+    }
+    
+    /**
      * @return the forward value
      */
     public float getForward() {
