@@ -16,8 +16,6 @@ package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
 import org.bukkit.World;
 
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitPowderSnow implements BukkitShapeModel {
@@ -31,9 +29,9 @@ public class BukkitPowderSnow implements BukkitShapeModel {
 
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
-        IPlayerData pData = blockCache.getPlayerData();
+        // IPlayerData pData = blockCache.getPlayerData();
         //System.out.println("psnow 0");
-        if (pData != null) {
+        /*if (pData != null) {
             MovingData data = pData.getGenericInstance(MovingData.class);
             // TODO: Make NoFall no dealing damage on this block
             //System.out.println("psnow 1 " + data.lastY + ">" + (y + 1 - 1e-5) + " " + data.hasLeatherBoots + " " + !pData.isShiftKeyPressed());
@@ -46,7 +44,7 @@ public class BukkitPowderSnow implements BukkitShapeModel {
             //if (data.noFallFallDistance > 2.5) {
             //    return REDUCED_HEIGHT;
             //}
-        }
+        }*/
         return FULL_BLOCK;
     }
 

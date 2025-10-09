@@ -47,6 +47,11 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
         BlockInit.setAs("VOID_AIR", Material.AIR);
         // Cave air.
         BlockInit.setAs("CAVE_AIR", Material.AIR);
+        
+        // Remove this flag from lava, as Mojang altered the collision logic for it in 1.13
+        for (final Material mat : MaterialUtil.LAVA) {
+            BlockFlags.removeFlags(mat, BlockFlags.F_HEIGHT_8SIM_DEC);
+        }
 
         // Dirt like.
         BlockInit.setAs("PODZOL", Material.DIRT);

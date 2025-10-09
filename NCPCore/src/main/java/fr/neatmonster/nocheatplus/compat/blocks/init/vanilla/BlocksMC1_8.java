@@ -59,6 +59,9 @@ public class BlocksMC1_8 implements BlockPropertiesSetup {
         props = new BlockProps(BlockProperties.woodAxe, 0.4f);
         BlockProperties.setBlockProps(Material.LADDER, props);
         
+        // Remove ground_height flag from snow
+        BlockFlags.removeFlags("SNOW", BlockFlags.F_GROUND_HEIGHT);
+        
         
         ///////////////////////////////
         // ---- New blocks ----

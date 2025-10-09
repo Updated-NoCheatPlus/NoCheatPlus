@@ -4412,27 +4412,18 @@ public class BlockProperties {
             // The block does not have the ground flag.
             return AlmostBoolean.MAYBE;
         }
-         if ((flags & ignoreFlags) != 0) {
-             final double[] blockAABB = node.getBounds(access, x, y, z);
-             // Fast check; primary bound is valid.
-             if (blockAABB != null && (blockAABB[3] == 0.0 || blockAABB[5] == 0.0)) {
-                 // The present flags are set to be disregarded.
-                 // Keep looping until we've collected the right flags.
-                 return AlmostBoolean.MAYBE;
-             }
-        }
         final double[] blockAABB = node.getBounds(access, x, y, z);
         if (blockAABB == null) {
-            // Ground flag has been collected, but the block's bounds are (somehow) null.
-            // Break the loop and regard as ground (optimistic return).
-            return AlmostBoolean.YES;
+            // Ground flag has been collected, but the block's bounds are null.
+            // Keep looping until we find a collision
+            return AlmostBoolean.MAYBE;
         }
         
         ////////////////////////////////////////
         // Test for block collision           //
         ////////////////////////////////////////
         if (!collidesBlock(access, minX, minY, minZ, maxX, maxY, maxZ, x, y, z, node, nodeAbove, flags)) {
-            // Did not actually collide with the block. Keep looping until we find a collision.
+            // Did not collide with the block. Keep looping until we find a collision.
             return AlmostBoolean.MAYBE;
         }
         
@@ -4442,9 +4433,9 @@ public class BlockProperties {
         final IPlayerData pData = access.getPlayerData();
         if (pData != null) {
             boolean hasBoots = pData.getGenericInstance(MovingData.class).hasLeatherBoots;
-            if ((flags & BlockFlags.F_POWDER_SNOW) != 0 && !hasBoots) {
-                // Player is in/on powder snow, but doesn't have leather boots to walk on it. Return immediately.
-                return AlmostBoolean.NO;
+            if ((flags & BlockFlags.F_POWDER_SNOW) != 0) {
+                // Player is in/on powder snow.
+                return hasBoots && (maxY - y >= 1.0) ? AlmostBoolean.YES : AlmostBoolean.NO;
             }
         }
         // Check if the collided block can be passed through with the bounding box (wall-climbing. Disregard the ignore flag).

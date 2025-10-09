@@ -856,6 +856,7 @@ public class SurvivalFly extends Check {
         /* Index for accessing speed combinations. If you need to perform an operation for/with each speed, set it to 0 and loop until it 8 */
         int i = 0;
         if (BridgeMisc.isWASDImpulseKnown(player)) {
+            // Clone for safety as this data is consumed. 
             input = data.input.clone();
             // In EntityLiving.java -> aiStep() the game multiplies input values by 0.98 before dispatching them to the travel() function.
             input.operationToInt(0.98f, 0.98f, 1);

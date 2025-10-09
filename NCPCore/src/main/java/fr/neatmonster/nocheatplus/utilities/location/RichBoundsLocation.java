@@ -1068,7 +1068,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
                     //NCPAPIProvider.getNoCheatPlusAPI().getLogManager().debug(Streams.TRACE_FILE, "*** fetch onground std");
                     // Full on-ground check (blocks).
                     // Note: Might check for half-block height too (getTypeId), but that is much more seldom.
-                    onGround = BlockProperties.isOnGround(blockCache, minX, minY - yOnGround, minZ, maxX, minY, maxZ, BlockFlags.F_POWDER_SNOW);
+                    onGround = BlockProperties.isOnGround(blockCache, minX, minY - yOnGround, minZ, maxX, minY, maxZ, 0L);
                 }
             }
             else {

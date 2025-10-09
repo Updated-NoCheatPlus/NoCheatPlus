@@ -25,7 +25,7 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitSnow implements BukkitShapeModel {
     
     private static final double[][] SNOW_LAYERS = {
-            {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+            null,
             {0.0, 0.0, 0.0, 1.0, 0.125, 1.0},
             {0.0, 0.0, 0.0, 1.0, 0.250, 1.0},
             {0.0, 0.0, 0.0, 1.0, 0.375, 1.0},
