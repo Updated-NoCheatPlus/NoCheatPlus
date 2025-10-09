@@ -39,7 +39,6 @@ import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.registry.feature.IDisableListener;
@@ -254,16 +253,6 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         if (!registeredPacketAdapters.isEmpty()) {
             DataManager.getGenericInstance(player, NetData.class).onJoin(player);
         }
-        SchedulerHelper.runSyncDelayedTask(Bukkit.getPluginManager().getPlugin("NoCheatPlus"), (arg) -> {
-            // Ensure client-version checking doesn't yield UNKNOWN if multiprotocol plugins are not present on the server
-            if (Bukkit.getPluginManager().getPlugin("ViaVersion") == null && Bukkit.getPluginManager().getPlugin("ProtocolSupport") == null) {
-                // Assume clients to match the server protocol version - We do not support protocol-hack plugins other than PS/Via
-                // - If not even ProtocolLib is installed, do return UNKNOWN (that's on the server's owner). Time to make NCP full-on depend on ProtocolLib?
-                // - If the server has protocol plugins active but doesn't have CompatNoCheatPlus, that's on them as well :)
-                //DataManager.getPlayerData(player).setClientVersionID(Via.getAPI().getPlayerVersion(player.getUniqueId()));
-                DataManager.getPlayerData(player).setClientVersionID(ProtocolLibrary.getProtocolManager().getProtocolVersion(player));
-            }
-        }, 5);
     }
 
     @Override
