@@ -174,7 +174,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public InputState.StrafeDirection strafeImpulse;
+    public PlayerKeyboardInput.StrafeDirection strafeImpulse;
     
     /**
      * Indicates the forward movement direction (FORWARD, BACKWARD, or NONE).
@@ -182,7 +182,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public InputState.ForwardDirection forwardImpulse;
+    public PlayerKeyboardInput.ForwardDirection forwardImpulse;
     
     /**
      * Judge if this horizontal collision ({@link PlayerMoveData#collideX} or {@link PlayerMoveData#collideZ}) is to be considered as minor.
@@ -210,8 +210,8 @@ public class PlayerMoveData extends MoveData {
         submergedWaterHeight = 0.0;
         isGliding = false;
         tridentRelease = false;
-        forwardImpulse = InputState.ForwardDirection.NONE;
-        strafeImpulse = InputState.StrafeDirection.NONE;
+        forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
+        strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
         // Properties involving the environment.
         bunnyHop = false;
         isStepUp = false;

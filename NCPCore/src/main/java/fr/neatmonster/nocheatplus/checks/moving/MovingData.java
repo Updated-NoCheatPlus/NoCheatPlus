@@ -31,7 +31,7 @@ import fr.neatmonster.nocheatplus.checks.access.ACheckData;
 import fr.neatmonster.nocheatplus.checks.moving.location.setback.DefaultSetBackStorage;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.TraceEntryPool;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput;
 import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveConsistency;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveTrace;
@@ -179,7 +179,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      * causing a de-synchronization between inputs and movements (see comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<p>
      * This data is stored in MovingData instead of the Moving trace, as the latter may be invalidated, overridden or otherwise wiped out, while the input state is still valid and needed for the next move(s); it is not suitable for long-term storage.
      */
-    public InputState input = new InputState();
+    public PlayerKeyboardInput input = new PlayerKeyboardInput();
 
     // *----------Velocity handling----------* 
     /** Tolerance value for using vertical velocity (the client sends different values than received with fight damage). */
@@ -435,8 +435,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         thisMove.zAllowedDistance = 0.0;
         thisMove.hAllowedDistance = 0.0;
         thisMove.hasImpulse = AlmostBoolean.NO;
-        thisMove.strafeImpulse = InputState.StrafeDirection.NONE;
-        thisMove.forwardImpulse = InputState.ForwardDirection.NONE;
+        thisMove.strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
+        thisMove.forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
     }
 
 

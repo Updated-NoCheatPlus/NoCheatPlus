@@ -37,9 +37,9 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.LostGround;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.MagicWorkarounds;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState.ForwardDirection;
-import fr.neatmonster.nocheatplus.checks.moving.model.InputState.StrafeDirection;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput.ForwardDirection;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput.StrafeDirection;
 import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
@@ -462,8 +462,8 @@ public class SurvivalFly extends Check {
         }
         // WASD key presses, as well as sneaking and item-use are irrelevant when gliding.
         thisMove.hasImpulse = AlmostBoolean.NO;
-        thisMove.forwardImpulse = InputState.ForwardDirection.NONE;
-        thisMove.strafeImpulse = InputState.StrafeDirection.NONE;
+        thisMove.forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
+        thisMove.strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
         // Initialize speed.
         thisMove.xAllowedDistance = lastMove.toIsValid ? lastMove.xDistance : 0.0;
         thisMove.yAllowedDistance = lastMove.toIsValid ? lastMove.yDistance : 0.0;
@@ -851,8 +851,8 @@ public class SurvivalFly extends Check {
         //////////////////////////////////////////
         // Setup theoretical inputs, if needed  //
         //////////////////////////////////////////
-        InputState input = null; // Precise input
-        InputState[] theorInputs = null; // All brute-forced inputs.
+        PlayerKeyboardInput input = null; // Precise input
+        PlayerKeyboardInput[] theorInputs = null; // All brute-forced inputs.
         /* Index for accessing speed combinations. If you need to perform an operation for/with each speed, set it to 0 and loop until it 8 */
         int i = 0;
         if (BridgeMisc.isWASDImpulseKnown(player)) {
@@ -875,12 +875,12 @@ public class SurvivalFly extends Check {
         }
         else {
             // The input's matrix is: NONE, LEFT, RIGHT, FORWARD, FORWARD_LEFT, FORWARD_RIGHT, BACKWARD, BACKWARD_LEFT, BACKWARD_RIGHT.
-            theorInputs = new InputState[9];
+            theorInputs = new PlayerKeyboardInput[9];
             // Loop through all combinations otherwise.
             for (int strafe = -1; strafe <= 1; strafe++) {
                 for (int forward = -1; forward <= 1; forward++) {
                     // Multiply all 
-                    theorInputs[i] = new InputState(strafe * 0.98f, forward * 0.98f);
+                    theorInputs[i] = new PlayerKeyboardInput(strafe * 0.98f, forward * 0.98f);
                     i++;
                 }
             }
@@ -1376,7 +1376,6 @@ public class SurvivalFly extends Check {
         // After completing a "touch-down" (toOnGround), the next move should always come *from* ground
         // Thus, such cases can be generalised by checking for negative motion and last move landing on ground, but this move not *starting back* from a ground position.
         boolean touchDownIsLost = !thisMove.couldStepUp && thisMove.yDistance < 0.0 && (lastMove.toLostGround || lastMove.to.onGround) && !thisMove.from.onGround;
-        boolean isShiftKeyPressed = BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.isShift() : pData.isShiftKeyPressed();
         
         
         //////////////////////////////////////////////////////////////////////////////
@@ -1431,7 +1430,7 @@ public class SurvivalFly extends Check {
         // *----------updateEntityAfterFallOn()----------*
         // NOTE: pressing space bar on a bouncy block will override the bounce (in that case, vdistrel will fall back to the jump check above).
         // updateEntityAfterFallOn(), this function is called on the next move
-        if ((BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.isShift() : pData.isShiftKeyPressed()) && lastMove.collideY) { 
+        if (pData.isShiftKeyPressed() && lastMove.collideY) { 
             if (lastMove.yAllowedDistance < 0.0) { // NOTE: Must be the allowed distance, not the actual one (exploit)
                 if (lastMove.to.onBouncyBlock) {
                     // The effect works by inverting the distance.
@@ -1479,7 +1478,7 @@ public class SurvivalFly extends Check {
             // Water applies friction before calling the fluidFalling function.
             thisMove.yAllowedDistance *= data.lastFrictionVertical;
             // Fluidfalling(...). For water only, this is done after applying friction.
-            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.wasSprinting() : cData.wasSprinting);
+            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
             thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             tags.add("v_water");
         }
@@ -1488,7 +1487,7 @@ public class SurvivalFly extends Check {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
                 // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
-                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), BridgeMisc.isSpaceBarImpulseKnown(player) ? data.input.wasSprinting() : cData.wasSprinting);
+                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
                 thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             }
             else {
@@ -1533,7 +1532,7 @@ public class SurvivalFly extends Check {
             // Should replicate the condition: !this.getInBlockState().is(Blocks.SCAFFOLDING)
             final Material typeId = from.getBlockType();
             final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            if (thisMove.yAllowedDistance < 0.0 && isShiftKeyPressed && from.getEntity() instanceof Player
+            if (thisMove.yAllowedDistance < 0.0 && pData.isShiftKeyPressed() && from.getEntity() instanceof Player
                 && (theseFlags & BlockFlags.F_SCAFFOLDING) == 0 && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
                 thisMove.yAllowedDistance = 0.0;
             }
@@ -1542,7 +1541,7 @@ public class SurvivalFly extends Check {
         // *----------EntityLiving.aiStep(), apply liquid motion----------*
         if (from.isInLiquid()) {
             // *----------LocalPlayer.aiStep(), goDownInWater()----------*
-            if (isShiftKeyPressed && from.isInWater()) {
+            if (pData.isShiftKeyPressed() && from.isInWater()) {
                 thisMove.yAllowedDistance -= Magic.LIQUID_SPEED_GAIN;
             }
             // *----------------------------------------------------------------------------------------------------------------------------*

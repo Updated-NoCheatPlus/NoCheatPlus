@@ -19,7 +19,7 @@ import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 /**
  * Carry information regarding the player's key presses (WASD, space bar, shift, sprint).
  */
-public class InputState implements Cloneable {
+public class PlayerKeyboardInput implements Cloneable {
     
     /** (A/D keys, left = 1, right = -1. A value of 0.0 means no strafe movement) */
     private float strafe;
@@ -34,13 +34,13 @@ public class InputState implements Cloneable {
     /** The last space bar pressing */
     private boolean wasSpaceBarPressed;
     /** The last sprinting status */
-    private boolean wasSprinting;
+    private boolean wasSprintingKeyPressed;
     /** The last shift status */
-    private boolean wasShifting;
+    private boolean wasShiftPressed;
     /** The shift key, usually represents sneaking */
-    private boolean isShift;
+    private boolean isShiftPressed;
     /** The sprint key */
-    private boolean isSprinting;
+    private boolean isSprintingKeyPressed;
     /** Enum direction of the forward value */
     private ForwardDirection fdir;
     /** Enum direction of the strafe value */
@@ -49,16 +49,16 @@ public class InputState implements Cloneable {
     /**
      * Default constructor for serialization/deserialization purposes.
      */
-    public InputState() {}
+    public PlayerKeyboardInput() {}
     
     /**
-     * Composes a new InputState instance based on the given strafe, forward only.<br>
+     * Composes a new PlayerKeyboardInput instance based on the given strafe, forward only.<br>
      * To be used for in a input loop for horizontal movement only.<br>
      *
      * @param strafe Represents sideways movement.
      * @param forward Represents forward and backward movement.
      */
-    public InputState(float strafe, float forward) {
+    public PlayerKeyboardInput(float strafe, float forward) {
         this.strafe = strafe;
         this.forward = forward;
         fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
@@ -71,21 +71,21 @@ public class InputState implements Cloneable {
      * @param strafe Strafe value as a float
      * @param forward Forward value as a float
      * @param isSpaceBarPressed Space bar status
-     * @param isShift Shift status
-     * @param isSprinting Sprinting status.
+     * @param isShiftPressed Shift key status
+     * @param isSprintingKeyPressed Sprinting key status.
      */
-    public void set(float strafe, float forward, boolean isSpaceBarPressed, boolean isShift, boolean isSprinting) {
+    public void set(float strafe, float forward, boolean isSpaceBarPressed, boolean isShiftPressed, boolean isSprintingKeyPressed) {
         lastStrafe = this.strafe;
         lastForward = this.forward;
-        wasSprinting = this.isSprinting;
-        wasShifting = this.isShift;
+        wasSprintingKeyPressed = this.isSprintingKeyPressed;
+        wasShiftPressed = this.isShiftPressed;
         wasSpaceBarPressed = this.isSpaceBarPressed;
         // do others store here
         this.forward = forward;
         this.strafe = strafe;
         this.isSpaceBarPressed = isSpaceBarPressed;
-        this.isShift = isShift;
-        this.isSprinting = isSprinting;
+        this.isShiftPressed = isShiftPressed;
+        this.isSprintingKeyPressed = isSprintingKeyPressed;
         fdir = forward >= 0.0 ? forward == 0.0 ? ForwardDirection.NONE : ForwardDirection.FORWARD : ForwardDirection.BACKWARD;
         sdir = strafe >= 0.0 ? strafe == 0.0 ? StrafeDirection.NONE : StrafeDirection.LEFT : StrafeDirection.RIGHT;
     }
@@ -154,7 +154,7 @@ public class InputState implements Cloneable {
      * @return True if so.
      */
     public boolean isShift() {
-        return isShift;
+        return isShiftPressed;
     }
     
     /**
@@ -162,48 +162,48 @@ public class InputState implements Cloneable {
      * @return True if so.
      */
     public boolean wasShifting() {
-        return wasShifting;
+        return wasShiftPressed;
     }
     
     /**
      * Whether the player is sprinting.
      * @return True if so.
      */
-    public boolean isSprinting() {
-        return isSprinting;
+    public boolean isSprintingKeyPressed() {
+        return isSprintingKeyPressed;
     }
     
     /**
      * Whether the player was sprinting in the last tick.
      * @return True if so.
      */
-    public boolean wasSprinting() {
-        return wasSprinting;
+    public boolean wasSprintingKeyPressed() {
+        return wasSprintingKeyPressed;
     }
 
     /** 
-     * Creates and returns a copy of this {@code InputState} instance.
+     * Creates and returns a copy of this {@code PlayerKeyboardInput} instance.
      * <p>
      * All field values (including directions and key states) are copied to the new
      * instance. 
      *
-     * @return a new {@code InputState} object containing identical values to this instance
+     * @return a new {@code PlayerKeyboardInput} object containing identical values to this instance
      */
     @Override
-    public InputState clone() {
+    public PlayerKeyboardInput clone() {
         try {
-            InputState clone = (InputState) super.clone();
+            PlayerKeyboardInput clone = (PlayerKeyboardInput) super.clone();
             return clone;
         } catch (CloneNotSupportedException e) {
-            InputState clone = new InputState(this.strafe, this.forward);
+            PlayerKeyboardInput clone = new PlayerKeyboardInput(this.strafe, this.forward);
             clone.lastStrafe = this.lastStrafe;
             clone.lastForward = this.lastForward;
             clone.isSpaceBarPressed = this.isSpaceBarPressed;
             clone.wasSpaceBarPressed = this.wasSpaceBarPressed;
-            clone.wasSprinting = this.wasSprinting;
-            clone.wasShifting = this.wasShifting;
-            clone.isShift = this.isShift;
-            clone.isSprinting = this.isSprinting;
+            clone.wasSprintingKeyPressed = this.wasSprintingKeyPressed;
+            clone.wasShiftPressed = this.wasShiftPressed;
+            clone.isShiftPressed = this.isShiftPressed;
+            clone.isSprintingKeyPressed = this.isSprintingKeyPressed;
             clone.fdir = this.fdir;
             clone.sdir = this.sdir;
             return clone;
