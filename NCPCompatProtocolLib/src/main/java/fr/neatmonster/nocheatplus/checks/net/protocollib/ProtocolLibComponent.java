@@ -254,9 +254,6 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
         if (!registeredPacketAdapters.isEmpty()) {
             DataManager.getGenericInstance(player, NetData.class).onJoin(player);
         }
-        SchedulerHelper.runSyncDelayedTask(Bukkit.getPluginManager().getPlugin("NoCheatPlus"), (arg) -> {
-                DataManager.getPlayerData(player).setClientVersionID(ProtocolLibrary.getProtocolManager().getProtocolVersion(player));
-        }, 5); // NCP will first set the ID version. If: protocolsupport/viaversion, cncp and protocollib are all present, then CNCP will override the version set by protocollib.
     }
 
     @Override
