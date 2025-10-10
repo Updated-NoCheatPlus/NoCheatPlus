@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.compat.bukkit.model;
 import org.bukkit.World;
 
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 /**
@@ -25,7 +26,8 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public class BukkitLilyPad implements BukkitShapeModel {
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
-        if (blockCache.getPlayerData().getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+        final IPlayerData data = blockCache.getPlayerData();
+        if (data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
             return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375};
         }
         return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.09375, 0.9375};

@@ -32,6 +32,7 @@ import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.net.AttackFrequency;
 import fr.neatmonster.nocheatplus.checks.net.NetConfig;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
+import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
@@ -40,6 +41,7 @@ import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
  * Adapter for the UseEntity NMS packet
  */
 public class UseEntityAdapter extends BaseAdapter {
+    private static final boolean isServerAtLeast1_13 = ServerVersion.isAtLeast("1.13");
 
     private static class LegacyReflectionSet {
         /** Hacks. */
@@ -168,9 +170,14 @@ public class UseEntityAdapter extends BaseAdapter {
             // Handle as if latest.
             try {
                 final StructureModifier<EntityUseAction> actions = packet.getEntityUseActions();
-                final StructureModifier<WrappedEnumEntityUseAction> enumActions = packet.getEnumEntityUseActions();
-                if (actions.size() == 1 && actions.read(0) == EntityUseAction.ATTACK
-                    || enumActions.size() == 1 && enumActions.read(0).equals(WrappedEnumEntityUseAction.attack())) {
+                // TODO: Not sure about version!
+                if (isServerAtLeast1_13) {
+                    final StructureModifier<WrappedEnumEntityUseAction> enumActions = packet.getEnumEntityUseActions();
+                    if (enumActions.size() == 1 && enumActions.read(0).equals(WrappedEnumEntityUseAction.attack())) {
+                        packetInterpreted = true;
+                        isAttack = true;
+                    }
+                } else if (actions.size() == 1 && actions.read(0) == EntityUseAction.ATTACK) {
                     packetInterpreted = true;
                     isAttack = true;
                 }

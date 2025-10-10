@@ -20,9 +20,13 @@ import java.util.UUID;
 
 import org.bukkit.entity.Player;
 
+import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.compat.AttribUtil;
 import fr.neatmonster.nocheatplus.components.modifier.IAttributeAccess;
+import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
+import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 
 public class ReflectAttributeAccess implements IAttributeAccess {
 
@@ -216,71 +220,78 @@ public class ReflectAttributeAccess implements IAttributeAccess {
     
     @Override
     public double getGravity(Player player) {
-        return Double.MAX_VALUE;
+        return Magic.DEFAULT_GRAVITY;
     }
     
     @Override
     public double getSafeFallDistance(Player player) {
-        return Double.MAX_VALUE;
+        return Magic.FALL_DAMAGE_DIST;
     }
     
     @Override
     public double getFallDamageMultiplier(Player player) {
-        return Double.MAX_VALUE;
+        return 1.0;
     }
     
     @Override
     public double getBreakingSpeedMultiplier(Player player) {
-        return Double.MAX_VALUE;
+        return 1.0;
     }
     
     @Override
     public double getJumpGainMultiplier(Player player) {
-        return Double.MAX_VALUE;
+        return 1.0;
     }
     
     @Override
     public double getPlayerSneakingFactor(Player player) {
-        return Double.MAX_VALUE;
+        return Magic.SNEAK_MULTIPLIER;
     }
     
     @Override
     public double getPlayerMaxBlockReach(Player player) {
-        return Double.MAX_VALUE;
+        return 4.5;
     }
     
     @Override
     public double getPlayerMaxAttackReach(Player player) {
-        return Double.MAX_VALUE;
+        return 3.0;
     }
     
     @Override
     public double getMaxStepUp(Player player) {
-        return Double.MAX_VALUE;
+        if (player.isInsideVehicle()) {
+            if (player.getVehicle() != null && MaterialUtil.isBoat(player.getVehicle().getType())) {
+                return 0.0;
+            }
+            return 1.0;
+        }
+        final MovingConfig cc = DataManager.getPlayerData(player).getGenericInstance(MovingConfig.class);
+        return cc.sfStepHeight;
     }
     
     @Override
     public float getMovementEfficiency(Player player) {
-        return Float.MAX_VALUE;
+        return 0f;
     }
     
     @Override
     public float getWaterMovementEfficiency(Player player) {
-        return Float.MAX_VALUE;
+        return 0f;
     }
     
     @Override
     public double getSubmergedMiningSpeedMultiplier(Player player) {
-        return Double.MAX_VALUE;
+        return 1.0;
     }
     
     @Override
     public double getMiningEfficiency(Player player) {
-        return Double.MAX_VALUE;
+        return 0f;
     }
     
     @Override
     public double getEntityScale(Player player) {
-        return Double.MAX_VALUE;
+        return 1.0;
     }
 }

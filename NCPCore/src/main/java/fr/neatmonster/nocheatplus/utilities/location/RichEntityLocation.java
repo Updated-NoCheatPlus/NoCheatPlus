@@ -268,7 +268,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         }
         if (GenericVersion.isLowerThan(entity, "1.13")) {
             // Does not exist, but assume multiprotocol plugins to map it to regular ice.
-            if (onBlueIce) onIce = true;
+            if (super.isOnBlueIce()) onIce = true;
             onBlueIce = false; // Must stay false regardless.
             return onBlueIce; 
         }

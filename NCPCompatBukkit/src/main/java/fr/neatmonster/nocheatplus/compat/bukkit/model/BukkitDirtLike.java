@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.compat.bukkit.model;
 import org.bukkit.World;
 
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 /**
@@ -26,7 +27,8 @@ public class BukkitDirtLike implements BukkitShapeModel {
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
         // Farmland changed the height from 1.10 but too lazy and not many clients on this version. Taking shortcut!
-        if (blockCache.getPlayerData().getClientVersion().isLowerThan(ClientVersion.V_1_9)) {
+        final IPlayerData data = blockCache.getPlayerData();
+        if (data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_9)) {
             return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
         }
         return new double[] {0.0, 0.0, 0.0, 1.0, 0.9375, 1.0};

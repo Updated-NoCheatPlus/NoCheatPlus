@@ -14,7 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.checks.combined;
 
-import org.bukkit.Input;
 import org.bukkit.Location;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -31,7 +30,6 @@ import org.bukkit.event.entity.EntityPoseChangeEvent;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
-import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerRiptideEvent;
@@ -139,16 +137,11 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
             });
         }
         if (BridgeMisc.hasPlayerInputEvent()) {
-            queuedComponents.add(new Listener() {
-                /**
-                 * See {@link PlayerMoveData#input} as for why we listen to this event.
-                 * @param event the input event
-                 */
-                @EventHandler(priority = EventPriority.MONITOR)
-                public void onInputChange(final PlayerInputEvent event) {
-                    onChangeOfInput(event.getInput(), event.getPlayer());
-                }
-            });
+            /**
+              * See {@link PlayerMoveData#input} as for why we listen to this event.
+              * @param event the input event
+              */
+            queuedComponents.add(new InputChangeListener());
         }
         if (Bridge1_13.hasPlayerRiptideEvent()) {
             queuedComponents.add(new Listener() {
@@ -196,21 +189,6 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
         final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         thisMove.tridentRelease = true;
-    }
-    
-    /**
-     * Sets the input data in this move.
-     * Do note that: 1) this is called only when the player toggles on/of a specific input (i.e.: press/release keys);
-     * 2) the input set here will be re-mapped in case of split moves.
-     *
-     * @param bukkitInput Input from the event.
-     * @param player
-     */
-    public void onChangeOfInput(Input bukkitInput, Player player) {
-        // TODO: Consider using packet input to tell which normal move change the input? But it require looping through packets. This should perform better on changing dir in normal moves
-        final IPlayerData pData = DataManager.getPlayerData(player);
-        final MovingData data = pData.getGenericInstance(MovingData.class);
-        data.input.set(Boolean.compare(bukkitInput.isLeft(), bukkitInput.isRight()), Boolean.compare(bukkitInput.isForward(), bukkitInput.isBackward()), bukkitInput.isJump(), bukkitInput.isSneak(), bukkitInput.isSprint());
     }
 
     /** 

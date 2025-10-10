@@ -513,6 +513,9 @@ public class BlockProperties {
     public static final double getVerticalFrictionFactor(final LivingEntity entity, final Location location, final double yOnGround, PlayerMoveData thisMove) {
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        if (entity instanceof Player) {
+            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
+        }
         eLoc.setBlockCache(blockCache);
         Location loc = new Location(location.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
         eLoc.set(loc, entity, yOnGround);
@@ -547,12 +550,14 @@ public class BlockProperties {
      * @return the factor
      */
     public static final float getHorizontalFrictionFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, PlayerMoveData thisMove) {
-        if (entity instanceof Player && ((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) {
-            // Flying player are ignored by the game.
-            return 1.0f;
-        }
         // Set-up caching
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
+        if (entity instanceof Player) {
+            // Flying player are ignored by the game.
+            if (((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) return 1.0f;
+
+            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
+        }
         blockCache.setAccess(rawLoc.getWorld());
         eLoc.setBlockCache(blockCache);
         // Compose and set the split-move-corrected location.
@@ -601,11 +606,13 @@ public class BlockProperties {
      * @return the factor
      */
     public static final double getStuckInBlockVerticalFactor(final LivingEntity entity, final Location location, final double yOnGround, PlayerMoveData thisMove) {
-        if (entity instanceof Player && ((Player) entity).isFlying()) {
-            // Flying player are ignored by the game.
-            return 1.0;
-        }
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
+        if (entity instanceof Player) {
+            // Flying player are ignored by the game.
+            if (((Player) entity).isFlying()) return 1.0f;
+
+            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
+        }
         blockCache.setAccess(location.getWorld());
         eLoc.setBlockCache(blockCache);
         Location loc = new Location(location.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
@@ -638,11 +645,13 @@ public class BlockProperties {
      * @param thisMove
      */
     public static final double getStuckInBlockHorizontalFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, final PlayerMoveData thisMove) {
-        if (entity instanceof Player && ((Player) entity).isFlying() ) {
-            // Flying player are ignored by the game.
-            return 1.0f;
-        }
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
+        if (entity instanceof Player) {
+            // Flying player are ignored by the game.
+            if (((Player) entity).isFlying()) return 1.0f;
+
+            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
+        }
         blockCache.setAccess(rawLoc.getWorld());
         Location loc = new Location(rawLoc.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
         eLoc.setBlockCache(blockCache);
@@ -676,11 +685,13 @@ public class BlockProperties {
      * @param thisMove Movement to compose the corrected location's coordinate with.
      */
     public static final float getBlockSpeedFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, PlayerMoveData thisMove) {
-        if (entity instanceof Player && ((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) {
-            // Flying player are ignored by the game.
-            return 1.0f;
-        }
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
+        if (entity instanceof Player) {
+            // Flying player are ignored by the game.
+            if (((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) return 1.0f;
+
+            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
+        }
         final IPlayerData pData = DataManager.getPlayerData((Player) entity);
         blockCache.setAccess(rawLoc.getWorld());
         eLoc.setBlockCache(blockCache);
@@ -738,6 +749,7 @@ public class BlockProperties {
         // Bit fat workaround, maybe put the object through from check listener ?
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        // Need player cache data?
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isInLiquid();
@@ -761,6 +773,7 @@ public class BlockProperties {
         // Bit fat workaround, maybe put the object through from check listener ?
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        // Need player cache data?
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isInWater();
@@ -785,6 +798,7 @@ public class BlockProperties {
         // Bit fat workaround, maybe put the object through from check listener ?
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        // Need player cache data?
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isInWeb();
@@ -808,6 +822,7 @@ public class BlockProperties {
         // Bit fat workaround, maybe put the object through from check listener ?
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        blockCache.setPlayerData(DataManager.getPlayerData(player));
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isOnGround();
@@ -830,6 +845,7 @@ public class BlockProperties {
     public static boolean isOnGroundOrResetCond(final Player player, final Location location, final double yOnGround) {
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        blockCache.setPlayerData(DataManager.getPlayerData(player));
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isOnGroundOrResetCond();
@@ -852,6 +868,7 @@ public class BlockProperties {
     public static boolean isResetCond(final Player player, final Location location, final double yOnGround) {
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        blockCache.setPlayerData(DataManager.getPlayerData(player));
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, yOnGround);
         final boolean res = eLoc.isResetCond();
@@ -2255,6 +2272,7 @@ public class BlockProperties {
                                            final Player player, final double eyeHeight, final Location location) {
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         blockCache.setAccess(location.getWorld());
+        blockCache.setPlayerData(DataManager.getPlayerData(player));
         eLoc.setBlockCache(blockCache);
         eLoc.set(location, player, 0.3);
         // On ground.

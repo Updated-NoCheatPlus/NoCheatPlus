@@ -247,10 +247,6 @@ public enum ClientVersion {
      * @return True, if so.
      */
     public boolean isHigherThan(ClientVersion target) {
-        if (this.protocolID == -1 || target.protocolID == -1) {
-            // Safeguard, UNKNOWN versions are not comparable
-            return false;
-        }
         return protocolID > target.protocolID;
     }
 
@@ -261,10 +257,6 @@ public enum ClientVersion {
      * @return True, if so.
      */
     public boolean isAtLeast(ClientVersion target) {
-        if (this.protocolID == -1 || target.protocolID == -1) {
-            // Safeguard, UNKNOWN versions are not comparable
-            return false;
-        }
         return protocolID >= target.protocolID;
     }
 
@@ -275,10 +267,6 @@ public enum ClientVersion {
      * @return True, if so.
      */
     public boolean isLowerThan(ClientVersion target) {
-        if (this.protocolID == -1 || target.protocolID == -1) {
-            // Safeguard, UNKNOWN versions are not comparable
-            return false;
-        }
         return protocolID < target.protocolID;
     }
 
@@ -289,10 +277,6 @@ public enum ClientVersion {
      * @return True, if so.
      */
     public boolean isAtMost(ClientVersion target) {
-        if (this.protocolID == -1 || target.protocolID == -1) {
-            // Safeguard, UNKNOWN versions are not comparable
-            return false;
-        }
         return protocolID <= target.protocolID;
     }
     
