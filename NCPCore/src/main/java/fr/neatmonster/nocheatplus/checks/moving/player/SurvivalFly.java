@@ -197,7 +197,7 @@ public class SurvivalFly extends Check {
             }
         }
         else {
-            final double[] res = vDistRel(now, player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug);
+            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug);
             yAllowedDistance = res[0];
             yDistanceAboveLimit = res[1];
             // If failed, try testing for after-failure conditions.
@@ -338,6 +338,7 @@ public class SurvivalFly extends Check {
         cData.wasSprinting = pData.isSprinting();
         cData.wasPressingShift = pData.isShiftKeyPressed();
         cData.wasSlowFalling = !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player));
+        cData.wasLevitating = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player));
         // Log tags added after violation handling.
         if (debug && tags.size() > tagsLength) {
             logPostViolationTags(player);
@@ -1353,7 +1354,7 @@ public class SurvivalFly extends Check {
      *
      * @param forceResetMomentum Whether the check should start with 0.0 speed on applying air friction.
      */
-    private double[] vDistRel(final long now, final Player player, final PlayerLocation from,
+    private double[] vDistRel(final Player player, final PlayerLocation from,
                               final boolean fromOnGround, final boolean resetFrom, final PlayerLocation to,
                               final boolean toOnGround, final boolean resetTo,
                               final double yDistance, boolean isNormalOrPacketSplitMove,
