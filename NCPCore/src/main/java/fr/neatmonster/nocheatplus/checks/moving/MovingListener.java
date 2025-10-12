@@ -2241,6 +2241,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
         // Hover.
         initHover(player, data, cc, data.playerMoves.getFirstPastMove().from.onGroundOrResetCond);
+        data.nextGravity = attributeAccess.getHandle().getGravity(player);
 
         // Check for vehicles.
         // TODO: Order / exclusion of items.

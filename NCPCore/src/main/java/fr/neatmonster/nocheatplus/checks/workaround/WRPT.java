@@ -42,6 +42,8 @@ public class WRPT extends SimpleWorkaroundRegistry {
     public static final String W_M_SF_POST_LOSTGROUND_CASE = "m.sf.after_lostground";
     public static final String W_M_SF_NO_GRAVITY_GAP = "m.sf.too_little_air_time";
     public static final String W_M_SF_INACCURATE_SPLIT_MOVE = "m.sf.bukkit_split_move";
+    public static final String W_M_SF_DIGGING_DOWN = "m.sf.digging_down";
+    public static final String W_M_SF_DIGGING_DOWN_2 = "m.sf.digging_down_2";
     // Levitation
     public static final String W_M_SF_LEVITATION_1_8_CLIENT = "m.sf.legacy1.8_levitating";
     public static final String W_M_SF_SBYTE_OVERFLOW = "m.sf.sbyte_overflow";
@@ -113,6 +115,8 @@ public class WRPT extends SimpleWorkaroundRegistry {
                 W_M_SF_NO_GRAVITY_GAP,
                 W_M_SF_INACCURATE_SPLIT_MOVE,
                 W_M_SF_BED_STEP_DOWN,
+                W_M_SF_DIGGING_DOWN,
+                W_M_SF_DIGGING_DOWN_2,
         };
         for (final String id : counters) {
             final WorkaroundCounter counter = new WorkaroundCounter(id);

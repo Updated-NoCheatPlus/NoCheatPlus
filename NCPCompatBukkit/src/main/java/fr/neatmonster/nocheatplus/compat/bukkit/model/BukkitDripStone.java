@@ -14,14 +14,15 @@
  */
 package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
-import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
-import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
-import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.PointedDripstone;
+
+import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
+import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
+import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
 public class BukkitDripStone implements BukkitShapeModel {
     private static final double[] TIP_MERGE = {0.3125, 0.0, 0.3125, 0.6875, 1.0, 0.6875};

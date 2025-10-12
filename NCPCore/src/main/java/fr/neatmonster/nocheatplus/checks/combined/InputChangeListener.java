@@ -25,7 +25,6 @@ import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 /**
  * Compatibility class in case of old version without Input.
- *
  */
 public class InputChangeListener implements Listener {
     
@@ -35,7 +34,6 @@ public class InputChangeListener implements Listener {
      * Sets the input data in this move.
      * Do note that: 1) this is called only when the player toggles on/of a specific input (i.e.: press/release keys);
      * 2) the input set here will be re-mapped in case of split moves.
-     *
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInputChange(final PlayerInputEvent event) {

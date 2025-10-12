@@ -53,7 +53,7 @@ public class PlayerKeyboardInput implements Cloneable {
     
     /**
      * Composes a new PlayerKeyboardInput instance based on the given strafe, forward only.<br>
-     * To be used for in a input loop for horizontal movement only.<br>
+     * To be used for in an input loop for horizontal movement only.<br>
      *
      * @param strafe Represents sideways movement.
      * @param forward Represents forward and backward movement.

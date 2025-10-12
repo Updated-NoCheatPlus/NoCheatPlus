@@ -116,7 +116,7 @@ public class BlocksMC1_17 implements BlockPropertiesSetup {
 
         //Dripstone
         BlockProperties.setBlockProps("DRIPSTONE_BLOCK", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 1.5f, true));
-        BlockFlags.addFlags("POINTED_DRIPSTONE", BlockFlags.SOLID_GROUND);
+        BlockFlags.addFlags("POINTED_DRIPSTONE", BlockFlags.SOLID_GROUND | BlockFlags.F_VARIABLE);
         BlockProperties.setBlockProps("POINTED_DRIPSTONE", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 1.5f));
 
         //Amethyst buds

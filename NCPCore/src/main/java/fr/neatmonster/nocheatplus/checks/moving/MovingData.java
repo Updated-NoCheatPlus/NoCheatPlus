@@ -23,18 +23,20 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.access.ACheckData;
+import fr.neatmonster.nocheatplus.checks.combined.InputChangeListener;
 import fr.neatmonster.nocheatplus.checks.moving.location.setback.DefaultSetBackStorage;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.TraceEntryPool;
-import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput;
 import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveConsistency;
 import fr.neatmonster.nocheatplus.checks.moving.model.MoveTrace;
+import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.PairAxisVelocity;
@@ -174,9 +176,9 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     }, 2);
     /**
      * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
-     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener#onChangeOfInput(Input, Player)}).<p>
+     * The field is updated on {@link org.bukkit.event.player.PlayerInputEvent} (see {@link InputChangeListener#onInputChange(PlayerInputEvent)}).<p>
      * This field is the one you should use to read input information during a PlayerMoveEvent instead of {@link Player#getCurrentInput()}, as it is kept synchronized with the correct movement, in case Bukkit happens to skip PlayerMoveEvents, 
-     * causing a de-synchronization between inputs and movements (see comment in {@link fr.neatmonster.nocheatplus.checks.moving.MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<p>
+     * causing a de-synchronization between inputs and movements (see comment in {@link MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<p>
      * This data is stored in MovingData instead of the Moving trace, as the latter may be invalidated, overridden or otherwise wiped out, while the input state is still valid and needed for the next move(s); it is not suitable for long-term storage.
      */
     public PlayerKeyboardInput input = new PlayerKeyboardInput();

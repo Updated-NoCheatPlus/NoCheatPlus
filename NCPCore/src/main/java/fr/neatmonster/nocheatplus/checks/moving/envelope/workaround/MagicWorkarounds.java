@@ -166,7 +166,8 @@ public class MagicWorkarounds {
         if (Bridge1_9.isGliding(player)) {
             return oddGliding(data, player, from, fromOnGround, to, toOnGround, isNormalOrPacketSplitMove);
         }
-        if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))) {
+        final CombinedData cData = pData.getGenericInstance(CombinedData.class);
+        if (cData.wasLevitating) {
             return oddLevitation(data, player, from, fromOnGround, isNormalOrPacketSplitMove, toOnGround);
         }
         if (from.isInLiquid()) {
@@ -208,7 +209,7 @@ public class MagicWorkarounds {
                 * TODO: This needs to be handled in a more decent way in RichEntityLocation. Will be removed.
                 * TODO: Does this actually work?
                 */
-                || data.noFallFallDistance > 2.5 && thisMove.from.inPowderSnow && !lastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
+                || player.getFallDistance() > 2.5 && thisMove.from.inPowderSnow && !lastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
                 && data.ws.use(WRPT.W_M_SF_LANDING_ON_PWDSNW_FALLDIST_25)
                /*
                 * 0: Allow the subsequent move of the one above as well, as it will still yield a false positive.
@@ -217,6 +218,26 @@ public class MagicWorkarounds {
                 */
                 || thisMove.to.inPowderSnow && !secondLastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
                 && data.ws.use(WRPT.W_M_SF_LANDING_ON_PWDSNW_FALLDIST_25)
-        ;
+                /*
+                 * 0: With players breaking blocks beneath them.
+                 * When a player breaks a block below them, several 0-yDistance moves will be sent to the server, while being off the ground (seemingly hovering above the just broken block) 
+                 * After these moves, the player speeds down to the ground, landing on it.
+                 * It seems the client is failing to send the past descending moves, hence this workaround where we estimate how many "hidden" moves the player sent before the current one
+                 * The total sum of the hidden moves cannot be greater than Bukkit's min movement threshold.
+                 * Happens due to the client having a threshold for sending moves to the server (0.03)
+                 */
+                || thisMove.yDistance == 0.0 && PhysicsEnvelope.inAir(thisMove) 
+                && PhysicsEnvelope.madeContactWithGroundWithin(data, 4)
+                && PhysicsEnvelope.estimateHiddenClientMoves(data) >= 1 && PhysicsEnvelope.estimateHiddenClientMoves(data) <= 4
+                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 4
+                && data.ws.use(WRPT.W_M_SF_DIGGING_DOWN)
+                /*
+                 * 0: Same case as above, but with a small y-distance (due to gravity). Taken from the old AirWorkaround class.
+                 */
+                || lastMove.yDistance < 0.0 && lastMove.to.extraPropertiesValid && lastMove.to.onGround 
+                && thisMove.yDistance >= -Magic.GRAVITY_MAX - Magic.GRAVITY_SPAN && thisMove.yDistance <= Magic.GRAVITY_MIN 
+                && PhysicsEnvelope.estimateHiddenClientMoves(data) >= 1 && PhysicsEnvelope.estimateHiddenClientMoves(data) <= 4
+                && data.ws.use(WRPT.W_M_SF_DIGGING_DOWN_2)
+                ;
     }
 }
