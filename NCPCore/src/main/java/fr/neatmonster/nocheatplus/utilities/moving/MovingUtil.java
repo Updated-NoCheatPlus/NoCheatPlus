@@ -622,85 +622,12 @@ public class MovingUtil {
          * damage, otherwise / if possible use a utility method checking the
          * config and ground properties).
          */
-
-        // TODO: Implement down-to-ground.
-        boolean scanForVoid = false; // If set, scan for void and teleport there (dedo).
-        // Void to void.
-        if (cc.sfSetBackPolicyVoid) {
-            if (from.getY() < 0.0) {
-                // Set back into the void.
-                // TODO: Assume realistic falling speed somehow?
-                return new Location(from.getWorld(),
-                        from.getX(), 
-                        from.getY() - Magic.GRAVITY_MAX, // Safer than sorry.
-                        from.getZ(), 
-                        from.getYaw(), from.getPitch());
-            }
-            else {
-                scanForVoid = true;
-            }
-        }
-
-        if (scanForVoid) { // || scanForGround
-            // TODO: Chunk section scanning?
-            // TODO: Rather precise scanForGround method for down-to-ground policy.
-            final double[] groundSpec = scanForGroundOrResetCond(player, from);
-            if (groundSpec == null) {
-                // Teleport to void
-                return new Location(from.getWorld(),
-                        from.getX(), 
-                        - 2.0, // Safer than sorry.
-                        from.getZ(), 
-                        from.getYaw(), from.getPitch());
-            }
-            // TODO: else if (scanForGround) { // Teleport there, ensure fall damage (MovingListener/override). 
-        }
-
         // Ordinary handling.
         if (data.hasSetBack()) {
             return data.getSetBack(refYaw, refPitch); // (OK)
         }
-
         // Nothing appropriate found.
         // (If no set back is set, should be checked before the actual check is run.)
         return null;
-    }
-
-
-    /**
-     * 
-     * @param player
-     * @param from
-     * @return {rough position of ground or -1.0 if none, maximum error}
-     */
-    private static final double[] scanForGroundOrResetCond(final Player player, final PlayerLocation from) {
-        // Re-check for ground - who knows where this will get called from.
-        if (from.isOnGroundOrResetCond()) {
-            // TODO: + inside blocks?
-            return new double[] {0.0, from.getyOnGround()};
-        }
-        // TODO: Actually scan for ground (BlockProperties).
-        // TODO: standsOnEntity is not covered yet (idk flying boats etc).
-        final double distToVoid = from.getY();
-        if (distToVoid <= 0.0) {
-            return null;
-        }
-        // TODO: Strictness flags and/or 
-        // collectFlagsSimple: Just allow air - more safe concerning false positives.
-        // collides: Scan for stuff that can be stood on.
-        if (BlockProperties.collectFlagsSimple(from.getBlockCache(), 
-                from.getMinX(), 0.0, from.getMinZ(), 
-                from.getMaxX(), from.getMinY(), from.getMaxZ()) != 0L
-                // (... & FLAGS_SCAN_FOR_GROUND_OR_RESETCOND) != 0L // Allow blocks one can't stand on.
-                ) {
-            //        if (BlockProperties.collides(from.getBlockCache(), 
-            //                from.getMinX(), 0.0, from.getMinZ(), 
-            //                from.getMaxX(), from.getMinY(), from.getMaxZ(), 
-            //                FLAGS_SCAN_FOR_GROUND_OR_RESETCOND)) {
-            return new double[] {0.0, distToVoid};
-        }
-        else {
-            return null;
-        }
     }
 }

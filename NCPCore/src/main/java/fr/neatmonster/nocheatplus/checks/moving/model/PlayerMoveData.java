@@ -119,9 +119,6 @@ public class PlayerMoveData extends MoveData {
     /** This move was an actual jump, as intended in its most common sense (jumping from the ground by pressing the space bar). */
     public boolean isJump;
     
-    /** Player-induced vertical motion by pressing the space bar. Doesn't necessarily mean that this motion is an actual jump (i.e.: pressing the space bar in liquids) */
-    public boolean isSpaceBarImpulse;
-    
     /** Highly uncertain movement: player might step up with this movement; we cannot know for sure. Set with lost-ground couldstep */
     public boolean couldStepUp;
     
@@ -232,7 +229,6 @@ public class PlayerMoveData extends MoveData {
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;
         hasImpulse = AlmostBoolean.NO;
-        isSpaceBarImpulse = false;
         // Super class last, because it'll set valid to true in the end.
         super.resetBase();
     }

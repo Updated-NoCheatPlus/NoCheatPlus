@@ -294,15 +294,6 @@ public class PhysicsEnvelope {
                 ;
     }
     
-    /**
-     * 
-     * @param thisMove
-     *            Not strictly the latest move in MovingData.
-     * @return
-     */
-    public static boolean touchedIce(final PlayerMoveData thisMove) {
-        return thisMove.from.onIce || thisMove.from.onBlueIce || thisMove.to.onIce || thisMove.to.onBlueIce;
-    }
     
     /**
      * The absolute per-tick base speed for swimming vertically.

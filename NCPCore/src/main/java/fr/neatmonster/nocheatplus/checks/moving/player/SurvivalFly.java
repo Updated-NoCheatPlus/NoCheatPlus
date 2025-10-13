@@ -296,8 +296,7 @@ public class SurvivalFly extends Check {
         else {
             data.sfJumpPhase ++;
             // TODO: Void-to-void: Rather handle unified somewhere else (!).
-            if (to.getY() < 0.0 && cc.sfSetBackPolicyVoid 
-                || !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))
+            if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))
                 || Bridge1_13.isRiptiding(player)
                 || Bridge1_9.isGliding(player)) {
                 data.setSetBack(to);
@@ -1403,7 +1402,6 @@ public class SurvivalFly extends Check {
             thisMove.yAllowedDistance = thisMove.yDistance;
             yDistanceAboveLimit = 0.0;
             thisMove.isJump = true;
-            thisMove.isSpaceBarImpulse = true;
             data.jumpDelay = Magic.MAX_JUMP_DELAY;
             tags.add("jump_env");
             return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
@@ -1696,7 +1694,6 @@ public class SurvivalFly extends Check {
                 if (MathUtil.isOffsetWithinPredictionEpsilon(thisMove.yDistance, yTheoreticalDistance[i])) {
                     thisMove.yAllowedDistance = yTheoreticalDistance[i];
                     thisMove.collideY = collideLiquidY[i];
-                    thisMove.isSpaceBarImpulse = yTheoreticalDistance[0] == thisMove.yAllowedDistance;
                     break;
                 }
             }
@@ -1711,7 +1708,7 @@ public class SurvivalFly extends Check {
             if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
                 thisMove.yAllowedDistance = thisMove.yDistance;
                 if (debug) {
-                    player.sendMessage("Workaround ID: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
+                    player.sendMessage("[SurvivalFly] VDistrel workaround ID: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
                 }
             }
             else if (data.getOrUseVerticalVelocity(yDistance).isEmpty()) {

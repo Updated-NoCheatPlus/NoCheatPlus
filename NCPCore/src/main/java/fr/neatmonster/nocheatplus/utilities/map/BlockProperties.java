@@ -4236,33 +4236,27 @@ public class BlockProperties {
         // Check for multi-bounding-box double arrays (starting from the 2nd box in the array. 1st has already been checked above).
         return !AxisAlignedBBUtils.isSimpleShape(blockBounds) && AxisAlignedBBUtils.isCollided(blockBounds, x, y, z, new double[]{minX, minY, minZ, maxX, maxY, maxZ}, allowEdge, 2);
     }
-
+    
     /**
-     * An isOnGround check that takes coordinates as parameters and dispatches them to the isOnGround function as arguments for minXYZ and maxXYZ.
-     * For the minXYZ arguments, the minimum value between the given coordinates is used.
-     * For the maxXYZ arguments, the maximum value between the given coordinates is used.
+     * Ground check covering a range between two positions.<br>
+     * <br>
+     * Similar to {@link #isOnGround(BlockCache, double, double, double, double, double, double, long)},
+     * but instead of checking a single bounding box, this method computes the minimum and maximum
+     * coordinates between both positions, expands them by configurable margins, and checks if any
+     * block within that range can be considered valid ground.
      *
-     * @param access
-     *            the access
-     * @param x1
-     *            the x1
-     * @param y1
-     *            the y1
-     * @param z1
-     *            the z1
-     * @param x2
-     *            the x2
-     * @param y2
-     *            the y2
-     * @param z2
-     *            the z2
-     * @param xzMargin
-     *            Subtracted from minima and added to maxima.
-     * @param yBelow
-     *            Subtracted from the minimum of y.
-     * @param yAbove
-     *            Added to the maximum of y.
-     * @return true, if is on ground shuffled
+     * @param world     The world in which the check is performed.
+     * @param access    The {@link BlockCache}.
+     * @param x1        First X-coordinate (start of movement).
+     * @param y1        First Y-coordinate (start of movement).
+     * @param z1        First Z-coordinate (start of movement).
+     * @param x2        Second X-coordinate (end of movement).
+     * @param y2        Second Y-coordinate (end of movement).
+     * @param z2        Second Z-coordinate (end of movement).
+     * @param xzMargin  Horizontal margin to expand the area (accounts for motion tolerance).
+     * @param yBelow    Downward margin to include slightly lower blocks.
+     * @param yAbove    Upward margin for small vertical offsets.
+     * @return {@code true} if any block within the combined bounds qualifies as ground.
      */
     public static final boolean isOnGroundShuffled(final World world, final BlockCache access, 
                                                    final double x1, final double y1, final double z1, 

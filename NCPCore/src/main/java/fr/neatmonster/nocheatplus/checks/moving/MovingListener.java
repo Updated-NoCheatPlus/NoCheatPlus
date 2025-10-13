@@ -710,10 +710,11 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         }
         // Feed combined check.
         final CombinedData data = pData.getGenericInstance(CombinedData.class);
+        final MovingData mData = pData.getGenericInstance(MovingData.class);
         data.lastMoveTime = now; 
+        mData.mcFallDistance = player.getFallDistance();
         final Location from = event.getFrom();
         // Feed yawrate and reset moving data positions if necessary.
-        final MovingData mData = pData.getGenericInstance(MovingData.class);
         final int tick = TickTask.getTick();
         final MovingConfig mCc = pData.getGenericInstance(MovingConfig.class);
         if (!event.isCancelled()) {
@@ -858,16 +859,15 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Split the event into separate moves and re-map inputs, or correct the looking data, if suitable.          //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-        // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet:
-        // 1) In some cases, a single PlayerMoveEvent can be the result of multiple flying packets.
-        // 2) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction - PlayerConnection.java). 
+        // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet. In some cases, a single PlayerMoveEvent can be the result of multiple flying packets.
+        // 1) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction - PlayerConnection.java). 
         //    This will result in movements that don't have a significant change to be skipped. 
         //    With anticheating, this means that micro and very slow moves cannot be checked accurately (or at all, for that matter), as coordinates will not be reported correctly for the subsequent event.
-        // 3) On MC 1.19.4 and later, PlayerMoveEvents are skipped altogether upon entering a minecart and fired normally when exiting.
-        // 4) Even on regular movements, the player's look information (pitch/yaw) can be incorrect (idle packet).
+        // 2) On MC 1.19.4 and later, PlayerMoveEvents are skipped altogether upon entering a minecart and fired normally when exiting.
+        // 3) Even on regular movements, the player's look information (pitch/yaw) can be incorrect (idle packet).
         // In fact, one could argue that the event's nomenclature is misleading: Bukkit's PlayerMoveEvent doesn't actually monitor move packets but rather *changes* of movement between packets.
         // Now, to fix this, we'd need to re-code NCP to run movement checks on packet-level instead. Such an option isn't feasible: it would require a massive re-work which we don't have the manpower for, hence this mechanic which -albeit convoluted- works well.
-        // Essentially, after Bukkit fires a PlayerMoveEvent, NCP will check if it had been fired normally. If it wasn't, the flying-packet queue is used to get the correct "from" and "to" locations.
+        // Essentially, after Bukkit fires a PlayerMoveEvent, NCP will check if it had been fired normally. If it wasn't, the flying-packet queue is used to know how many moves were skipped on Bukkit-level and reconstruct the correct from/to positions.
         // (Overall, this forces NCP to pretty much hard-depend on ProtocolLib, but it's the most sensible choice anyway, as working with Bukkit events has proven to be unreliable on the longer run)
         // (For simplicity, the mechanic is internally referred to as "split move", because the event is essentially split by how many moves were lost, with a cap)
         final PlayerMoveInfo moveInfo = aux.usePlayerMoveInfo();

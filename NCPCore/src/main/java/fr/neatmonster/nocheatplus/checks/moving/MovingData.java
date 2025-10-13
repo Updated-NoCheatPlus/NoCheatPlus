@@ -93,6 +93,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     //////////////////////////////////////////////
     // Data shared between the moving checks    //
     //////////////////////////////////////////////
+    public float mcFallDistance = 0.0f;
     public List<Location> lastCollidingEntitiesLocations = null;
     /** Has leather boot on*/
     public boolean hasLeatherBoots = false;

@@ -99,7 +99,6 @@ public class MovingConfig extends ACheckConfig {
     public final long survivalFlyVLFreezeCount;
     public final boolean survivalFlyVLFreezeInAir;
     // Set back policy.
-    public final boolean sfSetBackPolicyVoid;
     public final boolean sfSetBackPolicyFallDamage;
     public final ActionList survivalFlyActions;
 
@@ -206,7 +205,6 @@ public class MovingConfig extends ACheckConfig {
         survivalFlyResetItem = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_EXTENDED_RESETITEM);
         survivalFlyStrictHorizontal = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_EXTENDED_STRICT_HORIZONTAL_PREDICTION);
         sfSetBackPolicyFallDamage = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_SETBACKPOLICY_FALLDAMAGE);
-        sfSetBackPolicyVoid = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_SETBACKPOLICY_VOIDTOVOID);
         final double sfStepHeight = config.getDouble(ConfPaths.MOVING_SURVIVALFLY_STEPHEIGHT, Double.MAX_VALUE);
         if (sfStepHeight == Double.MAX_VALUE) {
             final String ref;

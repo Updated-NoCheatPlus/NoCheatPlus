@@ -114,10 +114,11 @@ public class LostGround {
         }
 
         if ((thisMove.yDistance > lastMove.yDistance 
-            // The condition above is not always enough: sometimes the player can suddenly speed up to the ground, leading to a smaller number than last y-distance.
+            // The condition above is not always enough: sometimes the player can suddenly speed down to the ground, leading to a smaller number than last y-distance.
             // Has been observed when stepping down slabs; it is also almost always preeceded by a to-lost-ground
             || Math.abs(thisMove.yDistance - lastMove.yDistance) > Magic.PREDICTION_EPSILON && lastMove.toLostGround)
             && lastMove.yDistance < 0.0) {
+            // NOTE: if (to.isOnGround) return false condition was removed because there have been cases where the ground collision was missed with the from position, but the player landed on ground normally.
             // Acceleration changed: player was falling with a certain speed and now decelerates (or goes up).
             // Try interpolating the ground collision from last-from to this-from.
             // Usually, this corresponds to a missed "fromOnGround" position with this move (with last missing a ground collision too, but with the "to" position).
