@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.checks.moving.envelope.workaround;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
+import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
@@ -161,7 +162,7 @@ public class MagicWorkarounds {
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
         final IPlayerData pData = DataManager.getPlayerData(player);
-        final double yAcceleration = thisMove.yDistance - lastMove.yDistance;
+        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
 
         if (Bridge1_9.isGliding(player)) {
             return oddGliding(data, player, from, fromOnGround, to, toOnGround, isNormalOrPacketSplitMove);
@@ -222,21 +223,17 @@ public class MagicWorkarounds {
                  * 0: With players breaking blocks beneath them.
                  * When a player breaks a block below them, several 0-yDistance moves will be sent to the server, while being off the ground (seemingly hovering above the just broken block) 
                  * After these moves, the player speeds down to the ground, landing on it.
-                 * It seems the client is failing to send the past descending moves, hence this workaround where we estimate how many "hidden" moves the player sent before the current one
-                 * The total sum of the hidden moves cannot be greater than Bukkit's min movement threshold.
-                 * Happens due to the client having a threshold for sending moves to the server (0.03)
+                 * With sfHoverTicks with multiMoveCount covered they near ground and all moves no more than Bukkit's min movement threshold
+                 * The client sent data to server but not firing PlayerMoveEvent because of the min movement threshold and stack till next PME
                  */
-                || thisMove.yDistance == 0.0 && PhysicsEnvelope.inAir(thisMove) 
-                && PhysicsEnvelope.madeContactWithGroundWithin(data, 4)
-                && PhysicsEnvelope.estimateHiddenClientMoves(data) >= 1 && PhysicsEnvelope.estimateHiddenClientMoves(data) <= 4
-                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 4
+                || thisMove.yDistance == 0.0 && data.sfHoverTicks <= 1
+                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 13 && PhysicsEnvelope.inAir(thisMove)
                 && data.ws.use(WRPT.W_M_SF_DIGGING_DOWN)
                 /*
-                 * 0: Same case as above, but with a small y-distance (due to gravity). Taken from the old AirWorkaround class.
+                 * 0: Same case as above, but with a small y-distance (due to gravity).
                  */
-                || lastMove.yDistance < 0.0 && lastMove.to.extraPropertiesValid && lastMove.to.onGround 
-                && thisMove.yDistance >= -Magic.GRAVITY_MAX - Magic.GRAVITY_SPAN && thisMove.yDistance <= Magic.GRAVITY_MIN 
-                && PhysicsEnvelope.estimateHiddenClientMoves(data) >= 1 && PhysicsEnvelope.estimateHiddenClientMoves(data) <= 4
+                || lastMove.yDistance < 0.0 && data.sfHoverTicks <= cc.sfHoverTicks
+                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 2 && PhysicsEnvelope.inAir(thisMove)
                 && data.ws.use(WRPT.W_M_SF_DIGGING_DOWN_2)
                 ;
     }

@@ -2241,7 +2241,9 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
         // Hover.
         initHover(player, data, cc, data.playerMoves.getFirstPastMove().from.onGroundOrResetCond);
-        data.nextGravity = attributeAccess.getHandle().getGravity(player);
+        // TODO: Thing are more complicated than just gravity. Friction too and other medium properties when join!
+        // TODO: last is use in calculating but doesn't init(because there no last move yet) when first time join leading to false positives
+        data.lastGravity = attributeAccess.getHandle().getGravity(player);
 
         // Check for vehicles.
         // TODO: Order / exclusion of items.
