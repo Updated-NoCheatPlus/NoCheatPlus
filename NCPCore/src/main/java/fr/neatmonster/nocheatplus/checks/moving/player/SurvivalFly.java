@@ -1680,7 +1680,7 @@ public class SurvivalFly extends Check {
         // (In which case, isStep will return false and fall-back to friction here)
         // It is imperative that you pass yAllowedDistance as argument here (not the real yDistance), because if the player isn't on ground, the current motion will be used to determine it (collideY && motionY < 0.0). Passing an uncontrolled yDistance will be easily exploitable.
         if (yTheoreticalDistance == null) {
-            Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
+            Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.fromLostGround && lastMove.yDistance < 0.0, from.getBoundingBox());
             thisMove.headObstructed = thisMove.yAllowedDistance != collisionVector.getY() && thisMove.yDistance >= 0.0 && from.seekCollisionAbove() && !fromOnGround;  // New definition of head obstruction: yDistance is checked because Minecraft considers players to be on ground when motion is explicitly negative
             // If this vertical move resulted in a collision, remember it.
             thisMove.collideY = collisionVector.getY() != thisMove.yAllowedDistance;
@@ -1699,7 +1699,7 @@ public class SurvivalFly extends Check {
         }
         else {
             for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yTheoreticalDistance[i], thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
+                Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yTheoreticalDistance[i], thisMove.zAllowedDistance), fromOnGround || thisMove.fromLostGround && lastMove.yDistance < 0.0, from.getBoundingBox());
                 if (yTheoreticalDistance[i] != collisionVector.getY()) {
                     // This theoretical speed would result in a collision. Remember it.
                     collideLiquidY[i] = true;
