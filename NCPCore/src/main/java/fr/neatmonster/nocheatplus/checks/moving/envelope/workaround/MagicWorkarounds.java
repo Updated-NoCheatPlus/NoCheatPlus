@@ -87,7 +87,8 @@ public class MagicWorkarounds {
     }
 
     /**
-     * Several non-predictable moves with levitation
+     * Several non-predictable moves with levitation<br>
+     * Precondition: player was levitating the tick before this move.
      * 
      * @param data
      * @param player

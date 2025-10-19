@@ -305,6 +305,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (GenericVersion.isLowerThan(entity, "1.13")) {
             // Does not exist.
             inBubbleStream = false;
+            // Perhaps inWater = true here? 
             return inBubbleStream;
         }
         return super.isInBubbleStream();

@@ -131,48 +131,10 @@ public class Magic {
     public static final float GRAVITY_VACC = (float) (GRAVITY_MIN * 0.6); // 0.03744
     /** Span of gravity between maximum and minimum. 0.021 */
     public static final double GRAVITY_SPAN = GRAVITY_MAX - GRAVITY_MIN;
-    /** This is actually 0.01, but this value matches with gravity formula (lastDelta * friction - gravity). Old vdistrel */
-    public static final double NCP_SLOW_FALL_GRAVITY = 0.0097; 
-    /** Somewhat arbitrary value to use with the legacy vAcc check with slowfall */
-    public static final float GRAVITY_SLOW_FALL_VACC = (float)(SLOW_FALL_GRAVITY * 0.6);
     
-    // *----------Friction (old)----------*
-    /** NoCheatPlus water friction (old hSpeed handling */
-    public static final double FRICTION_MEDIUM_WATER = 0.98;
-    /** NoCheatPlus lava friction (old handling */
-    public static final double FRICTION_MEDIUM_LAVA = 0.535;
-    /** Like medium_air but a bit more precise */
-    public static final double FRICTION_MEDIUM_ELYTRA_AIR = 0.9800002;
     
     // *----------Horizontal speeds/modifiers----------*
     public static final double WALK_SPEED = 0.221D;
-    public static final double[] modSwim = new double[] {
-            // Horizontal AND vertical with body fully in water
-            0.115D / WALK_SPEED,  
-            // Horizontal swimming only, 1.13 (Do not multiply with thisMove.walkSpeed)
-            0.044D / WALK_SPEED,  
-            // Vertical swimming only, 1.13 
-            0.3D / WALK_SPEED, 
-            // Horizontal with body out of water (surface level)
-            0.146D / WALK_SPEED,}; 
-    public static final double modDownStream = 0.19D / (WALK_SPEED * modSwim[0]);
-    public static final double[] modDepthStrider = new double[] {
-            1.0,
-            0.1645 / modSwim[0] / WALK_SPEED,
-            0.1995 / modSwim[0] / WALK_SPEED,
-            1.0 / modSwim[0], // Results in walkspeed.
-    };
-    /** Somewhat arbitrary horizontal speed gain maximum for advance glide phase. */
-    public static final double GLIDE_HORIZONTAL_GAIN_MAX = GRAVITY_MAX / 2.0;
-    
-    // *----------Vertical speeds/modifiers----------*
-    public static final double climbSpeedAscend        = 0.119;
-    public static final double climbSpeedDescend       = 0.151;
-    public static final double snowClimbSpeedAscend    = 0.1764;
-    public static final double snowClimbSpeedDescend   = 0.118;
-    public static final double bushSpeedDescend        = 0.09;
-    public static final double bubbleStreamDescend     = 0.49; // from wiki.
-    public static final double bubbleStreamAscend      = 0.9; // 1.1 from wiki. Wiki is too fast 
     /** Some kind of minimum y descend speed (note the negative sign), for an already advanced gliding/falling phase with elytra. */
     public static final double GLIDE_DESCEND_PHASE_MIN = -Magic.GRAVITY_MAX - Magic.GRAVITY_SPAN;
     /** Somewhat arbitrary, advanced glide phase, maximum descend speed gain (absolute value is negative). */

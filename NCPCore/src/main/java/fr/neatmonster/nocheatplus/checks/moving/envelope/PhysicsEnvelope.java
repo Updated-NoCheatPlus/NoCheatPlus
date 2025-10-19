@@ -28,74 +28,6 @@ public class PhysicsEnvelope {
     
     private static final IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
     
-   /* public static boolean isExtremeMoveLegit() {
-        return BridgeMisc.isRipgliding(player) 
-               || Bridge1_13.isRiptiding(player) && (thisMove.collideY || lastMove.collideY) 
-               || !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) && Bridge1_9.getLevitationAmplifier(player) >= 50
-    }*/
-
-    /**
-     * Advanced glide phase vertical gain envelope.
-     * 
-     * @param yDistance
-     * @param previousYDistance
-     * @return
-     */
-    public static boolean glideVerticalGainEnvelope(final double yDistance, final double previousYDistance) {
-        return  // Sufficient speed of descending.
-                yDistance < Magic.GLIDE_DESCEND_PHASE_MIN && previousYDistance < Magic.GLIDE_DESCEND_PHASE_MIN
-                // Controlled difference.
-                && yDistance - previousYDistance > Magic.GLIDE_DESCEND_GAIN_MAX_NEG 
-                && yDistance - previousYDistance < Magic.GLIDE_DESCEND_GAIN_MAX_POS;
-    }
-
-    /**
-     * Friction envelope testing, with a different kind of leniency (relate
-     * off-amount to decreased amount), testing if 'friction' has been accounted
-     * for in a sufficient but not necessarily exact way.<br>
-     * In the current shape this method is meant for higher speeds rather (needs
-     * a twist for low speed comparison).
-     * 
-     * @param thisMove
-     * @param lastMove
-     * @param friction
-     *            Friction factor to apply.
-     * @param minGravity
-     *            Amount to subtract from frictDist by default.
-     * @param maxOff
-     *            Amount yDistance may be off the friction distance.
-     * @param decreaseByOff
-     *            Factor, how many times the amount being off friction distance
-     *            must fit into the decrease from lastMove to thisMove.
-     * @return
-     */
-    public static boolean enoughFrictionEnvelope(final PlayerMoveData thisMove, final PlayerMoveData lastMove, final double friction, 
-                                                 final double minGravity, final double maxOff, final double decreaseByOff) {
-    
-        // TODO: Elaborate... could have one method to test them all?
-        final double frictDist = lastMove.yDistance * friction - minGravity;
-        final double off = Math.abs(thisMove.yDistance - frictDist);
-        return off <= maxOff && Math.abs(thisMove.yDistance - lastMove.yDistance) <= off * decreaseByOff;
-    }
-
-    /**
-     * A non-vanilla formula for if the player is (well) within in-air falling envelope.
-     * 
-     * @param yDistance
-     * @param lastYDist
-     * @param lastFrictionVertical
-     * @param extraGravity Extra amount to fall faster.
-     * @return
-     */
-    public static boolean isFrictionFalling(final double yDistance, final double lastYDist, 
-                                            final double lastFrictionVertical, final double extraGravity) {
-        if (yDistance >= lastYDist) {
-            return false;
-        }
-        final double frictDist = lastYDist * lastFrictionVertical - Magic.GRAVITY_MIN;
-        return yDistance <= frictDist + extraGravity && yDistance > frictDist - Magic.GRAVITY_SPAN - extraGravity;
-    }
-    
     /**
      * Test if the player is constricted in an area with a 1.5 blocks-high ceiling (applies to 1.14 clients and above).
      * We cannot detect if players try to jump in here: on the server side, player is seen as never leaving the ground and without any vertical motion change.
@@ -124,19 +56,21 @@ public class PhysicsEnvelope {
      * @return True, if isJump() returned true while the player is sprinting.
      */
     public static boolean isBunnyhop(final PlayerLocation from, final PlayerLocation to, final IPlayerData pData, boolean fromOnGround, boolean toOnGround, final Player player, boolean forceSetOffGround) {
-        return 
-               pData.isSprinting()
-               && (
+        if (!pData.isSprinting()) {
+            return false;
+        }
+        final MovingData data = pData.getGenericInstance(MovingData.class);
+        return
                     // 1:  99.9% of cases...
                     isJumpMotion(from, to, player, fromOnGround, toOnGround)
                     // 1: The odd one out. We can't know the ground status of the player, so this will have to do.
                     || isVerticallyConstricted(from, to, pData)
                     && (
                          !forceSetOffGround && pData.getClientVersion().isLowerThan(ClientVersion.V_1_21_2) // At least ensure to not apply this when we're brute-forcing speed with off-ground
-                         || BridgeMisc.isSpaceBarImpulseKnown(player) && player.getCurrentInput().isJump()
+                         || BridgeMisc.isSpaceBarImpulseKnown(player) && data.input.isSpaceBarPressed()
                     
                     )
-               );
+               ;
     }
     
     /**
@@ -148,7 +82,7 @@ public class PhysicsEnvelope {
      * <ul>
      * <li>The player must not be gliding, riptiding, levitating, or in a liquid block.</li>
      * <li>The vertical motion must align with Minecraft's {@code jumpFromGround()} formula 
-     *     (defined in {@code EntityLiving.java}). This is the most critical check.</li>
+     *     (defined in {@code EntityLiving.java}).</li>
      * <li>The player must be in a "leaving ground" state, transitioning from ground to air. 
      *     Edge cases, such as lost ground, are accounted for here.</li>
      * </ul>
@@ -172,7 +106,7 @@ public class PhysicsEnvelope {
         ////////////////////////////////////
         // Validate motion and update the headObstruction flag, if the player does actually collide with something above.
         double jumpGain = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * attributeAccess.getHandle().getJumpGainMultiplier(player);
-        Vector collisionVector = from.collide(new Vector(0.0, jumpGain, 0.0), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
+        Vector collisionVector = from.collide(new Vector(0.0, jumpGain, 0.0), fromOnGround || thisMove.fromLostGround, from.getBoundingBox());
         thisMove.headObstructed = jumpGain != collisionVector.getY() && thisMove.yDistance >= 0.0 && !toOnGround; // For setting the flag, we don't care about the correct speed.
         jumpGain = collisionVector.getY();
         if (!MathUtil.almostEqual(thisMove.yDistance, jumpGain, Magic.PREDICTION_EPSILON)) { // NOTE: This must be the current move, never the last one.
@@ -186,22 +120,32 @@ public class PhysicsEnvelope {
         // Demand to be in a "leaving ground" state.
         return
                 
-                // 1: Ordinary lift-off.
+                // 1: Ordinary lift off from ground.
                 fromOnGround && !toOnGround
-                // 1: 1-tick-delayed-jump cases: ordinary and with lost ground
-                // By "1-tick-delayed-jump" we mean a specific case where the player jumps, but sends a packet with 0 y-dist while still leaving ground (from ground -> to air)
-                // On the next tick, a packet containing the jump motion (0.42) is sent, but the player is already fully in air (air -> air))
-                // Mostly observed when jumping up a 1-block-high slope and then jumping immediately after, on the edge of the block. 
-                // Technically, this should be considered a lost ground case, however the ground status is detected in this case, just with a delay.
-                // TODO: Check for abuses. Check for more strict conditions.
+                // 1: Special cases; check for some safety pre-conditions first.
                 || lastMove.toIsValid && lastMove.yDistance <= 0.0 && !from.seekCollisionAbove() // This behaviour has not hitherto been observed with head obstruction, thus we can confine this edge case by ruling head obstruction cases out. We call seekCollisionAbove() as we don't need accuracy in this case.
                 && (
-                            // 2: The usual case, with ground status actually being detected later.
-                            // https://gyazo.com/dfab44980c71dc04e62b48c4ffca778e
+                            /* 
+                             * 2: 1-tick-delayed-jump cases: ordinary and with lost ground
+                             * By "1-tick-delayed-jump" we mean a specific case where the player jumps, but sends a packet with 0 y-dist while still leaving ground (from ground -> to air)
+                             * On the next tick, a packet containing the jump motion (0.42) is sent, but the player is already fully in air (air -> air))
+                             * Mostly observed when jumping up a 1-block-high slope and then jumping immediately after, on the edge of the block. 
+                             * Technically, this should be considered a lost ground case, however the ground status is detected in this case, just with a delay.
+                             * https://gyazo.com/dfab44980c71dc04e62b48c4ffca778e
+                             */ 
                             lastMove.from.onGround && !lastMove.to.onGround && !thisMove.touchedGroundWorkaround // Explicitly demand to not be using a lost ground case here.
                             // 2: However, sometimes the ground detection is missed, making this "delayed jump" a true lost-ground case.
                             || (thisMove.touchedGroundWorkaround && (!lastMove.touchedGroundWorkaround || !thisMove.to.onGround)) // TODO: Check which position (fromLostGround or toLostGround). This definition was added prior to adding the distinguishing flags.
+                            /*
+                             * 2: Jumping while breaking blocks below.
+                             * https://gyazo.com/8cb8f94217ee476b33637e15e65ed53c
+                             * Sometimes, players can seemingly jump from the "to" position of the last move.
+                             * In reality, the player is jumping from ground, but the ground is broken in the same tick, thus the "from" position of this move is already in air.
+                             */
+                            || !fromOnGround && !toOnGround && lastMove.to.onGround && !lastMove.from.onGround && !thisMove.touchedGroundWorkaround // Explicitly demand to not be using a lost ground case here. for further safety.
+                            // && TrigUtil.isSamePosAndLook(thisMove.from, lastMove.to)
                 )
+                
             ;
     }
 
@@ -294,51 +238,6 @@ public class PhysicsEnvelope {
                 ;
     }
     
-    
-    /**
-     * The absolute per-tick base speed for swimming vertically.
-     * 
-     * @return
-     */
-    public static double swimBaseSpeedV(boolean isSwimming) {
-        // TODO: Does this have to be the dynamic walk speed (refactoring)?
-        return isSwimming ? Magic.WALK_SPEED * Magic.modSwim[2] + 0.1 : Magic.WALK_SPEED * Magic.modSwim[0] + 0.07; // 0.244
-    }
-    
-    /**
-     * Test for a specific move in-air -> water, then water -> in-air.
-     * 
-     * @param thisMove
-     *            Not strictly the latest move in MovingData.
-     * @param lastMove
-     *            Move before thisMove.
-     * @return
-     */
-    static boolean splashMove(final PlayerMoveData thisMove, final PlayerMoveData lastMove) {
-        // Use past move data for two moves.
-        return !thisMove.touchedGround && thisMove.from.inWater && !thisMove.to.resetCond // Out of water.
-                && !lastMove.touchedGround && !lastMove.from.resetCond && lastMove.to.inWater // Into water.
-                && excludeStaticSpeed(thisMove) && excludeStaticSpeed(lastMove)
-                ;
-    }
-    
-    /**
-     * Test for a specific move ground/in-air -> water, then water -> in-air.
-     * 
-     * @param thisMove
-     *            Not strictly the latest move in MovingData.
-     * @param lastMove
-     *            Move before thisMove.
-     * @return
-     */
-    static boolean splashMoveNonStrict(final PlayerMoveData thisMove, final PlayerMoveData lastMove) {
-        // Use past move data for two moves.
-        return !thisMove.touchedGround && thisMove.from.inWater && !thisMove.to.resetCond // Out of water.
-                && !lastMove.from.resetCond && lastMove.to.inWater // Into water.
-                && excludeStaticSpeed(thisMove) && excludeStaticSpeed(lastMove)
-                ;
-    }
-    
     /**
      * Fully in-air move.
      * 
@@ -351,33 +250,23 @@ public class PhysicsEnvelope {
     }
     
     /**
-     * Test if the player has lifted off from the ground or is landing (not in air, not walking on ground)
-     * (Does not check for resetCond)
-     * 
-     * @return 
-     */
-    public static boolean liftingOffOrLandingOnGround(final PlayerMoveData move) {
-        return move.from.onGround ^ move.to.onGround;
-    }
-    
-    /**
-     * A liquid -> liquid move. Exclude web and climbable.
+     * A liquid -> liquid move.
      * 
      * @param thisMove
      * @return
      */
     public static boolean inLiquid(final PlayerMoveData thisMove) {
-        return thisMove.from.inLiquid && thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
+        return thisMove.from.inLiquid && thisMove.to.inLiquid;
     }
     
     /**
-     * A water -> water move. Exclude web and climbable.
+     * A water -> water move.
      * 
      * @param thisMove
      * @return
      */
     public static boolean inWater(final PlayerMoveData thisMove) {
-        return thisMove.from.inWater && thisMove.to.inWater && excludeStaticSpeed(thisMove);
+        return thisMove.from.inWater && thisMove.to.inWater;
     }
     
     /**
@@ -391,64 +280,42 @@ public class PhysicsEnvelope {
     }
     
     /**
-     * Moving out of liquid, might move onto ground. Exclude web and climbable.
+     * Moving out of liquid, might move onto ground.
      * 
      * @param thisMove
      * @return
      */
     public static boolean leavingLiquid(final PlayerMoveData thisMove) {
-        return thisMove.from.inLiquid && !thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
+        return thisMove.from.inLiquid && !thisMove.to.inLiquid;
     }
     
     /**
-     * Moving out of water, might move onto ground. Exclude web and climbable.
+     * Moving out of water, might move onto ground.
      * 
      * @param thisMove
      * @return
      */
     public static boolean leavingWater(final PlayerMoveData thisMove) {
-        return thisMove.from.inWater && !thisMove.to.inWater && excludeStaticSpeed(thisMove);
+        return thisMove.from.inWater && !thisMove.to.inWater;
     }
     
     /**
-     * Moving into water, might move onto ground. Exclude web and climbable.
+     * Moving into water, might move onto ground.
      * 
      * @param thisMove
      * @return
      */
     public static boolean intoWater(final PlayerMoveData thisMove) {
-        return !thisMove.from.inWater && thisMove.to.inWater && excludeStaticSpeed(thisMove);
+        return !thisMove.from.inWater && thisMove.to.inWater;
     }
     
     /**
-     * Moving into liquid., might move onto ground. Exclude web and climbable.
+     * Moving into liquid., might move onto ground.
      * 
      * @param thisMove
      * @return
      */
     public static boolean intoLiquid(final PlayerMoveData thisMove) {
-        return !thisMove.from.inLiquid && thisMove.to.inLiquid && excludeStaticSpeed(thisMove);
-    }
-    
-    /**
-     * A ground -> ground move.
-     * @param move
-     * @return
-     */
-    public static boolean fullyOnGround(final PlayerMoveData move) {
-        return move.from.onGround && move.to.onGround;
-    }
-    
-    /**
-     * Exclude moving from/to blocks with static (vertical) speed, such as web, climbable, berry bushes.
-     * 
-     * @param thisMove
-     * @return
-     */
-    public static boolean excludeStaticSpeed(final PlayerMoveData thisMove) {
-        return !thisMove.from.inWeb && !thisMove.to.inWeb
-                && !thisMove.from.onClimbable && !thisMove.to.onClimbable
-                && !thisMove.from.inBerryBush && !thisMove.to.inBerryBush
-                && !thisMove.from.inPowderSnow && !thisMove.to.inPowderSnow;
+        return !thisMove.from.inLiquid && thisMove.to.inLiquid;
     }
 }

@@ -108,7 +108,7 @@ public class PlayerLocation extends RichEntityLocation {
             y *= force / distance;
             z *= force / distance;
             if (onGround) {
-                // If on ground, the game calls both move() too.
+                // If on ground, the game calls both move() and push().
                 // The player is moved by 1.2 blocks from the ground the instant they release the trident
                 // This is NOT velocity, but a direct move of the player’s position upward, ignoring physics (the travel function isn't called), almost like a teleport offset.
                 // Because the move function is called, this offset is collision-aware.

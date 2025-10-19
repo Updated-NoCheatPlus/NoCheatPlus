@@ -859,7 +859,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Split the event into separate moves and re-map inputs, or correct the looking data, if suitable.          //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-        // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet. In some cases, a single PlayerMoveEvent can be the result of multiple flying packets.
+        // This mechanic is needed due to Bukkit not always firing PlayerMoveEvent(s) with each flying packet. In some cases, a single PlayerMoveEvent can be the result of multiple flying packets:
         // 1) Bukkit has thresholds for firing PlayerMoveEvents (1f/256 for distance and 10f for looking direction - PlayerConnection.java). 
         //    This will result in movements that don't have a significant change to be skipped. 
         //    With anticheating, this means that micro and very slow moves cannot be checked accurately (or at all, for that matter), as coordinates will not be reported correctly for the subsequent event.

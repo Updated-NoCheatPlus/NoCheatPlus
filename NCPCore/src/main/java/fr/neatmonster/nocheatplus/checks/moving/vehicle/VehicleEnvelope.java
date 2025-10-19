@@ -53,6 +53,7 @@ import fr.neatmonster.nocheatplus.utilities.moving.MagicVehicle;
 
 /**
  * Vehicle moving envelope check, for Minecraft 1.9 and higher.
+ * TODO: Major rework pending, as this is a mess. To put it mildly.
  * 
  * @author asofold
  *
