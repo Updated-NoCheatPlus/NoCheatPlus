@@ -45,6 +45,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
+import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
@@ -553,9 +554,8 @@ public class BlockProperties {
         // Set-up caching
         final BlockCache blockCache = wrapBlockCache.getBlockCache();
         if (entity instanceof Player) {
-            // Flying player are ignored by the game.
+            // Flying players are ignored by the game.
             if (((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) return 1.0f;
-
             blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
         blockCache.setAccess(rawLoc.getWorld());
@@ -610,7 +610,6 @@ public class BlockProperties {
         if (entity instanceof Player) {
             // Flying player are ignored by the game.
             if (((Player) entity).isFlying()) return 1.0f;
-
             blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
         blockCache.setAccess(location.getWorld());
@@ -649,7 +648,6 @@ public class BlockProperties {
         if (entity instanceof Player) {
             // Flying player are ignored by the game.
             if (((Player) entity).isFlying()) return 1.0f;
-
             blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
         blockCache.setAccess(rawLoc.getWorld());
@@ -2274,7 +2272,7 @@ public class BlockProperties {
         blockCache.setAccess(location.getWorld());
         blockCache.setPlayerData(DataManager.getPlayerData(player));
         eLoc.setBlockCache(blockCache);
-        eLoc.set(location, player, 0.3);
+        eLoc.set(location, player, DataManager.getPlayerData(player).getGenericInstance(MovingConfig.class).yOnGround); // Originally 0.3. Asofold did not document why the y offset was so large.
         // On ground.
         final boolean onGround = eLoc.isOnGround();
         // Head in water.

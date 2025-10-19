@@ -189,23 +189,11 @@ public class SurvivalFly extends Check {
         if (Bridge1_9.isGliding(player)) {
             yAllowedDistance = resGlide[2];
             yDistanceAboveLimit = resGlide[3];
-            // If failed, try testing for after-failure conditions.
-            if (yDistanceAboveLimit > 0.0) {
-                double[] res = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker, debug);
-                yAllowedDistance = res[0];
-                yDistanceAboveLimit = res[1];
-            }
         }
         else {
-            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug);
+            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug, useBlockChangeTracker );
             yAllowedDistance = res[0];
             yDistanceAboveLimit = res[1];
-            // If failed, try testing for after-failure conditions.
-            if (yDistanceAboveLimit > 0.0) {
-                double[] vRes = vDistAfterFailure(player, pData, data, fromOnGround, toOnGround, from, to, isNormalOrPacketSplitMove, resetFrom, resetTo, thisMove, lastMove, yDistanceAboveLimit, yAllowedDistance, useBlockChangeTracker, debug);
-                yAllowedDistance = vRes[0];
-                yDistanceAboveLimit = vRes[1];
-            }
         }
 
 
@@ -295,7 +283,6 @@ public class SurvivalFly extends Check {
         }
         else {
             data.sfJumpPhase ++;
-            // TODO: Void-to-void: Rather handle unified somewhere else (!).
             if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player))
                 || Bridge1_13.isRiptiding(player)
                 || Bridge1_9.isGliding(player)) {
@@ -739,15 +726,14 @@ public class SurvivalFly extends Check {
         // Calculate offsets  //
         ////////////////////////
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
-        if (!isPredictable) {
-            hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
+        if (isPredictable) {
+            hDistanceAboveLimit = handlePredictableMove(thisMove, cc.survivalFlyStrictHorizontal); 
         }
-        else hDistanceAboveLimit = handlePredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
+        else hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
         if (hDistanceAboveLimit > 0.0) {
              tags.add("hdistrel");
             //if (debug) player.sendMessage("c/e: " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
         }
-        
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit};
     }
     
@@ -823,6 +809,34 @@ public class SurvivalFly extends Check {
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
+        
+        // Reference commit of this piece of code: https://github.com/NoCheatPlus/NoCheatPlus/commit/1c024c072c9f6ebe5371c113916c6a2414e635a6
+        /////////////////////////////////////////////////////
+        // Horizontal push/pull is put on top priority     //
+        /////////////////////////////////////////////////////
+        // With the current implementation, the prediction will run for the axis even if a push/pull is detected on it.
+        // We'll have to somehow skip predicting that specfic axis, but it requires some refactoring to do it.
+        // This is not ideal, but it's better than flagging players for being pushed by pistons.
+        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
+        boolean xPush = false;
+        boolean zPush = false;
+        // TODO: Get rid of this config option. Why would someone want to disable piston push detection and cause false positives?
+        if (cc.trackBlockMove) {
+            if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, thisMove.xDistance < 0.0 ? Direction.X_NEG : Direction.X_POS, 0.05)) {
+                tags.add("blkmove_x");
+                xPush = true;
+            }
+            if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, thisMove.zDistance < 0.0 ? Direction.Z_NEG : Direction.Z_POS, 0.05)) {
+                tags.add("blkmove_z");
+                zPush = true;
+            }
+            if (xPush && zPush) {
+                thisMove.xAllowedDistance = thisMove.xDistance;
+                thisMove.zAllowedDistance = thisMove.zDistance;
+                // A push/pull happened on both axes, no need to continue the prediction.
+                return true;
+            }
+        }
         
         ////////////////////////////////////////////////////////
         // Test for specific cheat implementation types first //
@@ -1089,15 +1103,12 @@ public class SurvivalFly extends Check {
                 pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
             }
             // Check for block push.
-            // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end.
-            final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
-            if (cc.trackBlockMove) {
-                if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, thisMove.xAllowedDistance < 0.0 ? Direction.X_NEG : Direction.X_POS, 0.05)) {
-                    thisMove.xAllowedDistance = thisMove.xDistance;
-                }
-                if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, thisMove.zAllowedDistance < 0.0 ? Direction.Z_NEG : Direction.Z_POS, 0.05)) {
-                    thisMove.zAllowedDistance = thisMove.zDistance;
-                }
+            // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end. See note at the start of the method.
+            if (xPush) {
+               thisMove.xAllowedDistance = thisMove.xDistance;
+            }
+            if (zPush) {
+                thisMove.zAllowedDistance = thisMove.zDistance;
             }
             //////////////
             // Set data //
@@ -1180,7 +1191,6 @@ public class SurvivalFly extends Check {
                 zTheoreticalDistance[i] = backOff.getZ();
             }
         }
-        boolean newNegligible = pData.getClientVersion().isAtLeast(ClientVersion.V_1_9);
         // TODO: Optimize. Brute forcing collisions with all 9 speed combinations will tank performance.
         for (i = 0; i < 9; i++) {
             Vector collisionVector = from.collide(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), onGround, from.getBoundingBox());
@@ -1195,17 +1205,17 @@ public class SurvivalFly extends Check {
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
         }
-        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
-        if (cc.trackBlockMove) {
+        // Check for block push.
+        // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end. See note at the start of the method.
+        if (xPush) {
             for (i = 0; i < 9; i++) {
-                if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, xTheoreticalDistance[i] < 0.0 ? Direction.X_NEG : Direction.X_POS, 0.05)) {
-                    xTheoreticalDistance[i] = thisMove.xDistance;
-                }
+                // Override all theoretical speeds.
+                xTheoreticalDistance[i] = thisMove.xDistance;
             }
+        }
+        if (zPush) {
             for (i = 0; i < 9; i++) {
-                if (from.matchBlockChange(blockChangeTracker, data.blockChangeRef, zTheoreticalDistance[i] < 0.0 ? Direction.Z_NEG : Direction.Z_POS, 0.05)) {
-                    zTheoreticalDistance[i] = thisMove.zDistance;
-                }
+                zTheoreticalDistance[i] = thisMove.zDistance;
             }
         }
         /////////////////////////////////////////////////////////////////////////////
@@ -1351,7 +1361,8 @@ public class SurvivalFly extends Check {
     /**
      * Relative (to workarounds) vertical distance checking.
      *
-     * @param forceResetMomentum Whether the check should start with 0.0 speed on applying air friction.
+     * @param forceResetMomentum    Whether the check should start with 0.0 speed on applying air friction.
+     * @param useBlockChangeTracker
      */
     private double[] vDistRel(final Player player, final PlayerLocation from,
                               final boolean fromOnGround, final boolean resetFrom, final PlayerLocation to,
@@ -1359,7 +1370,7 @@ public class SurvivalFly extends Check {
                               final double yDistance, boolean isNormalOrPacketSplitMove,
                               final PlayerMoveData lastMove,
                               final MovingData data, final MovingConfig cc, final IPlayerData pData,
-                              boolean forceResetMomentum, final boolean debug) {
+                              boolean forceResetMomentum, final boolean debug, boolean useBlockChangeTracker) {
         double yDistanceAboveLimit = 0.0;
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final boolean yDirectionSwitch = lastMove.toIsValid && lastMove.yDistance != yDistance && (yDistance <= 0.0 && lastMove.yDistance >= 0.0 || yDistance >= 0.0 && lastMove.yDistance <= 0.0);
@@ -1367,15 +1378,28 @@ public class SurvivalFly extends Check {
         final boolean fullyInAir = !thisMove.touchedGroundWorkaround && !resetFrom && !resetTo;
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         /*
-         * 1: Attempt to simulate the reset of speed that the client should have sent to the server.
+         * 1: Simulate the reset of speed that the client should have sent to the server.
          * [Client lands on the ground but does not come to a "rest" on top of the block (and thus, reset the vertical speed), instead they'll immediately descend right after, but with speed that is still based on a previous move of 0.0]
-         * Can be noticed when stepping down stair of slabs or breaking blocks below.
+         * Can be noticed when stepping down stair of slabs or noob-towering upwards.
          * See: https://gyazo.com/0f748030296aebc0484564629abe6864
          * After interpolating the ground status, notice how the player immediately proceeds to descend with speed as if they actually landed on the ground with the previous move (-0.0784)
          */
         // After completing a "touch-down" (toOnGround), the next move should always come *from* ground
         // Thus, such cases can be generalised by checking for negative motion and last move landing on ground, but this move not *starting back* from a ground position.
         boolean touchDownIsLost = !thisMove.couldStepUp && thisMove.yDistance < 0.0 && (lastMove.toLostGround || lastMove.to.onGround) && !thisMove.from.onGround;
+        
+        ///////////////////////////////////////////////////
+        // Vertical push/pull is put on top priority     //
+        ///////////////////////////////////////////////////
+        if (useBlockChangeTracker) {
+            double[] res = getVerticalBlockMoveResult(thisMove.yDistance, from, to, data);
+            if (res != null) {
+                thisMove.yAllowedDistance = res[0];
+                yDistanceAboveLimit = res[1];
+                // Nothing else to do here; allow the movement as-is.
+                return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
+            }
+        }
         
         
         //////////////////////////////////////////////////////////////////////////////
@@ -1722,37 +1746,6 @@ public class SurvivalFly extends Check {
         }
         return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
     }
-    
-    
-    /**
-     * After failure checks of vertical distance.
-     *
-     * @return yDistanceAboveLimit, yAllowedDistance.
-     */
-    private double[] vDistAfterFailure(final Player player, final IPlayerData pData, final MovingData data, boolean fromOnGround, boolean toOnGround,
-                                       final PlayerLocation from, final PlayerLocation to, boolean isNormalOrPacketSplitMove,
-                                       boolean resetFrom, boolean resetTo, final PlayerMoveData thisMove, final PlayerMoveData lastMove, double yDistanceAboveLimit, double yAllowedDistance,
-                                       boolean useBlockChangeTracker, final boolean debug) {
-        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
-        /*
-         * 0: Vertical push/pull is put on top priority
-         */
-        if (useBlockChangeTracker) {
-            double[] res = getVerticalBlockMoveResult(thisMove.yDistance, from, to, data);
-            if (res != null) {
-                yAllowedDistance = res[0];
-                yDistanceAboveLimit = res[1];
-                // Nothing else to do here. (skip all other after-failure stuff)
-                return new double[]{yAllowedDistance, yDistanceAboveLimit};
-            }
-        }
-
-        // Don't test if gliding or riptiding with the stuff below.
-        if (Bridge1_9.isGliding(player) || Bridge1_13.isRiptiding(player) || from.isInLiquid() || from.isOnClimbable()) {
-            return new double[]{yAllowedDistance, yDistanceAboveLimit};
-        }
-        return new double[]{yAllowedDistance, yDistanceAboveLimit};
-    }
 
 
     /**
@@ -1803,7 +1796,7 @@ public class SurvivalFly extends Check {
          */
         if (useBlockChangeTracker && hDistanceAboveLimit > 0.0) {
             // Be sure to test this only if the player is seemingly off ground
-            if (!thisMove.touchedGroundWorkaround && !from.isOnGround() && from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick)) {
+            if (!thisMove.fromLostGround && !from.isOnGround() && from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick)) {
                 tags.add("blockchange_h");
                 double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, true, false);
                 hAllowedDistance = res[0];
