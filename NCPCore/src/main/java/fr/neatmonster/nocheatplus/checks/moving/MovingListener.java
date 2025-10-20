@@ -988,7 +988,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 // 3: Actual split
                 int count = 1;
                 // The maximum amount by which a single PlayerMoveEvent can be split.
-                int maxSplit = 14;
+                int maxSplit = 20;
                 float currentYaw = from.getYaw();
                 float currentPitch = from.getPitch();
                 Location packet = null;

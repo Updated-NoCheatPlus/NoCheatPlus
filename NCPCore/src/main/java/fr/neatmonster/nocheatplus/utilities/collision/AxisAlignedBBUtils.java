@@ -377,6 +377,26 @@ public class AxisAlignedBBUtils {
      * @param singleAABB The second AABB. This does not accept double arrays containing multiple AABBs. If a multi AABB is inputted, only the first six doubles in the array (1st AABB) will be considered for intersection checking.
      * @return True if the two AABBs intersect, false otherwise.
      */
+    public static boolean isIntersected(int x, int y, int z, double[] multiAABB, double[] singleAABB) {
+        for (int i = 0; i < getNumberOfAABBs(multiAABB); i++) {
+            int index = i * 6;
+            if (singleAABB[3] - CollisionUtil.COLLISION_EPSILON > multiAABB[index] + x && singleAABB[0] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 3] + x // x
+                && singleAABB[4] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 1] + y && singleAABB[1] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 4] + y // y
+                && singleAABB[5] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 2] + z && singleAABB[2] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 5] + z) { // z
+                return true;
+            }
+        }
+        return false; 
+    }
+    
+    /**
+     * Checks whether two axis-aligned bounding boxes intersect.
+     * An epsilon value is used here.
+     *
+     * @param multiAABB The first array, which can contain multiple LOCATION AABBs. The length must be a multiple of 6.
+     * @param singleAABB The second AABB. This does not accept double arrays containing multiple AABBs. If a multi AABB is inputted, only the first six doubles in the array (1st AABB) will be considered for intersection checking.
+     * @return True if the two AABBs intersect, false otherwise.
+     */
     public static boolean isIntersected(double[] multiAABB, double[] singleAABB) {
         for (int i = 0; i < getNumberOfAABBs(multiAABB); i++) {
             int index = i * 6;

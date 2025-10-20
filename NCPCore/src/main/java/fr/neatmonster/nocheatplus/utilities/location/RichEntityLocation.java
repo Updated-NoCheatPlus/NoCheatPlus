@@ -194,7 +194,8 @@ public class RichEntityLocation extends RichBoundsLocation {
         final Material supportingBlock = getBlockType((int) supportingBlockPos.getX(), (int) supportingBlockPos.getY(), (int) supportingBlockPos.getZ());
         final double[] AABB = getBoundingBox();
         return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0 
-               && BlockProperties.collidesBlock(blockCache, AABB[0],AABB[1],AABB[2],AABB[3],AABB[4],AABB[5], (int) supportingBlockPos.getX(),(int) supportingBlockPos.getY(),(int) supportingBlockPos.getZ(), getOrCreateBlockCacheNode(), null, flag);
+               && BlockProperties.collidesBlock(blockCache, AABB[0],AABB[1] - yOnGround,AABB[2],AABB[3],AABB[1],AABB[5], (int) supportingBlockPos.getX(),(int) supportingBlockPos.getY(),(int) supportingBlockPos.getZ(), 
+                       blockCache.getOrCreateBlockCacheNode(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ(), false), null, flag);
     }
     
     /**

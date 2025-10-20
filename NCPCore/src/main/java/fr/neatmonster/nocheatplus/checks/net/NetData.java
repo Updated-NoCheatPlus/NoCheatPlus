@@ -99,7 +99,7 @@ public class NetData extends ACheckData {
     private final LinkedList<DataPacketFlying> flyingQueue = new LinkedList<DataPacketFlying>();
     /** Maximum amount of packets to store. */
     private final LinkedList<DataPacketInput> inputQueue = new LinkedList<DataPacketInput>();
-    private final int flyingQueueMaxSize = 20; // TODO: Might want to increase, what if the server-side lag then it can recover and receiving lots of packet? Like try pasting large structure using WorldEdit. 
+    private final int flyingQueueMaxSize = 30; // TODO: Might want to increase, what if the server-side lag then it can recover and receiving lots of packet? Like try pasting large structure using WorldEdit. 
     /** The maximum of so far already returned sequence values, altered under lock. */
     private long maxSequence = 0;
 

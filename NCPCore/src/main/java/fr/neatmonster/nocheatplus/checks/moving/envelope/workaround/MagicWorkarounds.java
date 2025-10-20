@@ -228,7 +228,7 @@ public class MagicWorkarounds {
                  * The client sent data to server but not firing PlayerMoveEvent because of the min movement threshold and stack till next PME
                  */
                 || thisMove.yDistance == 0.0 && data.sfHoverTicks <= 1
-                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 13 && PhysicsEnvelope.inAir(thisMove)
+                && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 17 && PhysicsEnvelope.inAir(thisMove)
                 && data.ws.use(WRPT.W_M_SF_DIGGING_DOWN)
                 /*
                  * 0: Same case as above, but with a small y-distance (due to gravity).
