@@ -164,7 +164,7 @@ public class SupportingBlockUtils {
         // Compose the current Location of the player as a Vector by using our movement data (corrected by the split move mechanic)
         // Do not trust player#getLocation() as there will be mismatches with moving events, due to Bukkit sometimes skipping them.
         final PlayerMoveData thisMove = DataManager.getPlayerData(player).getGenericInstance(MovingData.class).playerMoves.getCurrentMove();
-        final Vector correctedPlayerLoc = new Vector(thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
+        final Vector correctedPlayerLoc = new Vector(thisMove.to.getX(), thisMove.to.getY(), thisMove.to.getZ());
         Vector lastBlockLocation = null;
         double lastDistance = Double.MAX_VALUE;
         

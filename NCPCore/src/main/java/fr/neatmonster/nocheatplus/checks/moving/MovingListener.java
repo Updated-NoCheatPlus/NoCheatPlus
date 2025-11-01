@@ -927,6 +927,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 //            }
             
             // Normal move: fire from -> to
+            if (BridgeMisc.isWASDImpulseKnown(player)) data.input.set(player.getCurrentInput());
             moveInfo.set(player, from, to, cc.yOnGround);
             checkPlayerMove(player, from, to, 0, moveInfo, debug, data, cc, pData, event, true);
         }

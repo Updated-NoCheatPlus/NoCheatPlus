@@ -1038,6 +1038,39 @@ public class SurvivalFly extends Check {
             }
             tags.add("bunnyhop");
         }
+
+        // Current yDistance before calculation for supporting block ground state. Copy paste from vDistrel
+        double yDistanceBeforeCollide = lastMove.toIsValid ? lastMove.yDistance : 0.0; 
+        if (lastMove.from.inWater) {
+            yDistanceBeforeCollide *= data.lastFrictionVertical;
+            //TODO: this or last
+            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, lastMove.yAllowedDistance, 0.0), cData.wasSprinting);
+            yDistanceBeforeCollide = fluidFallingAdjustMovement.getY();
+        }
+        else if (lastMove.from.inLava) {
+            if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) {
+                yDistanceBeforeCollide *= data.lastFrictionVertical;
+                //TODO: this or last
+                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, lastMove.yAllowedDistance, 0.0), cData.wasSprinting);
+                yDistanceBeforeCollide = fluidFallingAdjustMovement.getY();
+            }
+            else {
+                yDistanceBeforeCollide *= data.lastFrictionVertical;
+            }
+            if (data.lastGravity != 0.0) {
+                yDistanceBeforeCollide += -data.lastGravity / 4.0;
+            }
+        }
+        else {
+            // Air motion
+            if (cData.wasLevitating) {
+                yDistanceBeforeCollide += (0.05 * data.lastLevitationLevel - lastMove.yAllowedDistance) * 0.2;
+            }
+            else yDistanceBeforeCollide -= data.lastGravity;
+            yDistanceBeforeCollide *= data.lastFrictionVertical;
+        }
+        //End of yDistanceBeforeCollide getter
+
         // *--------------------------------------------------------------------------------------------------------------------*
         // *--------- If we know the player's impulse, brute-forcing acceleration and everything after it isn't needed ---------* 
         // *--------------------------------------------------------------------------------------------------------------------*
@@ -1087,7 +1120,8 @@ public class SurvivalFly extends Check {
             }
             // Collision next.
             // NOTE: Passing the unchecked y-distance is fine in this case. Vertical collision is checked with vdistrel (just separately).
-            Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), onGround, from.getBoundingBox());
+            // TODO: Perhaps after this use collisionVector to store onGround? Also can not restore minecraft ground state with step and jump movement(like stairs)!
+            Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yDistanceBeforeCollide, thisMove.zAllowedDistance), onGround, from.getBoundingBox());
             // Set flags.
             // NOTE: Collision flags must be set before setting speed in thisMove.
             thisMove.collideX = thisMove.xAllowedDistance != collisionVector.getX();
@@ -1100,7 +1134,7 @@ public class SurvivalFly extends Check {
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
+                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to.getBoundingBox(), yDistanceBeforeCollide < 0.0 && yDistanceBeforeCollide != collisionVector.getY()));
             }
             // Check for block push.
             // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end. See note at the start of the method.
@@ -1138,6 +1172,8 @@ public class SurvivalFly extends Check {
         double[] zTheoreticalDistance = new double[9];
         /* To keep track which theoretical speed would result in a collision on the Z axis */
         boolean[] collideZ = new boolean[9];
+        /* To keep track which theoretical speed would result in a collision on the Y axis */
+        boolean[] collideY = new boolean[9];
         for (i = 0; i < 9; i++) {
             // Each slot in the array is initialized with the same momentum first.
             xTheoreticalDistance[i] = thisMove.xAllowedDistance;
@@ -1192,8 +1228,10 @@ public class SurvivalFly extends Check {
             }
         }
         // TODO: Optimize. Brute forcing collisions with all 9 speed combinations will tank performance.
+        // TODO: If sprinting detected correctly, Might not need to loop backward, only 6 left to check
         for (i = 0; i < 9; i++) {
-            Vector collisionVector = from.collide(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), onGround, from.getBoundingBox());
+            // TODO: Perhaps after this use collisionVector to store onGround?
+            Vector collisionVector = from.collide(new Vector(xTheoreticalDistance[i], yDistanceBeforeCollide, zTheoreticalDistance[i]), onGround, from.getBoundingBox());
             if (xTheoreticalDistance[i] != collisionVector.getX()) {
                 // This theoretical speed would result in a collision. Remember it.
                 collideX[i] = true;
@@ -1201,6 +1239,10 @@ public class SurvivalFly extends Check {
             if (zTheoreticalDistance[i] != collisionVector.getZ()) {
                 // This theoretical speed would result in a collision. Remember it.
                 collideZ[i] = true;
+            }
+            if (yDistanceBeforeCollide != collisionVector.getY()) {
+                // This theoretical speed would result in a collision. Remember it.
+                collideY[i] = true;
             }
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
@@ -1265,7 +1307,7 @@ public class SurvivalFly extends Check {
                     thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
                     // Also set the supporting block.
                     if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yAllowedDistance, zTheoreticalDistance[i]), from.getBoundingBox(), onGround));
+                        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yAllowedDistance, zTheoreticalDistance[i]), to.getBoundingBox(), collideY[i] && yDistanceBeforeCollide < 0.0));
                     }
                     break;
                 }
@@ -1510,6 +1552,7 @@ public class SurvivalFly extends Check {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
                 // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
+                //TODO: Why the water use lastMove.yAllowedDistance but lava not??. Also new Vector use last or this??
                 Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
                 thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             }

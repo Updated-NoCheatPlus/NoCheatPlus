@@ -137,13 +137,6 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 }
             });
         }
-        if (BridgeMisc.hasPlayerInputEvent()) {
-            /**
-             * See {@link PlayerMoveData#input} as for why we listen to this event.
-             * @param event the input event
-             */
-            queuedComponents.add(new InputChangeListener());
-        }
         if (Bridge1_13.hasPlayerRiptideEvent()) {
             queuedComponents.add(new Listener() {
                 @EventHandler(priority = EventPriority.MONITOR)

@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -122,16 +121,7 @@ public class SoundDistance extends BaseAdapter {
     }
 
     private boolean isSoundMonitoredLatest(final PacketContainer packetContainer) {
-        StructureModifier<Sound> sounds = packetContainer.getSoundEffects();
-        // Compatibility: Can't use sounds#getValues() for 1.12 server using 1.21 build. Something changed internally in org.bukkit.Sound
-        for (int i = 0; i < sounds.size(); i++) {
-            final Sound sound = sounds.readSafely(i);
-            if (sound != null && effectNames.contains(BridgeBukkitAPI.ConvertSoundToString(sound))) {
-                //debug(null, "MONITOR SOUND: " + sound);
-                return true;
-            }
-        }
-        return false;
+        return BridgeBukkitAPI.matchSounds(packetContainer.getSoundEffects(), effectNames);
     }
 
     private boolean isSoundMonitored(final PacketContainer packetContainer) {

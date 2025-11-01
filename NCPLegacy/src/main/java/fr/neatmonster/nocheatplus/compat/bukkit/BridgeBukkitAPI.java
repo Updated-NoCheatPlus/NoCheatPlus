@@ -22,13 +22,22 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.Sound;
 
+import com.comphenix.protocol.reflect.StructureModifier;
+import java.util.Set;
+
 //import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 
 public class BridgeBukkitAPI {
     //private static final boolean isServerLowerThan1_20_5 = ServerVersion.isLowerThan("1.20.5");
     // Why it need to put here when the class didn't change at all
-    public static String ConvertSoundToString(Sound sound) {
-        return sound.toString();
+    public static boolean matchSounds(StructureModifier<Sound> sounds, Set<String> effectNames) {
+        for (int i = 0; i < sounds.size(); i++) {
+            final Sound sound = sounds.readSafely(i);
+            if (sound != null && effectNames.contains(sound.toString())) {
+                return true;
+            }
+        }
+        return false;
     }
     
     public static Inventory getTopInventory(Player p) {
