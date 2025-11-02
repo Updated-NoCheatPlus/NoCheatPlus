@@ -1123,7 +1123,7 @@ public class SurvivalFly extends Check {
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 // This is called with setOnGroundWithMovement at the same time of setting the ground flag but before setting the horizontal collision flags.
-                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
+                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to.getBoundingBox(), yDistanceBeforeCollide < 0.0 && yDistanceBeforeCollide != collisionVector.getY()));
             }
             // NOTE: Collision flags must be set before setting speed in thisMove.
             thisMove.collideX = thisMove.xAllowedDistance != collisionVector.getX();

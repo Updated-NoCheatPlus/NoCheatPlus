@@ -572,7 +572,6 @@ public class BlockProperties {
         final Material blockBelow;
         // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
         if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-            // TODO: is this correct?
             BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
             blockBelow = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
         }
@@ -715,7 +714,6 @@ public class BlockProperties {
             final Material blockBelow2;
             // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                // TODO: is this correct?
                 BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
                 blockBelow2 = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
             }
