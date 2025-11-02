@@ -43,6 +43,7 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.SupportingBlockUtils;
+import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
 import fr.neatmonster.nocheatplus.utilities.entity.PassengerUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache.IBlockCacheNode;
@@ -190,12 +191,9 @@ public class RichEntityLocation extends RichBoundsLocation {
      */
     public boolean isSupportedBy(long flag) {
         final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
-        Vector supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData.getSupportingBlockData(), (float)0.5000001D);
-        final Material supportingBlock = getBlockType((int) supportingBlockPos.getX(), (int) supportingBlockPos.getY(), (int) supportingBlockPos.getZ());
-        final double[] AABB = getBoundingBox();
-        return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0 
-               && BlockProperties.collidesBlock(blockCache, AABB[0],AABB[1] - yOnGround,AABB[2],AABB[3],AABB[1],AABB[5], (int) supportingBlockPos.getX(),(int) supportingBlockPos.getY(),(int) supportingBlockPos.getZ(), 
-                       blockCache.getOrCreateBlockCacheNode(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ(), false), null, flag);
+        BlockCoord supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData.getSupportingBlockData(), (float)0.5000001D);
+        final Material supportingBlock = getBlockType(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ());
+        return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0;
     }
     
     /**

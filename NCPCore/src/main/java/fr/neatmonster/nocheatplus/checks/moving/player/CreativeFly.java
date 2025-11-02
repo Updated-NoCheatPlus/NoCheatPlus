@@ -159,7 +159,7 @@ public class CreativeFly extends Check {
         }
         // Keep altitude.
         else {
-            double[] res = vDistZero(from, to, yDistance, flying, thisMove, lastMove, model, data, cc);
+            double[] res = vDistZero();
             resultV = Math.max(resultV, res[1]);
             limitV = res[0];
         }
@@ -478,20 +478,10 @@ public class CreativeFly extends Check {
 
     /**
      * Keep the altitude
-     * @param from
-     * @param to
-     * @param yDistance
-     * @param flying
-     * @param thisMove
-     * @param lastMove
-     * @param model
-     * @param data
-     * @param cc
+     *
      * @return limitV, resultV
      */
-    private double[] vDistZero(final PlayerLocation from, final PlayerLocation to, final double yDistance, final boolean flying, 
-                               final PlayerMoveData thisMove, final PlayerMoveData lastMove, final ModelFlying model, 
-                               final MovingData data, final MovingConfig cc) {
+    private double[] vDistZero() {
         double limitV = 0.0;
         double resultV = 0.0;
         return new double[] {limitV, resultV};

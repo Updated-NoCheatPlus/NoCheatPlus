@@ -447,10 +447,7 @@ public class SurvivalFly extends Check {
             // No Gliding, no deal
             return new double[] {thisMove.hDistance, 0.0, thisMove.yDistance, 0.0};
         }
-        // WASD key presses, as well as sneaking and item-use are irrelevant when gliding.
-        thisMove.hasImpulse = AlmostBoolean.NO;
-        thisMove.forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
-        thisMove.strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
+        // Note: WASD key presses, as well as sneaking and item-use are irrelevant when gliding.
         // Initialize speed.
         thisMove.xAllowedDistance = lastMove.toIsValid ? lastMove.xDistance : 0.0;
         thisMove.yAllowedDistance = lastMove.toIsValid ? lastMove.yDistance : 0.0;
@@ -1123,6 +1120,11 @@ public class SurvivalFly extends Check {
             // TODO: Perhaps after this use collisionVector to store onGround? Also can not restore minecraft ground state with step and jump movement(like stairs)!
             Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yDistanceBeforeCollide, thisMove.zAllowedDistance), onGround, from.getBoundingBox());
             // Set flags.
+            // Set the supporting block data.
+            if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
+                // This is called with setOnGroundWithMovement at the same time of setting the ground flag but before setting the horizontal collision flags.
+                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(from.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), from.getBoundingBox(), onGround));
+            }
             // NOTE: Collision flags must be set before setting speed in thisMove.
             thisMove.collideX = thisMove.xAllowedDistance != collisionVector.getX();
             thisMove.collideZ = thisMove.zAllowedDistance != collisionVector.getZ();
@@ -1132,10 +1134,6 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance = collisionVector.getZ();
             // More edge data...
             thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to, input.getStrafe(), input.getForward());
-            // Set the supporting block data.
-            if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to.getBoundingBox(), yDistanceBeforeCollide < 0.0 && yDistanceBeforeCollide != collisionVector.getY()));
-            }
             // Check for block push.
             // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end. See note at the start of the method.
             if (xPush) {
@@ -1301,14 +1299,14 @@ public class SurvivalFly extends Check {
                 }
                 if (!forceViolation) {
                     // Found a candidate to set in this move; these collisions are valid.
-                    thisMove.collideX = collideX[i];
-                    thisMove.collideZ = collideZ[i];
-                    thisMove.collidesHorizontally = thisMove.collideX || thisMove.collideZ;
-                    thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
                     // Also set the supporting block.
                     if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                         pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yAllowedDistance, zTheoreticalDistance[i]), to.getBoundingBox(), collideY[i] && yDistanceBeforeCollide < 0.0));
                     }
+                    thisMove.collideX = collideX[i];
+                    thisMove.collideZ = collideZ[i];
+                    thisMove.collidesHorizontally = thisMove.collideX || thisMove.collideZ;
+                    thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
                     break;
                 }
             }
@@ -1840,7 +1838,7 @@ public class SurvivalFly extends Check {
         if (useBlockChangeTracker && hDistanceAboveLimit > 0.0) {
             // Be sure to test this only if the player is seemingly off ground
             if (!thisMove.fromLostGround && !from.isOnGround() && from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick)) {
-                tags.add("blockchange_h");
+                tags.add("onground_tracked");
                 double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, true, false);
                 hAllowedDistance = res[0];
                 hDistanceAboveLimit = res[1];

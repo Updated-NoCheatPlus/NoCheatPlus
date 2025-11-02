@@ -18,6 +18,8 @@ import java.util.Objects;
 
 import org.bukkit.util.Vector;
 
+import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
+
 /**
  * Store information about the position of the supporting block,
  * and whether the entity is currently on the ground.
@@ -25,7 +27,7 @@ import org.bukkit.util.Vector;
  */
 public class SupportingBlockData {
 
-    private Vector blockPos;
+    private BlockCoord blockPos;
     private boolean onGround;
     
     /**
@@ -34,7 +36,7 @@ public class SupportingBlockData {
      * @param blockPos The position of the supporting block, or {@code null} if none.
      * @param onGround {@code true} if the entity is considered to be on the ground, otherwise {@code false}.
      */
-    public SupportingBlockData(Vector blockPos, boolean onGround) {
+    public SupportingBlockData(BlockCoord blockPos, boolean onGround) {
         this.blockPos = blockPos;
         this.onGround = onGround;
     }
@@ -44,17 +46,8 @@ public class SupportingBlockData {
      *
      * @return A {@link Vector} representing the block position, or {@code null} if none.
      */
-    public Vector getBlockPos() {
+    public BlockCoord getBlockPos() {
         return blockPos;
-    }
-    
-    /**
-     * Sets the position of the supporting block.
-     *
-     * @param blockPos A {@link Vector} representing the new block position.
-     */
-    public void setBlockPos(Vector blockPos) {
-        this.blockPos = blockPos;
     }
     
     /**

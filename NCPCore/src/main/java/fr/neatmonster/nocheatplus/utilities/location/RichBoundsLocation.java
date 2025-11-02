@@ -332,65 +332,6 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     }
 
     /**
-     * Compares block coordinates (not the world).
-     *
-     * @param other
-     *            the other
-     * @return true, if is same block
-     */
-    public final boolean isSameBlock(final IGetBlockPosition other) {
-        return blockX == other.getBlockX() && blockZ == other.getBlockZ() && blockY == other.getBlockY();
-    }
-
-    /**
-     * Block coordinate comparison.
-     *
-     * @param x
-     *            the x
-     * @param y
-     *            the y
-     * @param z
-     *            the z
-     * @return true, if is same block
-     */
-    public final boolean isSameBlock(final int x, final int y, final int z) {
-        return blockX == x && blockZ == z && blockY == y;
-    }
-
-    /**
-     * Compares block coordinates (not the world).
-     *
-     * @param loc
-     *            the loc
-     * @return true, if is same block
-     */
-    public final boolean isSameBlock(final Location loc) {
-        return blockX == loc.getBlockX() && blockZ == loc.getBlockZ() && blockY == loc.getBlockY();
-    }
-
-    /**
-     * Check if this location is above the given one (blockY + 1).
-     *
-     * @param loc
-     *            the loc
-     * @return true, if is block above
-     */
-    public boolean isBlockAbove(final IGetBlockPosition loc) {
-        return blockY == loc.getBlockY() + 1 && blockX == loc.getBlockX() && blockZ == loc.getBlockZ();
-    }
-
-    /**
-     * Check if this location is above the given one (blockY + 1).
-     *
-     * @param loc
-     *            the loc
-     * @return true, if is block above
-     */
-    public boolean isBlockAbove(final Location loc) {
-        return blockY == loc.getBlockY() + 1 && blockX == loc.getBlockX() && blockZ == loc.getBlockZ();
-    }
-
-    /**
      * Compares exact coordinates (not the world).
      *
      * @param loc

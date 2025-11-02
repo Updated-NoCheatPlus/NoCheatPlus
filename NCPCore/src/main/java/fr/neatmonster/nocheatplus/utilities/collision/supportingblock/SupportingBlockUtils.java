@@ -30,17 +30,17 @@ import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
+import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
-
 /**
  * Utility class for handling Mojang's logic introduced in Minecraft 1.20 to fix a <a href="https://bugs.mojang.com/browse/MC-262690">long-standing bug</a>.
  * <p>
  * Prior to Minecraft 1.19.4, block properties would only apply if the player stood at the very center of the block.
- * In Minecraft 1.20+, block properties are now determined based on the closest block to the player's position.
+ * In Minecraft 1.20+, block properties are now determined based on the closest block to the player's position with a tie-break system
  */
 public class SupportingBlockUtils {
     
@@ -54,8 +54,8 @@ public class SupportingBlockUtils {
      * @param eAABB The entity's bounding box represented as an array.
      * @return A list of {@link Vector} positions where collisions occur.
      */
-    public static List<Vector> getCollisionsLoc(BlockCache blockCache, double[] eAABB) {
-        List<Vector> collisionsLoc = new ArrayList<>();
+    public static List<BlockCoord> getCollisionsLoc(BlockCache blockCache, double[] eAABB) {
+        List<BlockCoord> collisionsLoc = new ArrayList<>();
         int minBlockX = (int) Math.floor(eAABB[0] - CollisionUtil.COLLISION_EPSILON) - 1;
         int maxBlockX = (int) Math.floor(eAABB[3] + CollisionUtil.COLLISION_EPSILON) + 1;
         int minBlockY = (int) Math.max(Math.floor(eAABB[1] - CollisionUtil.COLLISION_EPSILON) - 1, blockCache.getMinBlockY());
@@ -79,7 +79,7 @@ public class SupportingBlockUtils {
                         final double[] originAABB = blockCache.fetchBounds(x, y, z);
                         if (originAABB != null) {
                             if (AxisAlignedBBUtils.isIntersected(x, y, z, originAABB, eAABB)) {
-                                collisionsLoc.add(new Vector(x, y, z));
+                                collisionsLoc.add(new BlockCoord(x, y, z));
                             }
                         }
                     }
@@ -99,21 +99,21 @@ public class SupportingBlockUtils {
      * @param yBelow Y parameter for searching beneath the player.
      * @return A {@link Vector} containing the position of the block.
      */
-    public static Vector getOnPos(BlockCache access, Location eLoc, SupportingBlockData data, float yBelow) {
-        Vector supportingBlockLoc = data.getBlockPos();
-        if (supportingBlockLoc != null) {
-            final BlockCache.IBlockCacheNode node = access.getOrCreateBlockCacheNode(supportingBlockLoc.getX(), supportingBlockLoc.getY(), supportingBlockLoc.getZ(), false);
+    public static BlockCoord getOnPos(BlockCache access, Location eLoc, SupportingBlockData data, float yBelow) {
+        BlockCoord blockPos = data.getBlockPos();
+        if (blockPos != null) {
+            final BlockCache.IBlockCacheNode node = access.getOrCreateBlockCacheNode(blockPos.getX(), blockPos.getY(), blockPos.getZ(), false);
             final long flags = BlockFlags.getBlockFlags(node.getType());
             final Material mat = node.getType();
             boolean isSpecialCond = (!(yBelow <= 0.5D) || (flags & BlockFlags.F_HEIGHT150) == 0)
                                      && !MaterialUtil.ALL_WALLS.contains(mat)
                                      && !MaterialUtil.WOODEN_FENCE_GATES.contains(mat);
             if (isSpecialCond) {
-                return new Vector(supportingBlockLoc.getX(), MathUtil.floor(eLoc.getY()-yBelow), supportingBlockLoc.getZ()); // location of the block
+                return new BlockCoord(blockPos.getX(), MathUtil.floor(eLoc.getY()-yBelow), blockPos.getZ()); // location of the block
             }
-            return supportingBlockLoc;
+            return blockPos;
         }
-        return new Vector(MathUtil.floor(eLoc.getX()), MathUtil.floor(eLoc.getY()-yBelow), MathUtil.floor(eLoc.getZ())); // location of the entity
+        return new BlockCoord(MathUtil.floor(eLoc.getX()), MathUtil.floor(eLoc.getY()-yBelow), MathUtil.floor(eLoc.getZ())); // location of the entity
     }
     
     /**
@@ -129,50 +129,55 @@ public class SupportingBlockUtils {
      * @return A {@link SupportingBlockData} object containing the supporting block data.
      */
     public static SupportingBlockData checkSupportingBlock(BlockCache cache, Player player, SupportingBlockData lastSupportingBlock, Vector movementVector, double[] AABB, boolean isOnGround) {
+        // Match vanilla: when not on ground, clear supporting block and onGround flag
         if (!isOnGround) {
             return new SupportingBlockData(null, false);
         }
-        
-        // Offset the box by a very tiny margin below.
-        AABB = AxisAlignedBBUtils.move(AABB, 0.0, -1.0E-6D, 0.0);
-        AABB[4] = AABB[1]; // We don't care about the top of the box. replace it with minY. 
-        
-        Optional<Vector> supportingBlock = findSupportingBlock(cache, player, AABB);
-        if (!supportingBlock.isPresent() && !lastSupportingBlock.lastOnGroundAndNoBlock()) {
+
+        // Lower the box by a very tiny margin and set the top to minY (vanilla creates a new AABB)
+        double[] searchAABB = AxisAlignedBBUtils.move(AABB, 0.0, -1.0E-6D, 0.0);
+        searchAABB[4] = searchAABB[1]; // set maxY = minY
+
+        Optional<BlockCoord> optional = findSupportingBlock(cache, player, searchAABB);
+
+        // If no block found and we were not previously onGround with no blocks, try using the movement vector
+        boolean prevOnGroundNoBlocks = lastSupportingBlock != null && lastSupportingBlock.lastOnGroundAndNoBlock();
+        if (!optional.isPresent() && !prevOnGroundNoBlocks) {
             if (movementVector != null) {
-                // NOTE: lastMovement is supposed to represent the speed-after-computing-collisions in the prediction
-                double[] AABB_2 = AxisAlignedBBUtils.move(AABB, -movementVector.getX(), 0.0, -movementVector.getZ());
-                supportingBlock = findSupportingBlock(cache, player, AABB_2);
-                return new SupportingBlockData(supportingBlock.orElse(null), true);
+                double[] movedAABB = AxisAlignedBBUtils.move(searchAABB, -movementVector.getX(), 0.0, -movementVector.getZ());
+                optional = findSupportingBlock(cache, player, movedAABB);
             }
         }
-        else return new SupportingBlockData(supportingBlock.orElse(null), true);
-        return new SupportingBlockData(null, true);
+
+        // Vanilla sets its onGroundNoBlocks = optional.isEmpty();
+        // We represent supporting block position as optional.orElse(null) and the onGround flag as true (since we entered the on-ground branch).
+        return new SupportingBlockData(optional.orElse(null), true);
     }
     
     /**
      * Search for the block that's currently supporting the player. May be empty, if it can't be found. 
      * From: {@code ICollisionAccess.java} -> {@code findSupportingBlock()}.
-     * 
-     * @param cache
-     * @param player
-     * @param AABB
+     *
+     * @param cache The block cache used for retrieving block data.
+     * @param player The player whose supporting block is being searched.
+     * @param AABB   The axis-aligned bounding box representing the entity's collision area used for the search.
      * @return An {@link Optional} containing the supporting block's position as a {@link Vector}, 
      *         or empty if no valid supporting block is found.   
      */
-    private static Optional<Vector> findSupportingBlock(BlockCache cache, Player player, double[] AABB) {
+    private static Optional<BlockCoord> findSupportingBlock(BlockCache cache, Player player, double[] AABB) {
         // Compose the current Location of the player as a Vector by using our movement data (corrected by the split move mechanic)
         // Do not trust player#getLocation() as there will be mismatches with moving events, due to Bukkit sometimes skipping them.
         final PlayerMoveData thisMove = DataManager.getPlayerData(player).getGenericInstance(MovingData.class).playerMoves.getCurrentMove();
         final Vector correctedPlayerLoc = new Vector(thisMove.to.getX(), thisMove.to.getY(), thisMove.to.getZ());
-        Vector lastBlockLocation = null;
+        BlockCoord lastBlockLocation = null;
         double lastDistance = Double.MAX_VALUE;
         
-        for (Vector blockLocation : getCollisionsLoc(cache, AABB)) {
-            Vector blockLocAsVector3d = blockLocation.clone().add(new Vector(0.5, 0.5, 0.5));
+        for (BlockCoord blockLocation : getCollisionsLoc(cache, AABB)) {
+            // + 0.5 is to get the center of the block (distanceToCenterSq)
+            Vector blockLocAsVector3d = new Vector(blockLocation.getX() + 0.5, blockLocation.getY() + 0.5, blockLocation.getZ() + 0.5);
             double currentDistance = correctedPlayerLoc.distanceSquared(blockLocAsVector3d);
             if (currentDistance < lastDistance 
-                || currentDistance == lastDistance && (lastBlockLocation == null || compareTo(blockLocation, lastBlockLocation))) {
+                || currentDistance == lastDistance && (lastBlockLocation == null || winsTieBreakAgainst(blockLocation, lastBlockLocation))) {
                 lastBlockLocation = blockLocation;
                 lastDistance = currentDistance;
             }
@@ -182,23 +187,19 @@ public class SupportingBlockUtils {
     
     
     /**
-     * Determines if the first location has priority over the second one, based on xyz coordinates.
-     *
-     * <p>Priority is given to locations with:
-     * <ul>
-     *     <li>Lower Y-coordinate</li>
-     *     <li>If Y is the same, lower X and Z-coordinates</li>
-     * </ul>
-     * From {@code Vector3i.java} -> {@code compareTo()}
+     * Determines if the first location should win the tie-break against the second one.
+     * Mirrors the tie-break behavior used when multiple blocks are at the same distance from a point in vanilla
+     * From {@code Vector3i.java} -> {@code compareTo()} (semantics have been adapted to a boolean predicate; the NMS method would return an int)
      * 
-     * @param first  The first location (as a Vector) to compare.
-     * @param second The second location (as a Vector) to compare.
-     * @return {@code true} if the first location has priority over the second, otherwise {@code false}.
+     * @param first The first location to compare (candidate that may win).
+     * @param second The second location to compare (current best).
+     * @return {@code true} if the first location has priority (wins the tie-break) over the second, otherwise {@code false}.
      */
-    private static boolean compareTo(Vector first, Vector second) {
+    private static boolean winsTieBreakAgainst(BlockCoord first, BlockCoord second) {
         if (first.getY() < second.getY()) {
             return true; // Lowest Y has priority
         }
-        return first.getZ() == second.getZ() ? first.getX() < second.getX() : first.getZ() < second.getZ(); // Lowest X and Z have priority
+        // If Y are equal or first Y is not lower, then compare Z, then X
+        return first.getZ() == second.getZ() ? first.getX() < second.getX() : first.getZ() < second.getZ(); // Lowest Z then X have priority
     }
 }

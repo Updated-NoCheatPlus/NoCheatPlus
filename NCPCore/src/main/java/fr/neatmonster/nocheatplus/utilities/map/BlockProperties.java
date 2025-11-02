@@ -42,7 +42,6 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
@@ -75,6 +74,7 @@ import fr.neatmonster.nocheatplus.utilities.collision.supportingblock.Supporting
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.ICollidePassable;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.PassableAxisTracing;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.PassableRayTracing;
+import fr.neatmonster.nocheatplus.utilities.ds.map.BlockCoord;
 import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 import fr.neatmonster.nocheatplus.utilities.location.RichEntityLocation;
@@ -573,8 +573,8 @@ public class BlockProperties {
         // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
         if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
             // TODO: is this correct?
-            Vector supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
-            blockBelow = eLoc.getBlockType((int) supportingBlock.getX(), (int) supportingBlock.getY(), (int) supportingBlock.getZ());
+            BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
+            blockBelow = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
         }
         else blockBelow = eLoc.getBlockType(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
         //////////////////////////////////////////////////////////////
@@ -716,8 +716,8 @@ public class BlockProperties {
             // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 // TODO: is this correct?
-                Vector supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
-                blockBelow2 = eLoc.getBlockType((int) supportingBlock.getX(), (int) supportingBlock.getY(), (int) supportingBlock.getZ());
+                BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
+                blockBelow2 = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
             }
             else blockBelow2 = eLoc.getBlockType(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
             if (blockBelow2 == Material.SOUL_SAND) {

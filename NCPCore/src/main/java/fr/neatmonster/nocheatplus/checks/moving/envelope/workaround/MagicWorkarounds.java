@@ -224,8 +224,8 @@ public class MagicWorkarounds {
                  * 0: With players breaking blocks beneath them.
                  * When a player breaks a block below them, several 0-yDistance moves will be sent to the server, while being off the ground (seemingly hovering above the just broken block) 
                  * After these moves, the player speeds down to the ground, landing on it.
-                 * With sfHoverTicks with multiMoveCount covered they near ground and all moves no more than Bukkit's min movement threshold
-                 * The client sent data to server but not firing PlayerMoveEvent because of the min movement threshold and stack till next PME
+                 * With sfHoverTicks and multiMoveCount accounted for, this should be exploit-free: the player remains near the ground and all movements stay within Bukkit’s minimum movement threshold.
+                 * The client sends movement data to the server, but no PlayerMoveEvent is triggered due to the usual thresholds, causing the movements to stack until the next event.
                  */
                 || thisMove.yDistance == 0.0 && data.sfHoverTicks <= 1
                 && thisMove.multiMoveCount > 0 && thisMove.multiMoveCount <= 17 && PhysicsEnvelope.inAir(thisMove)
