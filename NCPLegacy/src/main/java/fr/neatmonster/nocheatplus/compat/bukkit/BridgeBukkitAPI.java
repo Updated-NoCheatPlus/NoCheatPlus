@@ -22,22 +22,53 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.Sound;
 
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.utility.MinecraftReflection;
+import com.comphenix.protocol.utility.MinecraftVersion;
+
+import java.lang.reflect.Field;
+import java.util.Locale;
 import java.util.Set;
 
 //import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 
 public class BridgeBukkitAPI {
-    //private static final boolean isServerLowerThan1_20_5 = ServerVersion.isLowerThan("1.20.5");
-    // Why it need to put here when the class didn't change at all
-    public static boolean matchSounds(StructureModifier<Sound> sounds, Set<String> effectNames) {
-        for (int i = 0; i < sounds.size(); i++) {
-            final Sound sound = sounds.readSafely(i);
-            if (sound != null && effectNames.contains(sound.toString())) {
-                return true;
-            }
+    private static final boolean isServerModern = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.AQUATIC_UPDATE);
+    public static String getNamedSound(PacketContainer packet) {
+        String soundName = "";
+        Class<?> soundEffectCls = MinecraftReflection.getSoundEffectClass();
+        //if (soundEffectCls == null) {
+        //    return soundName;
+        //}
+
+        // Read raw SoundEffect (no converters)
+        Object soundEffect = packet.getModifier().withType(soundEffectCls).readSafely(0);
+        if (soundEffect == null) {
+            return soundName;
         }
-        return false;
+        
+        try {
+            Field fieldResourceLocation = soundEffect.getClass().getDeclaredField("b");
+            fieldResourceLocation.setAccessible(true);
+            Object resourceLocation = fieldResourceLocation.get(soundEffect);
+
+            Field soundSuffixField = resourceLocation.getClass().getDeclaredField("b");
+            soundSuffixField.setAccessible(true);
+            soundName = (String) soundSuffixField.get(resourceLocation);
+        } catch (Exception e) {
+            return soundName;
+        }
+
+        return soundName.replace('.', '_').toUpperCase(Locale.ROOT);
+    }
+    public static boolean matchSounds(PacketContainer packetContainer, Set<String> effectNames) {
+        if (isServerModern) {
+            final StructureModifier<Sound> sounds = packetContainer.getSoundEffects();
+            final Sound sound = sounds.read(0);
+            return effectNames.contains(sound.toString());
+        }
+        return effectNames.contains(getNamedSound(packetContainer));
     }
     
     public static Inventory getTopInventory(Player p) {

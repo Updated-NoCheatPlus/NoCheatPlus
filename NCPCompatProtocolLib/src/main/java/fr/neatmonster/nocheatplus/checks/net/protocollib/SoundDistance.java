@@ -45,9 +45,9 @@ public class SoundDistance extends BaseAdapter {
 
     /** Partly by debugging, partly from various sources, possibly including wrong spelling. */
     private static final Set<String> effectNames = new HashSet<String>(Arrays.asList(
-            ////////////
-            // PRE 1.9
-            ////////////
+            /////////////
+            // PRE 1.9 //
+            /////////////
 
             // Weather
             "ambient.weather.thunder",
@@ -68,7 +68,7 @@ public class SoundDistance extends BaseAdapter {
             "game.neutral.die", // Enderdragon 1.8.7 (debug).
 
             //////////////////
-            // 1.9 AND LATER
+            // 1.9 AND 1.20 //
             //////////////////
             // Weather
             "ENTITY_LIGHTNING_IMPACT",
@@ -87,9 +87,22 @@ public class SoundDistance extends BaseAdapter {
             "ENTITY_WITHER_DEATH",
             "ENTITY_WITHER_HURT",
             "ENTITY_WITHER_SHOOT",
-            "ENTITY_WITHER_SPAWN"
+            "ENTITY_WITHER_SPAWN",
 
-
+            ////////////////////
+            // 1.21 AND LATER //
+            ////////////////////
+            // Weather
+            "ENTITY_LIGHTNING_BOLT_IMPACT",
+            "ENTITY_LIGHTNING_BOLT_THUNDER",
+            // Enderdragon
+            "ENTITY_ENDER_DRAGON_AMBIENT",
+            "ENTITY_ENDER_DRAGON_DEATH",
+            "ENTITY_DRAGON_FIREBALL_EXPLODE",
+            "ENTITY_ENDER_DRAGON_FLAP",
+            "ENTITY_ENDER_DRAGON_GROWL",
+            "ENTITY_ENDER_DRAGON_HURT",
+            "ENTITY_ENDER_DRAGON_SHOOT"
             ));
 
     private final Integer idSoundEffectCancel = counters.registerKey("packet.sound.cancel");
@@ -121,7 +134,7 @@ public class SoundDistance extends BaseAdapter {
     }
 
     private boolean isSoundMonitoredLatest(final PacketContainer packetContainer) {
-        return BridgeBukkitAPI.matchSounds(packetContainer.getSoundEffects(), effectNames);
+        return BridgeBukkitAPI.matchSounds(packetContainer, effectNames);
     }
 
     private boolean isSoundMonitored(final PacketContainer packetContainer) {
