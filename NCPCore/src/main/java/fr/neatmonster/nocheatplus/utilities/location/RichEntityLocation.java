@@ -866,6 +866,9 @@ public class RichEntityLocation extends RichBoundsLocation {
             for (BlockFace hDirection : new BlockFace[]{BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST}) {
                 if (BlockProperties.isSolidFace(blockCache, (Player) entity, x, y, z, hDirection, liquidTypeFlag, getLocation()) 
                     || BlockProperties.isSolidFace(blockCache, (Player) entity, x, y + 1, z, hDirection, liquidTypeFlag, getLocation())) {
+                    /* 
+                      Vertical motion is modified here. Despite the function mostly being used for horizontal flow.
+                     */
                     flowingVector = MathUtil.normalizedVectorWithoutNaN(flowingVector).add(new Vector(0.0D, -6.0D, 0.0D));
                     break;
                 }

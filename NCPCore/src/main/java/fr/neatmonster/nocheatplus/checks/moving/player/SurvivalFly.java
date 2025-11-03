@@ -85,6 +85,14 @@ public class SurvivalFly extends Check {
     
     private final IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
     
+    /**
+     * The vertical component of liquid push (water/lava).
+     * This is computed in hdistrel and then used by vidstrel to avoid having to call the getLiquidPush() method twice.
+     * When computing the horizontal liquid push, the way Mojang coded the function to get the liquid's flowing force
+     * to calculate horizontal speed with, also affects the vertical speed (See comment in {@link fr.neatmonster.nocheatplus.utilities.location.RichEntityLocation#getFlowForceVector(int, int, int, long)}.
+     */
+    private double verticalLiquidPushComponent = 0.0;
+    
     
     public SurvivalFly() {
         super(CheckType.MOVING_SURVIVALFLY);
@@ -1020,6 +1028,7 @@ public class SurvivalFly extends Check {
         if (from.isInLiquid()) {
             Vector liquidFlowVector = from.getLiquidPushingVector(thisMove.xAllowedDistance, thisMove.zAllowedDistance, from.isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
             thisMove.xAllowedDistance += liquidFlowVector.getX();
+            verticalLiquidPushComponent = liquidFlowVector.getY();
             thisMove.zAllowedDistance += liquidFlowVector.getZ();
         }
         // Before calculating the acceleration, check if momentum is below the negligible speed threshold and cancel it.
@@ -1035,20 +1044,25 @@ public class SurvivalFly extends Check {
             }
             tags.add("bunnyhop");
         }
-
+        
+        /*
+         * This bit of vertical distance computation is needed for the supporting block mechanism, which needs Minecraft-calculated on-ground status.
+         * Normally, these would be computed at the same time, however, since NCP handles horizontal and vertical speed estimation separately, we need to duplicate this bit of code here.
+         * TODO: Unify predictions somehow.
+         */
         // Current yDistance before calculation for supporting block ground state. Copy paste from vDistrel
         double yDistanceBeforeCollide = lastMove.toIsValid ? lastMove.yDistance : 0.0; 
         if (lastMove.from.inWater) {
             yDistanceBeforeCollide *= data.lastFrictionVertical;
-            //TODO: this or last
-            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, lastMove.yAllowedDistance, 0.0), cData.wasSprinting);
+            // NOTE: For fluid falling, it should be thisMove not last. the allowed distance is already initialised with lastMove's distance; calling the last ALLOWED distance, would basically mean using the momentum of the second last move, which is incorrect.
+            // Here, we use yDistanceBeforeCollide as thisMove.yAllowedDistance has not yet been calculated at this point.
+            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, yDistanceBeforeCollide <= 0.0, new Vector(0.0, yDistanceBeforeCollide, 0.0), cData.wasSprinting);
             yDistanceBeforeCollide = fluidFallingAdjustMovement.getY();
         }
         else if (lastMove.from.inLava) {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) {
                 yDistanceBeforeCollide *= data.lastFrictionVertical;
-                //TODO: this or last
-                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, lastMove.yAllowedDistance, 0.0), cData.wasSprinting);
+                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, yDistanceBeforeCollide <= 0.0, new Vector(0.0, yDistanceBeforeCollide, 0.0), cData.wasSprinting);
                 yDistanceBeforeCollide = fluidFallingAdjustMovement.getY();
             }
             else {
@@ -1061,7 +1075,7 @@ public class SurvivalFly extends Check {
         else {
             // Air motion
             if (cData.wasLevitating) {
-                yDistanceBeforeCollide += (0.05 * data.lastLevitationLevel - lastMove.yAllowedDistance) * 0.2;
+                yDistanceBeforeCollide += (0.05 * data.lastLevitationLevel - yDistanceBeforeCollide) * 0.2;
             }
             else yDistanceBeforeCollide -= data.lastGravity;
             yDistanceBeforeCollide *= data.lastFrictionVertical;
@@ -1541,7 +1555,7 @@ public class SurvivalFly extends Check {
             // Water applies friction before calling the fluidFalling function.
             thisMove.yAllowedDistance *= data.lastFrictionVertical;
             // Fluidfalling(...). For water only, this is done after applying friction.
-            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, lastMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
+            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
             thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             tags.add("v_water");
         }
@@ -1587,6 +1601,10 @@ public class SurvivalFly extends Check {
         //////////////////////////////////
         // Last client-tick/move        //
         //////////////////////////////////
+        if (from.isInLiquid() && verticalLiquidPushComponent != 0.0) {
+            // Liquid vertical push component calculated in hdistrel.
+            thisMove.yAllowedDistance += verticalLiquidPushComponent;
+        }
         // *----------LivingEntity.aiStep(), negligible speed----------*
         checkNegligibleMomentumVertical(pData, thisMove);
         // *----------LivingEntity.travel(), handleRelativeFrictionAndCalculateMovement() -> handleOnClimbable()----------*
