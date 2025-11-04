@@ -21,6 +21,7 @@ import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
 /**
  * Carry information regarding the player's key presses (WASD, space bar, shift, sprint).
+ * To not be conflated with the status of the player (isSprinting, isSneaking, etc).<br>
  */
 public class PlayerKeyboardInput implements Cloneable {
     

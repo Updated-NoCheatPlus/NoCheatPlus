@@ -35,7 +35,6 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.players.DataManager;
@@ -104,9 +103,8 @@ public class BridgeMisc {
      * Test if the player's horizontal impulse (WASD presses) is either known or emulated by ViaVersion.
      * 
      * @param player The player whose input is being checked.
-     * @return <b>Always</b><code>true</code>, if both client and server are on a version that supports impulse sending and reading respectively (1.21.2 and above).<br>
-     *         <b>Always</b><code>false</code>, if the server is unable to read inputs at all (legacy, pre 1.21.2). <br>
-     *         <b>Note</b>: currently, we cannot rely on ViaVersion's input emulation for older clients on newer servers (1.21.2+); it seems to be way off from the actual input.
+     * @return True if both client and server are on a version that supports impulse reading and sending respectively (1.21.2 and above).<br>
+     *         Always false, if the server or the client is unable to read inputs at all (legacy, pre 1.21.2). <br>
      * <hr>
      * Check {@link BridgeMisc#isSpaceBarImpulseKnown(Player)} for the vertical impulse.
      *
@@ -117,28 +115,16 @@ public class BridgeMisc {
             // TODO: What about modern clients (1.21.2+) on legacy servers (1.21.2-)? Is there a way to intercept and translate the sent input by ourselves?
             return false;
         }
-        if (DataManager.getPlayerData(player).getClientVersion().isAtLeast(ClientVersion.V_1_21_2)) {
-            // Client sends impulses and server can read them. Inputs are always known, regardless of any other condition.
-            return true;
-        }
-        //final IPlayerData pData =  DataManager.getPlayerData(player);
-        //final MovingData data = pData.getGenericInstance(MovingData.class);
-        // A legacy client (which doesn't natively send inputs) is connected to a server that supports impulse-reading.
-        // Connection is enabled by ViaVersion, which emulates the PLAYER_INPUT packet.
-        // TODO: Check how exactly ViaVersion is emulating the packet. It would be useful to have the logic within NCP.
-        //return !data.hasActiveHorVel();
-        return false;
+        // Client sends impulses and server can read them. Inputs are always known, regardless of any other condition.
+        return DataManager.getPlayerData(player).getClientVersion().isAtLeast(ClientVersion.V_1_21_2);
     }
     
     /**
      * Test if the player's vertical impulse (space bar presses) is either known or emulated by ViaVersion.
      *      
      * @param player The player whose input is being checked.
-     * @return <b>Always</b> <code>true</code> if both client and server are on a version that supports impulse reading and sending respectively (1.21.2 and above).<br>
-     *         <b>Always</b> <code>false</code>, if the server is unable to read inputs at all (legacy, pre 1.21.2). <br>
-     *         <code>true</code>, if the server supports impulse reading, but the client does not natively support impulse-sending, which is instead enabled by ViaVersion
-     *         through emulation of the PLAYER_INPUT packet. Because the packet is emulated, the actual impulse may not always reflect what the player actually pressed; particularly if the 
-     *         player's speed was affected by external velocity sources. In which case, this will return <code>false</code>.
+     * @return True if both client and server are on a version that supports impulse reading and sending respectively (1.21.2 and above).<br>
+     *         Always false, if the server or the client is unable to read inputs at all (legacy, pre 1.21.2). <br>
      * <hr>
      * Check {@link BridgeMisc#isWASDImpulseKnown(Player)} for the horizontal impulse.  
      */
@@ -146,14 +132,7 @@ public class BridgeMisc {
         if (!hasInputGetterMethod) {
             return false;
         }
-        if (DataManager.getPlayerData(player).getClientVersion().isAtLeast(ClientVersion.V_1_21_2)) {
-            return true;
-        }
-        //final IPlayerData pData =  DataManager.getPlayerData(player);
-        //final MovingData data = pData.getGenericInstance(MovingData.class);
-        // TODO: getOrUseVerticalVelocity or peekVerticalVelocity?
-        // TODO: How exactly does ViaVersion provide?
-        return false;
+        return DataManager.getPlayerData(player).getClientVersion().isAtLeast(ClientVersion.V_1_21_2);
     }
     
     /**

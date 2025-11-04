@@ -1125,7 +1125,7 @@ public class SurvivalFly extends Check {
             // NOTE: this is after the riptiding propelling force.
             // NOTE: here the game uses isShiftKeyDown (so this is shifting not sneaking, using Bukkit's isShift is correct)
             if (!player.isFlying() && pData.isShiftKeyPressed() && from.isAboveGround() && thisMove.yDistance <= 0.0) {
-                Vector backOff = from.maybeBackOffFromEdge(new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance));
+                Vector backOff = from.maybeBackOffFromEdge(new Vector(thisMove.xAllowedDistance, yDistanceBeforeCollide, thisMove.zAllowedDistance));
                 thisMove.xAllowedDistance = backOff.getX();
                 thisMove.zAllowedDistance = backOff.getZ();
             }
@@ -1234,7 +1234,7 @@ public class SurvivalFly extends Check {
         if (!player.isFlying() && pData.isShiftKeyPressed() && from.isAboveGround() && thisMove.yDistance <= 0.0) {
             for (i = 0; i < 9; i++) {
                 // TODO: Optimize. Brute forcing collisions with all 9 speed combinations will tank performance.
-                Vector backOff = from.maybeBackOffFromEdge(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]));
+                Vector backOff = from.maybeBackOffFromEdge(new Vector(xTheoreticalDistance[i], yDistanceBeforeCollide, zTheoreticalDistance[i]));
                 xTheoreticalDistance[i] = backOff.getX();
                 zTheoreticalDistance[i] = backOff.getZ();
             }
@@ -1508,7 +1508,7 @@ public class SurvivalFly extends Check {
         // NOTE: pressing space bar on a bouncy block will override the bounce (in that case, vdistrel will fall back to the jump check above).
         // updateEntityAfterFallOn(), this function is called on the next move
         if (pData.isShiftKeyPressed() && lastMove.collideY) { 
-            if (lastMove.yAllowedDistance < 0.0) { // NOTE: Must be the allowed distance, not the actual one (exploit)
+            if (thisMove.yAllowedDistance < 0.0) { // NOTE: Must be the allowed distance, not the actual one (exploit)
                 if (lastMove.to.onBouncyBlock) {
                     // The effect works by inverting the distance.
                     // Beds have a weaker bounce effect (BedBlock.java).
@@ -1532,13 +1532,13 @@ public class SurvivalFly extends Check {
                 thisMove.yAllowedDistance = 0.0;
             }
         }
-        // *----------Finalization of handleRelativeFrictionAndCalculateMovement; this check/condition is called after having called the move(). The former method is called only when the player is traveling in air, thus the liquid and gliding checks ----------*
+        // *----------Finalization of handleRelativeFrictionAndCalculateMovement; this check/condition is called after having called the move() function. The former method is called only when the player is traveling in air, thus the liquid and gliding checks ----------*
         if (!lastMove.from.inLiquid && !lastMove.isGliding) {
             // TODO: Which condition is correct ??? Check for past versions to see when this check changed... Fun. 
             // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.getInBlockState().is(Blocks.POWDER_SNOW) && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.wasInPowderSnow && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // TODO: We have to loop the jumping state for 1.21.1 and below... No other way to put it unfortunately. This will make the code an ugly mess than it already is.
-            final boolean jumpedOrCollided = lastMove.collidesHorizontally || data.input.isSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
+            final boolean jumpedOrCollided = lastMove.collidesHorizontally || data.input.wasSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
             if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.inPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { // this.wasInPowderSnow. The living entity field already checks for the past state, does that mean we need to check for the second last move?
                 thisMove.yAllowedDistance = 0.2;
             }
@@ -1838,6 +1838,7 @@ public class SurvivalFly extends Check {
          *  Because this move is not sent by the client and cannot be predicted through normal means, we have to brute force it.
          */
         if (hDistanceAboveLimit > 0.0 && lastMove.isPossibleStoppingMotion(pData.getClientVersion())) {
+            tags.add("stop_motion");
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
             hAllowedDistance = res[0];
             hDistanceAboveLimit = res[1];
@@ -1846,6 +1847,7 @@ public class SurvivalFly extends Check {
          * 2: Undetectable jump (must brute force here): player failed with the onGround flag, lets try with off-ground then.
          */
         if (PhysicsEnvelope.isVerticallyConstricted(from, to, pData) && hDistanceAboveLimit > 0.0) {
+            tags.add("vert_constricted");
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, true);
             hAllowedDistance = res[0];
             hDistanceAboveLimit = res[1];

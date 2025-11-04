@@ -785,9 +785,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             if (blockFlags != null && (blockFlags & BlockFlags.F_POWDER_SNOW) == 0) {
                 inPowderSnow = false;
             }
-            else {
-                inPowderSnow = isInside(BlockFlags.F_POWDER_SNOW);
-            }
+            else inPowderSnow = isInside(BlockFlags.F_POWDER_SNOW);
         }
         return inPowderSnow;
     }

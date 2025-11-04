@@ -18,7 +18,6 @@ import java.util.Collection;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.access.ACheckData;
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.components.data.IDataOnRemoveSubCheckData;
 import fr.neatmonster.nocheatplus.players.PlayerData;
 import fr.neatmonster.nocheatplus.utilities.PenaltyTime;
@@ -35,12 +34,10 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
     
     /** 
      * Last sprinting state of the player as set by {@link PlayerData#isSprinting()}. Set in SurvivalFly.
-     * If the server and client are capable of reading and sending inputs respectively, {@link MovingData#input}should be used instead.
      */
     public boolean wasSprinting;
      /** 
       * Last shift state of the player as set by {@link PlayerData#isShiftKeyPressed()}. Set in SurvivalFly.
-      * If the server and client are capable of reading and sending inputs respectively, {@link MovingData#input}should be used instead.
       */
     public boolean wasPressingShift;
     

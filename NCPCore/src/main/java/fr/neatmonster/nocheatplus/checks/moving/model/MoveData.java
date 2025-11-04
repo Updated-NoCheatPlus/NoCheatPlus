@@ -45,6 +45,14 @@ public class MoveData {
 
     /**
      * Start point of a move, or a static location (join/teleport).
+     * 
+     * <p>Quick note on semantics: these fields (from/to) follow Bukkit's PlayerMoveEvent semantics.<br>
+     * {@code from} is the server's last known position for the entity. <br>
+     * For example, if the player was at (1,1,1) and the client sends an update to (2,1,1),
+     * Bukkit will fire a move event with {@code from}=(1,1,1) and {@code to}=(2,1,1).<br>
+     * From the server's perspective, the {@code from} location is the current/last-known position
+     * and {@code to} one is the destination <i>about</i> to be applied that's been reported by the client; however, from the client's perspective they
+     * already are at the {@code to} position when the packet is sent.
      */
     public final LocationData from = new LocationData();
 
@@ -52,7 +60,7 @@ public class MoveData {
      * Indicate if coordinates for a move end-point and distances are present.
      * Always set on setPositions call.
      */
-    public boolean toIsValid = false; // Must initialize.
+    public boolean toIsValid = false; // Must initialize here as false.
 
 
     /////////////////////////////////////////////////////////////////////
@@ -60,7 +68,11 @@ public class MoveData {
     /////////////////////////////////////////////////////////////////////
     // Coordinates and distances.
     /**
-     * End point of a move.
+     * End point (destination) of a move.
+     *
+     * Essentially represents the destination reported by the client and about to be applied by the server. Example: client updates to
+     * (2,1,1) => {@code to}=(2,1,1) (the client may already be at that position).
+     * See {@link #from} for more details on semantics.
      */
     public final LocationData to = new LocationData();
 
