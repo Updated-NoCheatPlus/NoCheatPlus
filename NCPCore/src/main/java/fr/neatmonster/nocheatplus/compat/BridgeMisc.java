@@ -149,11 +149,11 @@ public class BridgeMisc {
         if (DataManager.getPlayerData(player).getClientVersion().isAtLeast(ClientVersion.V_1_21_2)) {
             return true;
         }
-        final IPlayerData pData =  DataManager.getPlayerData(player);
-        final MovingData data = pData.getGenericInstance(MovingData.class);
+        //final IPlayerData pData =  DataManager.getPlayerData(player);
+        //final MovingData data = pData.getGenericInstance(MovingData.class);
         // TODO: getOrUseVerticalVelocity or peekVerticalVelocity?
         // TODO: How exactly does ViaVersion provide?
-        return data.getOrUseVerticalVelocity(data.playerMoves.getCurrentMove().yDistance).isEmpty();
+        return false;
     }
     
     /**

@@ -786,26 +786,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
                 inPowderSnow = false;
             }
             else {
-                inPowderSnow = false; // Must initialize with false.
-                final int iMinX = Location.locToBlock(minX + 0.001);
-                final int iMaxX = Location.locToBlock(maxX - 0.001);
-                final int iMinY = Location.locToBlock(minY + 0.001);
-                final int iMaxY = Math.min(Location.locToBlock(maxY - 0.001), blockCache.getMaxBlockY());
-                final int iMinZ = Location.locToBlock(minZ + 0.001);
-                final int iMaxZ = Location.locToBlock(maxZ - 0.001);
-                for (int x = iMinX; x < iMaxX; x++) {
-                    for (int y = iMinY; y < iMaxY; y++) {
-                        for (int z = iMinZ; z < iMaxZ; z++) {
-                            if (x == Math.floor(getX()) && y == Math.floor(getY()) && z == Math.floor(getZ())  // Ensure that we only check the exact block the player is currently inside.
-                                // Use collidesBlock to avoid having to check for a second collision loop within collides()
-                                // Do not check for flags as they already have been checked within isInPowderSnow
-                                && BlockProperties.collidesBlock(blockCache, minX, minY, minZ, maxX, maxY, maxZ, x, y, z, getOrCreateBlockCacheNode(), null, BlockFlags.F_POWDER_SNOW)) {
-                                inPowderSnow = true;
-                                return inPowderSnow;
-                            }
-                        }
-                    }
-                }
+                inPowderSnow = isInside(BlockFlags.F_POWDER_SNOW);
             }
         }
         return inPowderSnow;
