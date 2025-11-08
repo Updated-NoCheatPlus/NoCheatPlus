@@ -66,7 +66,7 @@ public class PlayerLocation extends RichEntityLocation {
 
     /**
      * Straw-man method to account for this specific bug: <a href="https://bugs.mojang.com/browse/MC-2404">...</a>
-     * Should not be used outside its intended context (sneaking on edges), or if vanilla uses it.
+     * Should not be used outside its intended context (sneaking on edges), or if vanilla uses it elsewhere.
      */
     public boolean isAboveGround() {
         final IPlayerData pData = DataManager.getPlayerData(player);

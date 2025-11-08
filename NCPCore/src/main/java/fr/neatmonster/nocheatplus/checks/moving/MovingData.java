@@ -23,7 +23,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
@@ -176,7 +175,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     }, 2);
     /**
      * Track the inputs of the player (WASD, space bar, sprinting and jumping). <br> 
-     * The field is updated on {@link org.bukkit.event.player.PlayerMoveEvent} under split moves processor.<p>
+     * The field is updated on {@link org.bukkit.event.player.PlayerMoveEvent}s under split moves processor.<p>
      * This field is the one you should use to read input information during a PlayerMoveEvent instead of {@link Player#getCurrentInput()} alone, as it is kept synchronized with the correct movement, in case Bukkit happens to skip PlayerMoveEvents, 
      * causing a de-synchronization between inputs and movements (see comment in {@link MovingListener#onPlayerMove(PlayerMoveEvent)} and {@link PlayerMoveData#multiMoveCount}).<p>
      * This data is stored in MovingData instead of the Moving trace, as the latter may be invalidated, overridden or otherwise wiped out, while the input state is still valid and needed for the next move(s); it is not suitable for long-term storage.

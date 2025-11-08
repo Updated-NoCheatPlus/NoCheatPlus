@@ -46,6 +46,7 @@ public class PlayerMoveData extends MoveData {
     /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedWaterHeight;
     
+    /** Sets whether the player has just released a trident with riptide. Set on {@link org.bukkit.event.player.PlayerRiptideEvent}. */
     public boolean tridentRelease;
     
     /**
@@ -57,7 +58,8 @@ public class PlayerMoveData extends MoveData {
     
     /**
      * Indicates that this movement has/should have been slowed down due to the player hitting an entity (sprinting will be reset as well).<br>
-     * Mostly intended to be used for the h-speed prediction.
+     * Mostly intended to be used for the h-speed prediction.<br>
+     * Set in the {@link fr.neatmonster.nocheatplus.checks.fight.FightListener}
      */
     public boolean hasAttackSlowDown;
 
@@ -70,7 +72,7 @@ public class PlayerMoveData extends MoveData {
     public double xAllowedDistance;
     
     /**
-     *  The collision oon the X axis that has been set in this movement by SurvivalFly.
+     *  The collision on the X axis that has been set in this movement by SurvivalFly.
      *  Prior to version 1.21.2, this was set only if the theoretical speed prediction to set in this movement was found; or in other words, only if the player isn't cheating.
      *  On 1.21.2 and above, this is always set 
      *  @see PlayerMoveData#hasImpulse
@@ -206,7 +208,6 @@ public class PlayerMoveData extends MoveData {
         submergedLavaHeight = 0.0;
         submergedWaterHeight = 0.0;
         isGliding = false;
-        tridentRelease = false;
         forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
         strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
         // Properties involving the environment.

@@ -124,6 +124,7 @@ public class SurvivalFly extends Check {
         final boolean debug = pData.isDebugActive(type);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
+        final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         /* Regular and past fromOnGround */
         final boolean fromOnGround = from.isOnGround() || useBlockChangeTracker && from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick);
         /* Regular and past toOnGround */
@@ -328,11 +329,13 @@ public class SurvivalFly extends Check {
         data.lastLevitationLevel = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) ? Bridge1_9.getLevitationAmplifier(player) + 1 : 0.0;
         data.lastGravity = data.nextGravity;
         data.lastCollidingEntitiesLocations = CollisionUtil.getCollidingEntitiesLocations(player);
-        final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         cData.wasSprinting = pData.isSprinting();
         cData.wasPressingShift = pData.isShiftKeyPressed();
         cData.wasSlowFalling = !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player));
         cData.wasLevitating = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player));
+        if (thisMove.tridentRelease) {
+            thisMove.tridentRelease = false;
+        }
         // Log tags added after violation handling.
         if (debug && tags.size() > tagsLength) {
             logPostViolationTags(player);
@@ -474,6 +477,16 @@ public class SurvivalFly extends Check {
         // Reset speed if judged to be negligible.
         checkNegligibleMomentum(pData, thisMove);
         checkNegligibleMomentumVertical(pData, thisMove);
+        // Yes, players can glide and riptide at the same time, increasing speed at a faster rate than chunks can load...
+        // Surely a questionable decision on Mojang's part.
+        // NOTE: For the elytra, this has to be done before applying gravity and other motion changes.
+        if (thisMove.tridentRelease) {
+            Vector riptideVelocity = to.getRiptideVelocity(false); // Cannot glide while on ground, so no need to check for it.
+            // Fortunately, we do not have to account for onGround push here, as gliding does not work on ground.
+            thisMove.xAllowedDistance += riptideVelocity.getX();
+            thisMove.yAllowedDistance += riptideVelocity.getY();
+            thisMove.zAllowedDistance += riptideVelocity.getZ();
+        }
         // TODO: Reduce verbosity (at least, make it easier to look at)
         Vector viewVector = TrigUtil.getLookingDirection(to, player);
         float radianPitch = to.getPitch() * TrigUtil.toRadians;
@@ -522,21 +535,11 @@ public class SurvivalFly extends Check {
         thisMove.xAllowedDistance *= 0.99;
         thisMove.yAllowedDistance *= data.lastFrictionVertical;
         thisMove.zAllowedDistance *= 0.99;
-
         // Stuck-speed with the updated multiplier (both at the end)
         if (TrigUtil.lengthSquared(data.nextStuckInBlockHorizontal, data.nextStuckInBlockVertical, data.nextStuckInBlockHorizontal) > 1.0E-7) {
             thisMove.xAllowedDistance *= (double) data.nextStuckInBlockHorizontal;
             thisMove.yAllowedDistance *= (double) data.nextStuckInBlockVertical;
             thisMove.zAllowedDistance *= (double) data.nextStuckInBlockHorizontal;
-        }
-        // Yes, players can glide and riptide at the same time, increasing speed at a faster rate than chunks can load...
-        // Surely a questionable decision on Mojang's part.
-        if (thisMove.tridentRelease) {
-            Vector riptideVelocity = to.getRiptideVelocity(false); // Cannot glide while on ground, so no need to check for it.
-            // Fortunately, we do not have to account for onGround push here, as gliding does not work on ground.
-            thisMove.xAllowedDistance += riptideVelocity.getX();
-            thisMove.yAllowedDistance += riptideVelocity.getY();
-            thisMove.zAllowedDistance += riptideVelocity.getZ();
         }
         // Collisions last.
         Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
@@ -676,7 +679,9 @@ public class SurvivalFly extends Check {
             return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit};
         }
         
-        boolean onGround = !forceSetOffGround && (from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround || lastMove.yDistance < 0.0 && thisMove.fromLostGround || forceSetOnGround);
+        boolean onGround = from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround || lastMove.yDistance < 0.0 && thisMove.fromLostGround || forceSetOnGround;
+        // Override ground status if needed.
+        if (forceSetOffGround) onGround = false;
         /* All moves are assumed to be predictable, unless there are technical limitations / bugs / glitches that we cannot solve */
         boolean isPredictable;
         //////////////////////////////////////////////////////////////
@@ -737,7 +742,7 @@ public class SurvivalFly extends Check {
         else hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
         if (hDistanceAboveLimit > 0.0) {
              tags.add("hdistrel");
-            //if (debug) player.sendMessage("c/e: " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
+            if (debug) player.sendMessage("c/e: " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
         }
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit};
     }
@@ -856,7 +861,7 @@ public class SurvivalFly extends Check {
         }
         // If impulses don't need to be inferred from the prediction, illegal sprinting checks can be performed here.
         if (BridgeMisc.isWASDImpulseKnown(player) && pData.isSprinting()
-            && (data.input.getForwardDir() != ForwardDirection.FORWARD 
+            && (data.input.getForwardDir() != ForwardDirection.FORWARD && data.input.getStrafeDir() != StrafeDirection.NONE && data.input.getForwardDir() != ForwardDirection.NONE
                 || player.getFoodLevel() <= 5) // must be checked here as well (besides on toggle sprinting) because players will immediately lose the ability to sprint if food level drops below 5
             ) { 
             // || inputs[i].getForward() < 0.8 // hasEnoughImpulseToStartSprinting, in LocalPlayer,java -> aiStep()
@@ -1039,9 +1044,6 @@ public class SurvivalFly extends Check {
             thisMove.xAllowedDistance += (double) (-TrigUtil.sin(to.getYaw() * TrigUtil.toRadians) * Magic.BUNNYHOP_BOOST);
             thisMove.zAllowedDistance += (double) (TrigUtil.cos(to.getYaw() * TrigUtil.toRadians) * Magic.BUNNYHOP_BOOST);
             thisMove.bunnyHop = true;
-            if (!BridgeMisc.isWASDImpulseKnown(player) && PhysicsEnvelope.isVerticallyConstricted(from, to, pData)) {
-                isPredictable = false;
-            }
             tags.add("bunnyhop");
         }
         
@@ -1162,9 +1164,9 @@ public class SurvivalFly extends Check {
             thisMove.hasImpulse = AlmostBoolean.match(input.getForwardDir() != ForwardDirection.NONE || input.getStrafeDir() != StrafeDirection.NONE);
             thisMove.strafeImpulse = input.getStrafeDir();
             thisMove.forwardImpulse = input.getForwardDir();
-            /*if (debug) {
+            if (debug) {
                 player.sendMessage("[SurvivalFly] (postPredict) Direction: " + input.getForwardDir() +" | "+ input.getStrafeDir());
-            }*/
+            }
             // If-else instead of an early return... Matter of preference. This makes code slightly easier to look at, as it avoids yet another indentation
             return isPredictable;
         }
@@ -1305,7 +1307,8 @@ public class SurvivalFly extends Check {
             if (found) {
                 // These checks must be performed ex-post because they rely on data that is set after the prediction.
                 if (pData.isSprinting() 
-                    && (theorInputs[i].getForwardDir() != ForwardDirection.FORWARD || player.getFoodLevel() <= 5)) { 
+                    && (theorInputs[i].getForwardDir() != ForwardDirection.FORWARD && theorInputs[i].getStrafeDir() != StrafeDirection.NONE && theorInputs[i].getForwardDir() != ForwardDirection.NONE
+                        || player.getFoodLevel() <= 5)) { 
                     tags.add("illegalsprint");
                     Improbable.check(player, (float) thisMove.hDistance, System.currentTimeMillis(), "moving.survivalfly.illegalsprint", pData);
                     // Keep looping
