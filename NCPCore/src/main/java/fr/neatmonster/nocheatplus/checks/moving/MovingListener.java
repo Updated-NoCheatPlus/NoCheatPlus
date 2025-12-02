@@ -1191,6 +1191,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         thisMove.multiMoveCount = multiMoveCount;
         thisMove.setBackYDistance = pTo.getY() - data.getSetBackY();
         thisMove.isGliding = Bridge1_9.isGliding(player);
+        thisMove.tridentRelease = data.consumeTridentReleaseEvent();
 
         ////////////////////////////
         // Potion effect "Jump".  //

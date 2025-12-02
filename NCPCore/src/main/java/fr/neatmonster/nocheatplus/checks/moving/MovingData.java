@@ -216,6 +216,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public int fireworksBoostTickNeedCheck = 0;
     /** Expire at this tick. */
     public int fireworksBoostTickExpire = 0;
+    private AlmostBoolean tridentRelease = AlmostBoolean.NO; 
 
     // *----------Data of the MorePackets check----------*
     /** Packet frequency count. */
@@ -828,6 +829,21 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         // Elytra boost best fits velocity / effects.
         fireworksBoostDuration = 0; 
         fireworksBoostTickExpire = 0;
+    }
+    /**
+     * Set when PlayerRiptideEvent called
+     */
+    public void setTridentReleaseEvent(AlmostBoolean isReleased) {
+        tridentRelease = isReleased;
+    }
+
+    /**
+     * Set when pass to PlayerMoveData, also reset state
+     */
+    public AlmostBoolean consumeTridentReleaseEvent() {
+        final AlmostBoolean result = tridentRelease;
+        tridentRelease = AlmostBoolean.NO;
+        return result;
     }
     
 

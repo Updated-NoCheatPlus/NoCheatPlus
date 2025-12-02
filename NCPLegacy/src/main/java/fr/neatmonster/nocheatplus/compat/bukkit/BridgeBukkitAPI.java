@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.compat.bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -75,6 +76,22 @@ public class BridgeBukkitAPI {
         return p.getOpenInventory().getTopInventory();
     }
     
+    public static Inventory getTopInventory(InventoryClickEvent event) {
+        return getInventoryView(event).getTopInventory();
+    }
+    
+    public static Inventory getBottomInventory(InventoryClickEvent event) {
+        return getInventoryView(event).getBottomInventory();
+    }
+    
+    public static InventoryView getInventoryView(InventoryClickEvent event) {
+        return event.getView();
+    }
+    
+    public static String getInventoryTitle(InventoryClickEvent event) {
+        return getInventoryView(event).getTitle();
+    }
+	
     public static boolean hasInventoryOpenOwnExcluded(final Player player) {
         final InventoryView view = player.getOpenInventory();
         return view != null && view.getType() != InventoryType.CRAFTING && view.getType() != InventoryType.CREATIVE; // Exclude the CRAFTING and CREATIVE inv type.

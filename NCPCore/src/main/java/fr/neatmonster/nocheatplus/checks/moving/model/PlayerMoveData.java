@@ -47,7 +47,7 @@ public class PlayerMoveData extends MoveData {
     public double submergedWaterHeight;
     
     /** Sets whether the player has just released a trident with riptide. Set on {@link org.bukkit.event.player.PlayerRiptideEvent}. */
-    public boolean tridentRelease;
+    public AlmostBoolean tridentRelease;
     
     /**
      * The distance covered by a move from the setback point to the to.getY() point.
@@ -230,6 +230,7 @@ public class PlayerMoveData extends MoveData {
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;
         hasImpulse = AlmostBoolean.NO;
+        tridentRelease = AlmostBoolean.NO;
         // Super class last, because it'll set valid to true in the end.
         super.resetBase();
     }

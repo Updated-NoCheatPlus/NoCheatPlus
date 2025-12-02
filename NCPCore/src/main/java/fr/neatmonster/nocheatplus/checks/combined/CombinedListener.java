@@ -47,6 +47,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
+import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
@@ -181,8 +182,7 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
     public void onReleasingTrident(Player player, Vector vel) {
         final IPlayerData pData = DataManager.getPlayerData(player);
         final MovingData data = pData.getGenericInstance(MovingData.class);
-        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
-        thisMove.tridentRelease = true;
+        data.setTridentReleaseEvent(AlmostBoolean.MAYBE);
     }
 
     /** 

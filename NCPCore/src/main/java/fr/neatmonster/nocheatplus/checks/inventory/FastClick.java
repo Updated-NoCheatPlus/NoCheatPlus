@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -69,7 +70,7 @@ public class FastClick extends Check {
     * @return true, if successful
     */
     public boolean check(final Player player, final long now, 
-                         final InventoryView view, final int slot, final ItemStack cursor, 
+                         final InventoryClickEvent event, final int slot, final ItemStack cursor, 
                          final ItemStack clicked, final boolean isShiftClick, 
                          final String inventoryAction, final InventoryData data, final InventoryConfig cc, 
                          final IPlayerData pData) {
@@ -91,11 +92,11 @@ public class FastClick extends Check {
         }
 
         if (inventoryAction != null) {
-            amount = getAmountWithAction(view, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, inventoryAction, data, cc);
+            amount = getAmountWithAction(event, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, inventoryAction, data, cc);
         }
         else if (cursor != null) {
             // Detect shift-click features indirectly.
-            amount = detectTweaks1_5(view, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, data, cc);
+            amount = detectTweaks1_5(event, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, data, cc);
         }
         else amount = 1f;
 
@@ -190,7 +191,7 @@ public class FastClick extends Check {
     * @param data
     * @param cc
     */
-    private float detectTweaks1_5(final InventoryView view, final int slot, final ItemStack clicked, 
+    private float detectTweaks1_5(final InventoryClickEvent event, final int slot, final ItemStack clicked, 
                                   final Material clickedMat, final Material cursorMat, 
                                   final int cursorAmount, final boolean isShiftClick, 
                                   final InventoryData data, final InventoryConfig cc) {
@@ -203,13 +204,13 @@ public class FastClick extends Check {
         else if (clickedMat == Material.AIR || clickedMat == cursorMat 
                 || isShiftClick && clickedMat == data.fastClickLastClicked ) {
             return Math.min(cc.fastClickNormalLimit , cc.fastClickShortTermLimit) 
-                    / (float) (isShiftClick && clickedMat != Material.AIR ? (1.0 + Math.max(cursorAmount, InventoryUtil.getStackCount(view, clicked))) : cursorAmount)  * 0.75f;
+                    / (float) (isShiftClick && clickedMat != Material.AIR ? (1.0 + Math.max(cursorAmount, InventoryUtil.getStackCount(event, clicked))) : cursorAmount)  * 0.75f;
         }
         return 1f;
     }
 
 
-    private float getAmountWithAction(final InventoryView view, final int slot, final ItemStack clicked, 
+    private float getAmountWithAction(final InventoryClickEvent event, final int slot, final ItemStack clicked, 
                                       final Material clickedMat, final Material cursorMat, 
                                       final int cursorAmount, final boolean isShiftClick, 
                                       final String inventoryAction, 
@@ -219,7 +220,7 @@ public class FastClick extends Check {
         if (inventoryAction.equals("DROP_ONE_SLOT")
             && slot == data.fastClickLastSlot 
             && clickedMat == data.fastClickLastClicked
-            && view.getType() == InventoryType.CRAFTING
+            && event.getInventory().getType() == InventoryType.CRAFTING
             // && InventoryUtil.couldHaveInventoryOpen(player)
             // TODO: Distinguish if the inventory is really open.
             ) {
@@ -228,14 +229,14 @@ public class FastClick extends Check {
 
         // Collect to cursor.
         if (inventoryAction.equals("COLLECT_TO_CURSOR")) {
-            final int stackCount = InventoryUtil.getStackCount(view, clicked);
+            final int stackCount = InventoryUtil.getStackCount(event, clicked);
             return stackCount <= 0 ? 1f : Math.min(cc.fastClickNormalLimit , cc.fastClickShortTermLimit) / stackCount * 0.75f;
         }
 
         // Shift click features.
         if ((inventoryAction.equals("MOVE_TO_OTHER_INVENTORY")) && cursorMat != Material.AIR) {
             // Let the legacy method do the side condition checks and counting for now.
-            return detectTweaks1_5(view, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, data, cc);
+            return detectTweaks1_5(event, slot, clicked, clickedMat, cursorMat, cursorAmount, isShiftClick, data, cc);
         }
         return 1f;
     }

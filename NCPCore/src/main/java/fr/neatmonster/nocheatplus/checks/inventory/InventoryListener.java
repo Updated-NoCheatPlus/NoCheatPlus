@@ -49,7 +49,6 @@ import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 
@@ -227,7 +226,7 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
             // We still want to know if the player clicked in the inventory (even if cancelled) for the inventory-open estimate above.
             return;
         }
-        if (slot == InventoryView.OUTSIDE || slot < 0) {
+        if (slot == -999 || slot < 0) {
             // Set and return, not interested in these clicks.
             data.lastClickTime = now;
             return;
@@ -238,11 +237,11 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
         boolean cancel = false;
         // Fast inventory manipulation check.
         if (fastClick.isEnabled(player, pData)) {
-            if (!((event.getView().getType().equals(InventoryType.CREATIVE) || player.getGameMode() == GameMode.CREATIVE) && cc.fastClickSpareCreative)) {
+            if (!((event.getInventory().getType().equals(InventoryType.CREATIVE) || player.getGameMode() == GameMode.CREATIVE) && cc.fastClickSpareCreative)) {
                 boolean check = true;
                 try {
                     // Exempted inventories are not checked.
-                    check = !cc.inventoryExemptions.contains(ChatColor.stripColor(event.getView().getTitle()));
+                    check = !cc.inventoryExemptions.contains(ChatColor.stripColor(BridgeBukkitAPI.getInventoryTitle(event)));
                 }
                 catch (IllegalStateException e) {
                     // Uhm... Can this ISE be fixed?
@@ -257,7 +256,7 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
                         keepCancel = true;
                     }
                     // Then check for too fast inventory clicking
-                    if (!cancel && fastClick.check(player, now, event.getView(), slot, cursor, clicked, event.isShiftClick(), inventoryAction, data, cc, pData)) {  
+                    if (!cancel && fastClick.check(player, now, event, slot, cursor, clicked, event.isShiftClick(), inventoryAction, data, cc, pData)) {  
                         cancel = true;
                     }
                 }
@@ -676,14 +675,14 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
 
         // Inventory view.
         builder.append(" , View: ");
-        final InventoryView view = event.getView();
-        builder.append(view.getClass().getName());
+        //final InventoryView view = BridgeBukkitAPI.getInventoryView(event);
+        //builder.append(view.getClass().getName());
 
         // Bottom inventory.
-        addInventory(view.getBottomInventory(), view, " , Bottom: ", builder);
+        addInventory(BridgeBukkitAPI.getBottomInventory(event), BridgeBukkitAPI.getInventoryTitle(event), " , Bottom: ", builder);
 
         // Top inventory.
-        addInventory(view.getBottomInventory(), view, " , Top: ", builder);
+        addInventory(BridgeBukkitAPI.getTopInventory(event), BridgeBukkitAPI.getInventoryTitle(event), " , Top: ", builder);
         
         if (action != null) {
             builder.append(" , Action: ");
@@ -698,13 +697,12 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
         debug(player, builder.toString());
     }
 
-    private void addInventory(final Inventory inventory, final InventoryView view, final String prefix, final StringBuilder builder) {
+    private void addInventory(final Inventory inventory, final String name, final String prefix, final StringBuilder builder) {
         builder.append(prefix);
         if (inventory == null) {
             builder.append("(none)");
         }
         else {
-            String name = view.getTitle();
             builder.append(name);
             builder.append("/");
             builder.append(inventory.getClass().getName());

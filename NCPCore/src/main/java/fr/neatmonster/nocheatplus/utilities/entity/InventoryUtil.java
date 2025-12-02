@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
@@ -169,8 +170,8 @@ public class InventoryUtil {
      *            the reference
      * @return the stack count
      */
-    public static int getStackCount(final InventoryView view, final ItemStack reference) {
-        return getStackCount(view.getBottomInventory(), reference) + getStackCount(view.getTopInventory(), reference);
+    public static int getStackCount(final InventoryClickEvent event, final ItemStack reference) {
+        return getStackCount(BridgeBukkitAPI.getBottomInventory(event), reference) + getStackCount(BridgeBukkitAPI.getTopInventory(event), reference);
     }
 
     //    /**

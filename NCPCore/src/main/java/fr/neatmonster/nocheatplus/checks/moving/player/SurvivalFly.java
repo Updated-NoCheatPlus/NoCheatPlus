@@ -125,6 +125,13 @@ public class SurvivalFly extends Check {
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
+        /*
+         * Actually forgot what this does. But quick guess might be idle move (0,0,0) on count 1 and riptide on count 2.
+         */
+        if (lastMove.tridentRelease.decideOptimistically() && multiMoveCount == 2 && lastMove.yDistance == 0.0) {
+            thisMove.tridentRelease = AlmostBoolean.YES;
+            lastMove.tridentRelease = AlmostBoolean.NO;
+        }
         /* Regular and past fromOnGround */
         final boolean fromOnGround = from.isOnGround() || useBlockChangeTracker && from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick);
         /* Regular and past toOnGround */
@@ -333,9 +340,6 @@ public class SurvivalFly extends Check {
         cData.wasPressingShift = pData.isShiftKeyPressed();
         cData.wasSlowFalling = !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player));
         cData.wasLevitating = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player));
-        if (thisMove.tridentRelease) {
-            thisMove.tridentRelease = false;
-        }
         // Log tags added after violation handling.
         if (debug && tags.size() > tagsLength) {
             logPostViolationTags(player);
@@ -480,7 +484,8 @@ public class SurvivalFly extends Check {
         // Yes, players can glide and riptide at the same time, increasing speed at a faster rate than chunks can load...
         // Surely a questionable decision on Mojang's part.
         // NOTE: For the elytra, this has to be done before applying gravity and other motion changes.
-        if (thisMove.tridentRelease) {
+        if (thisMove.tridentRelease.decideOptimistically()) {
+            thisMove.tridentRelease = AlmostBoolean.YES;
             Vector riptideVelocity = to.getRiptideVelocity(false); // Cannot glide while on ground, so no need to check for it.
             // Fortunately, we do not have to account for onGround push here, as gliding does not work on ground.
             thisMove.xAllowedDistance += riptideVelocity.getX();
@@ -741,7 +746,7 @@ public class SurvivalFly extends Check {
         }
         else hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
         if (hDistanceAboveLimit > 0.0) {
-             tags.add("hdistrel");
+            tags.add("hdistrel");
             if (debug) player.sendMessage("c/e: " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
         }
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit};
@@ -1000,12 +1005,21 @@ public class SurvivalFly extends Check {
                 thisMove.xAllowedDistance = thisMove.zAllowedDistance = 0.0;
             }
         }
+        // ???-Next stage after ground riptide(integrated, no gnd_riptide_pre)
+        boolean newFriction = false;
+        if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
+            final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
+            if (lastMove.from.onGround || secondLastMove.tridentRelease.decideOptimistically() || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {
+                newFriction = true;
+            }
+        }
+        
         // Block speed
         thisMove.xAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
         thisMove.zAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
         // Friction next.
-        thisMove.xAllowedDistance *= (double) data.lastInertia;
-        thisMove.zAllowedDistance *= (double) data.lastInertia;
+        thisMove.xAllowedDistance *= (double) (newFriction ? data.nextInertia : data.lastInertia);
+        thisMove.zAllowedDistance *= (double) (newFriction ? data.nextInertia : data.lastInertia);
         // Apply entity-pushing speed
         // From Entity.java.push()
         // The entity's location is in the past.
@@ -1082,6 +1096,10 @@ public class SurvivalFly extends Check {
             else yDistanceBeforeCollide -= data.lastGravity;
             yDistanceBeforeCollide *= data.lastFrictionVertical;
         }
+        if (from.isInLiquid() && verticalLiquidPushComponent != 0.0) {
+            // Liquid vertical push component calculated in hdistrel.
+            yDistanceBeforeCollide += verticalLiquidPushComponent;
+        }
         //End of yDistanceBeforeCollide getter
 
         // *--------------------------------------------------------------------------------------------------------------------*
@@ -1118,8 +1136,9 @@ public class SurvivalFly extends Check {
                 thisMove.zAllowedDistance *= (double) data.nextStuckInBlockHorizontal;
             }
             // Riptide works by propelling the player after releasing the trident (the effect only pushes the player, unless is on ground)
-            if (thisMove.tridentRelease) {
-                Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
+            if (thisMove.tridentRelease.decideOptimistically()) {
+                thisMove.tridentRelease = AlmostBoolean.YES;
+                Vector riptideVelocity = to.getRiptideVelocity(onGround);
                 thisMove.xAllowedDistance += riptideVelocity.getX();
                 thisMove.zAllowedDistance += riptideVelocity.getZ();
             }
@@ -1226,8 +1245,9 @@ public class SurvivalFly extends Check {
                 zTheoreticalDistance[i] *= (double) data.nextStuckInBlockHorizontal;
             }
         }
-        if (thisMove.tridentRelease) {
-            Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
+        if (thisMove.tridentRelease.decideOptimistically()) {
+            thisMove.tridentRelease = AlmostBoolean.YES;
+            Vector riptideVelocity = to.getRiptideVelocity(onGround);
             for (i = 0; i < 9; i++) {
                 xTheoreticalDistance[i] += riptideVelocity.getX();
                 zTheoreticalDistance[i] += riptideVelocity.getZ();
@@ -1434,6 +1454,7 @@ public class SurvivalFly extends Check {
         /* Not on ground, not on climbable, not in liquids, not in stuck-speed, no lostground (...) */
         final boolean fullyInAir = !thisMove.touchedGroundWorkaround && !resetFrom && !resetTo;
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
+        final boolean onGround = from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround;
         /*
          * 1: Simulate the reset of speed that the client should have sent to the server.
          * [Client lands on the ground but does not come to a "rest" on top of the block (and thus, reset the vertical speed), instead they'll immediately descend right after, but with speed that is still based on a previous move of 0.0]
@@ -1456,6 +1477,14 @@ public class SurvivalFly extends Check {
                 // Nothing else to do here; allow the movement as-is.
                 return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
             }
+        }
+
+        if (onGround && thisMove.tridentRelease.decideOptimistically() && thisMove.multiMoveCount == 1 && !isNormalOrPacketSplitMove && Math.abs(thisMove.yDistance - 1.2) < Magic.PREDICTION_EPSILON) {
+            thisMove.yAllowedDistance = 1.2;
+            data.setTridentReleaseEvent(AlmostBoolean.YES);
+            yDistanceAboveLimit = 0.0;
+            tags.add("gnd_riptide_pre");
+            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
         }
         
         
@@ -1640,13 +1669,13 @@ public class SurvivalFly extends Check {
                 if (data.input.isSpaceBarPressed()) {
                     boolean isSubmergedInWater = from.isInWater() && thisMove.submergedWaterHeight > 0.0;
                     double fluidJumpThreshold = from.getEyeHeight() < 0.4D ? 0.0D : 0.4D;
-                    if (isSubmergedInWater && (!from.isOnGround() || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
+                    if (isSubmergedInWater && (!onGround || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
                         thisMove.yAllowedDistance += Magic.LIQUID_SPEED_GAIN; // The game distinguishes liquid tagkeys, but the motion is the same...
                     } 
-                    else if (from.isInLava() && (!from.isOnGround() || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
+                    else if (from.isInLava() && (!onGround || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
                         thisMove.yAllowedDistance += Magic.LIQUID_SPEED_GAIN;
                     } 
-                    else if ((from.isOnGround() || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
+                    else if ((onGround || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
                         thisMove.yAllowedDistance = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * attributeAccess.getHandle().getJumpGainMultiplier(player);
                         data.jumpDelay = Magic.MAX_JUMP_DELAY;
                         thisMove.hasImpulse = AlmostBoolean.YES; // Minecraft explicitly tells us that there's impulse in this case.
@@ -1688,13 +1717,13 @@ public class SurvivalFly extends Check {
                 yTheoreticalDistance[2] = thisMove.yAllowedDistance;
                 boolean isSubmergedInWater = from.isInWater() && thisMove.submergedWaterHeight > 0.0;
                 double fluidJumpThreshold = from.getEyeHeight() < 0.4D ? 0.0D : 0.4D;
-                if (isSubmergedInWater && (!from.isOnGround() || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
+                if (isSubmergedInWater && (!onGround || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
                     yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
                 }
-                else if (from.isInLava() && (!from.isOnGround() || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
+                else if (from.isInLava() && (!onGround || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
                     yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
                 }
-                else if ((from.isOnGround() || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
+                else if ((onGround || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
                     yTheoreticalDistance[0] = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * attributeAccess.getHandle().getJumpGainMultiplier(player);
                     data.jumpDelay = Magic.MAX_JUMP_DELAY;
                     thisMove.hasImpulse = AlmostBoolean.YES;
@@ -1727,15 +1756,38 @@ public class SurvivalFly extends Check {
             else thisMove.yAllowedDistance *= data.nextStuckInBlockVertical;
         }
         // *----------TridentItem.releaseUsing(), apply trident motion----------*
-        if (thisMove.tridentRelease) {
+        if (thisMove.tridentRelease.decideOptimistically()) {
+            thisMove.tridentRelease = AlmostBoolean.YES;
             // Riptide works by propelling the player in air after releasing the trident (the effect only pushes the player, unless is on ground)
-            final Vector riptideVelocity = to.getRiptideVelocity(from.isOnGround() || lastMove.toIsValid && lastMove.yDistance <= 0.0 && lastMove.from.onGround);
-            if (yTheoreticalDistance != null) {
-                for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                    yTheoreticalDistance[i] += riptideVelocity.getY();
+            final Vector riptideVelocity = to.getRiptideVelocity(onGround);
+            final double fric = getLastYGroundRipTide(from, lastMove, data, cData);
+            if (fric != 0.0) {
+                if (yTheoreticalDistance != null) {
+                    for (int i = 0; i < yTheoreticalDistance.length; i++) {
+                        yTheoreticalDistance[i] = riptideVelocity.getY() + fric;
+                    }
                 }
+                else thisMove.yAllowedDistance = riptideVelocity.getY() + fric;
+            } else {
+                if (yTheoreticalDistance != null) {
+                    for (int i = 0; i < yTheoreticalDistance.length; i++) {
+                        yTheoreticalDistance[i] += riptideVelocity.getY();
+                    }
+                }
+                else thisMove.yAllowedDistance += riptideVelocity.getY();
             }
-            else thisMove.yAllowedDistance += riptideVelocity.getY();
+        }
+        // ???-Next stage after ground riptide(integrated, no gnd_riptide_pre)
+        if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
+            final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
+            if (lastMove.from.onGround || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {
+                if (yTheoreticalDistance != null) {
+                    for (int i = 0; i < yTheoreticalDistance.length; i++) {
+                        yTheoreticalDistance[i] -= 1.2 * data.lastFrictionVertical;
+                    }
+                }
+                else thisMove.yAllowedDistance -= 1.2 * data.lastFrictionVertical;
+            }
         }
         // *----------Entity.move(), call the collide() function----------*
         // Include horizontal motion to account for stepping: there are cases where NCP's isStep definition fails to catch it.
@@ -1807,6 +1859,38 @@ public class SurvivalFly extends Check {
             }
         }
         return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
+    }
+
+    private double getLastYGroundRipTide(PlayerLocation from, PlayerMoveData lastMove, MovingData data, CombinedData cData) {
+        double tmp = 0.0;
+        if (lastMove.tridentRelease == AlmostBoolean.MAYBE) {
+            if (lastMove.from.inWater) {
+                return from.getFluidFallingAdjustedMovement(data.lastGravity, true, new Vector(0.0, 0.0, 0.0), false).getY();
+            }
+            else if (lastMove.from.inLava) {
+                // Lava friction is quite odd. Depending on specified thresholds, it can be 0.5 or 0.8
+                if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) {
+                    tmp = from.getFluidFallingAdjustedMovement(data.lastGravity, true, new Vector(0.0, 0.0, 0.0), false).getY();
+                }
+                else {
+                    // Otherwise, 0.5
+                    tmp *= data.lastFrictionVertical;
+                }
+                if (data.lastGravity != 0.0) {
+                    tmp += -data.lastGravity / 4.0;
+                }
+            }
+            else {
+                // Air motion
+                if (cData.wasLevitating) {
+                    // Levitation forces players to ascend and does not work in liquids, so thankfully we don't have to account for that, other than stuck-speed.
+                    tmp += (0.05 * data.lastLevitationLevel - lastMove.yAllowedDistance) * 0.2;
+                }
+                else tmp -= data.lastGravity;
+                tmp *= data.lastFrictionVertical;
+            }
+        }
+        return tmp;
     }
 
 
