@@ -713,14 +713,20 @@ public class CollisionUtil {
         double maxX = nextBlockBB[3];
         double maxY = nextBlockBB[4];
         double maxZ = nextBlockBB[5];
-        double lastMinX = lastBlockBB[0];
-        double lastMinY = lastBlockBB[1];
-        double lastMinZ = lastBlockBB[2];
-        double lastMaxX = lastBlockBB[3];
-        double lastMaxY = lastBlockBB[4];
-        double lastMaxZ = lastBlockBB[5];
+        double lastMinX = -1;
+        double lastMinY = -1;
+        double lastMinZ = -1;
+        double lastMaxX = -1;
+        double lastMaxY = -1;
+        double lastMaxZ = -1;
         // Slab/door/trap door fix(3/3): Bypass : Can't interact through other side of block from one side
         if (lastBlockBB != null) {
+            lastMinX = lastBlockBB[0];
+            lastMinY = lastBlockBB[1];
+            lastMinZ = lastBlockBB[2];
+            lastMaxX = lastBlockBB[3];
+            lastMaxY = lastBlockBB[4];
+            lastMaxZ = lastBlockBB[5];
             if (axisData != null) {
                 // If there's any y distance...
                 if (dy != 0.0) {
@@ -857,19 +863,19 @@ public class CollisionUtil {
         }
         // X
         if (dx != 0.0) {
-            if (nextBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && nextBlockBB[2] == 0.0 && nextBlockBB[5] == 1.0) {
-                if (axisData != null && (dx > 0 ? nextBlockBB[0] != 0.0 : nextBlockBB[3] != 1.0)) {
+            if (minY == 0.0 && maxY == 1.0 && minZ == 0.0 && maxZ == 1.0) {
+                if (axisData != null && (dx > 0 ? minX != 0.0 : maxX != 1.0)) {
                     axisData.dirExclusion = dx > 0 ? Direction.X_POS : Direction.X_NEG;
                     return true;
                 }
                 return rayTracing.getCollidingAxis() != Axis.X_AXIS;
             }
-            if (!mightEdgeInteraction && lastBlockBB != null && (dx > 0 ? lastBlockBB[3] == 1.0 && nextBlockBB[0] == 0.0 : lastBlockBB[0] == 0.0 && nextBlockBB[3]==1.0) 
+            if (!mightEdgeInteraction && lastBlockBB != null && (dx > 0 ? lastMaxX == 1.0 && minX == 0.0 : lastMinX == 0.0 && maxX==1.0) 
                 && (
-                    nextBlockBB[1] == 0.0 && lastBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && lastBlockBB[4] == 1.0 
-                    && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[2], lastBlockBB[5], nextBlockBB[2], nextBlockBB[5]), 1.0, 0.001) 
-                    || nextBlockBB[2] == 0.0 && lastBlockBB[2] == 0.0 && nextBlockBB[5] == 1.0 && lastBlockBB[5] == 1.0 
-                    && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[1], lastBlockBB[4], nextBlockBB[1], nextBlockBB[4]), 1.0, 0.001)
+                    minY == 0.0 && lastMinY == 0.0 && maxY == 1.0 && lastMaxY == 1.0 
+                    && MathUtil.equal(MathUtil.getCoveredSpace(lastMinZ, lastMaxZ, minZ, maxZ), 1.0, 0.001) 
+                    || minZ == 0.0 && lastMinZ == 0.0 && maxZ == 1.0 && lastMaxZ == 1.0 
+                    && MathUtil.equal(MathUtil.getCoveredSpace(lastMinY, lastMaxY, minY, maxY), 1.0, 0.001)
                 )) {
                 return false;
             }
@@ -877,16 +883,16 @@ public class CollisionUtil {
         }
         // Z
         if (dz != 0) {
-            if (nextBlockBB[0] == 0.0 && nextBlockBB[3] == 1.0 && nextBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0) {
-                if (axisData != null && (dz > 0 ? nextBlockBB[2] != 0.0 : nextBlockBB[5] != 1.0)) {
+            if (minX == 0.0 && maxX == 1.0 && minY == 0.0 && maxY == 1.0) {
+                if (axisData != null && (dz > 0 ? minZ != 0.0 : maxZ != 1.0)) {
                     axisData.dirExclusion = dz > 0 ? Direction.Z_POS : Direction.Z_NEG;
                     return true;
                 }
                 return rayTracing.getCollidingAxis() != Axis.Z_AXIS;
             }
-            if (!mightEdgeInteraction && lastBlockBB != null && (dz > 0 ? lastBlockBB[5] == 1.0 && nextBlockBB[2] == 0.0 : lastBlockBB[2] == 0.0 && nextBlockBB[5]==1.0)
-                    && (nextBlockBB[1] == 0.0 && lastBlockBB[1] == 0.0 && nextBlockBB[4] == 1.0 && lastBlockBB[4] == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[0], lastBlockBB[3], nextBlockBB[0], nextBlockBB[3]), 1.0, 0.001)
-                    || nextBlockBB[0] == 0.0 && lastBlockBB[0] == 0.0 && nextBlockBB[3] == 1.0 && lastBlockBB[3] == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastBlockBB[1], lastBlockBB[4], nextBlockBB[1], nextBlockBB[4]), 1.0, 0.001))) return false;
+            if (!mightEdgeInteraction && lastBlockBB != null && (dz > 0 ? lastMaxZ == 1.0 && minZ == 0.0 : lastMinZ == 0.0 && maxZ==1.0)
+                    && (minY == 0.0 && lastMinY == 0.0 && maxY == 1.0 && lastMaxY == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastMinX, lastMaxX, minX, maxX), 1.0, 0.001)
+                    || minX == 0.0 && lastMinX == 0.0 && maxX == 1.0 && lastMaxX == 1.0 && MathUtil.equal(MathUtil.getCoveredSpace(lastMinY, lastMaxY, minY, maxY), 1.0, 0.001))) return false;
             return true;
         }
         return false;
