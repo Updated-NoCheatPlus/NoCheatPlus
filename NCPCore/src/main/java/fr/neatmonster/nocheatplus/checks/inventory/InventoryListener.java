@@ -588,6 +588,7 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
         final Inventory inv = BridgeBukkitAPI.getTopInventory(event.getPlayer());
+        boolean moreInvCheck = false;
         if (moreInv.isEnabled(event.getPlayer(), pData) 
             && moreInv.check(event.getPlayer(), cData, pData, inv.getType(), inv, PoYdiff)) {
             for (int i = 1; i <= 4; i++) {
@@ -595,18 +596,23 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
                 // Ensure air-clicking is not detected... :)
                 if (item != null && !BlockProperties.isAir(item.getType())) {
                     // NOTE: dropItemsNaturally does not fire InvDrop events, so don't use it here. Simply close the inventory,
-                    event.getPlayer().closeInventory();
+                    event.getPlayer().closeInventory(); // Do not call Open.checkClose() here, as it checks for if the inventory is open again, and we're not interested in that.
                     if (pData.isDebugActive(CheckType.INVENTORY_MOREINVENTORY)) {
                         debug(event.getPlayer(), "On PlayerMoveEvent: force-close inventory on MoreInv detection.");
                     }
+                    moreInvCheck = true;
                     break;
                 }
             }
         }
+        if (moreInvCheck) {
+            // Already closed inventory; no need to also check for open-on-move.
+            return;
+        }
         // Determine if the inventory should be closed.
         if (cc.openCancelOnMove && !pData.hasBypass(CheckType.INVENTORY_OPEN, event.getPlayer())) {
             if (InventoryUtil.hasInventoryOpen(event.getPlayer()) && open.checkOnMove(event.getPlayer(), pData)) {
-                event.getPlayer().closeInventory(); // Do not call open.check() here.
+                event.getPlayer().closeInventory(); // Do not call open.check() here. <- Uhm... Why did I write this note?
                 if (pData.isDebugActive(CheckType.INVENTORY_OPEN)) {
                     debug(event.getPlayer(), "Player is actively moving: force-close open inventory.");
                 }

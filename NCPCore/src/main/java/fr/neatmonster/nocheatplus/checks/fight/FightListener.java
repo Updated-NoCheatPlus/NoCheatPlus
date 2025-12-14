@@ -46,7 +46,9 @@ import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.ITraceEntry;
 import fr.neatmonster.nocheatplus.checks.moving.player.UnusedVelocity;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
-import fr.neatmonster.nocheatplus.compat.*;
+import fr.neatmonster.nocheatplus.compat.Bridge1_9;
+import fr.neatmonster.nocheatplus.compat.BridgeMisc;
+import fr.neatmonster.nocheatplus.compat.IBridgeCrossPlugin;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
@@ -62,8 +64,8 @@ import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.players.PlayerFactoryArgument;
 import fr.neatmonster.nocheatplus.stats.Counters;
-import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
+import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
@@ -260,10 +262,10 @@ public class FightListener extends CheckListener implements JoinLeaveListener{
         // Can't attack with an inventory open.
         if (cc.enforceClosedInventory && !damaged.isDead()) {
             if (InventoryUtil.hasInventoryOpen(player)) {
+                // Do not call Open.checkClose here to prevent a disabled open check from deactivating this feature.
                 player.closeInventory();
-                // If closed, do reset InventoryData's stored data.
                 pData.getGenericInstance(InventoryData.class).inventoryOpenTime = 0;
-                Improbable.feed(player, 0.5f, System.currentTimeMillis());
+                Improbable.feed(player, 1.5f, System.currentTimeMillis());
                 // (No cancel here! Less invasive for PvP)
             }
         }
@@ -272,7 +274,7 @@ public class FightListener extends CheckListener implements JoinLeaveListener{
         if (cc.enforceItemRelease && !damaged.isDead()) {
             if (BridgeMisc.isUsingItem(player)) {
                 pData.requestItemUseResync();
-                Improbable.feed(player, 0.5f, System.currentTimeMillis());
+                Improbable.feed(player, 1.5f, System.currentTimeMillis());
                 // (No cancel here! Less invasive for PvP)
             }
         }

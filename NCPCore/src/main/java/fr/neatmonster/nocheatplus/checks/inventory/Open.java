@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.checks.inventory;
 import java.util.UUID;
 
 import org.bukkit.GameMode;
+import org.bukkit.Input;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.InventoryType.SlotType;
@@ -27,7 +28,7 @@ import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
-import fr.neatmonster.nocheatplus.compat.Bridge1_9;
+import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeBukkitAPI;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.registry.event.IHandle;
@@ -35,8 +36,8 @@ import fr.neatmonster.nocheatplus.components.registry.feature.IDisableListener;
 import fr.neatmonster.nocheatplus.hooks.ExemptionSettings;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
+import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
 
 /**
  * Watch over open inventories - check with "combined" static access, put here because it has too much to do with inventories.
@@ -79,7 +80,7 @@ public class Open extends Check implements IDisableListener {
      * Also resets inventory opening time and interaction time.
      * 
      * @param player
-     * @return If cancelling some event is opportune (open inventory and cancel flag set).
+     * @return True, if the inventory has been successfully closed. This will also reset the inventory open time and interaction time.
      */
     public boolean check(final Player player) {
         final boolean isShulkerBox = BridgeBukkitAPI.getTopInventory(player).getType().toString().equals("SHULKER_BOX");
@@ -120,19 +121,30 @@ public class Open extends Check implements IDisableListener {
      * @return True, if the open inventory needs to be closed during this movement.
      */
     public boolean checkOnMove(final Player player, final IPlayerData pData) {
+        if (BridgeMisc.isWASDImpulseKnown(player)) {
+            // Use WASD input directly if available (1.21.1+).
+            Input input = player.getCurrentInput();
+            boolean moving = input.isLeft() || input.isRight() || input.isForward() || input.isBackward() || input.isJump();
+            if (moving) {
+                final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
+                if (cc.openImprobableWeight > 0.0) {
+                    Improbable.feed(player, cc.openImprobableWeight, System.currentTimeMillis());
+                }
+                return true;
+            }
+            return false;
+        }
+        
         final MovingData mData = pData.getGenericInstance(MovingData.class);
         final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
         final InventoryData data = pData.getGenericInstance(InventoryData.class);
         final boolean creative = player.getGameMode() == GameMode.CREATIVE && ((data.clickedSlotType == SlotType.QUICKBAR) || cc.openDisableCreative);
         final boolean isMerchant = BridgeBukkitAPI.getTopInventory(player).getType() == InventoryType.MERCHANT;
         final PlayerMoveData thisMove = mData.playerMoves.getCurrentMove();
-        
         // Skipping conditions first.
         if (
-            // This check relies on data set in SurvivalFly.
-            !pData.isCheckActive(CheckType.MOVING_SURVIVALFLY, player)
             // Ignore duplicate packets
-            || mData.lastMoveNoMove
+            mData.lastMoveNoMove
             // Can't check vehicles
             || player.isInsideVehicle()
             // In creative or middle click
@@ -148,9 +160,7 @@ public class Open extends Check implements IDisableListener {
         }
             
         // Actual detection: do assume player to be actively moving even if we don't actually know the direction (MAYBE, needs testing)
-        if (thisMove.hasImpulse.decideOptimistically() || Bridge1_9.isGlidingWithElytra(player) && (thisMove.from.getYaw() != thisMove.to.getYaw() || thisMove.from.getPitch() != thisMove.to.getPitch())) {
-            // Use SurvivalFly prediction handling to see if the player is actively moving.
-            // WASD keys presses are irrelevant when gliding but the telltale sign that let's you know that the player is moving in their inventory is if rotations don't match
+        if (thisMove.hasImpulse.decide()) {
             if (cc.openImprobableWeight > 0.0) {
                 Improbable.feed(player, cc.openImprobableWeight, System.currentTimeMillis());
             }
