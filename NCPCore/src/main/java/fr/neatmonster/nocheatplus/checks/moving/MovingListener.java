@@ -835,6 +835,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 prepareSetBack(player, event, newTo, data, cc, pData); // Logs set back details.
             }
             data.joinOrRespawn = false;
+            data.hasLeatherBoots = BridgeMisc.canStandOnPowderSnow(player);
+            data.lastY = from.getY();
             return;
         }
         // TODO: Is this right place? Just throw in entity/player in blockcache is better or this one? Too tired for now, maybe later
