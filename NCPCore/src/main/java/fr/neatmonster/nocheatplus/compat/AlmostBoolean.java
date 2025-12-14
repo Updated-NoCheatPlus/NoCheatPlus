@@ -19,7 +19,7 @@ package fr.neatmonster.nocheatplus.compat;
  * @author mc_dev
  *
  */
-public enum AlmostBoolean{
+public enum AlmostBoolean {
     YES,
     NO,
     MAYBE;
@@ -72,7 +72,7 @@ public enum AlmostBoolean{
      * 
      * @return true if the state is {@code YES}, false otherwise.
      */
-    public boolean decide(){
+    public boolean decide() {
         return this == YES;
     }
 

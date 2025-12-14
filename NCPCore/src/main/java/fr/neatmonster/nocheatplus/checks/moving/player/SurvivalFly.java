@@ -127,6 +127,7 @@ public class SurvivalFly extends Check {
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         /*
          * Actually forgot what this does. But quick guess might be idle move (0,0,0) on count 1 and riptide on count 2.
+         * TODO: Is this supposed to be here? (Move in MovingListener at the beginning of checkPayerMove?)
          */
         if (lastMove.tridentRelease.decideOptimistically() && multiMoveCount == 2 && lastMove.yDistance == 0.0) {
             thisMove.tridentRelease = AlmostBoolean.YES;
@@ -207,7 +208,7 @@ public class SurvivalFly extends Check {
             yDistanceAboveLimit = resGlide[3];
         }
         else {
-            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, cc, pData, false, debug, useBlockChangeTracker );
+            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, pData, false, debug, useBlockChangeTracker );
             yAllowedDistance = res[0];
             yDistanceAboveLimit = res[1];
         }
@@ -487,7 +488,6 @@ public class SurvivalFly extends Check {
         if (thisMove.tridentRelease.decideOptimistically()) {
             thisMove.tridentRelease = AlmostBoolean.YES;
             Vector riptideVelocity = to.getRiptideVelocity(false); // Cannot glide while on ground, so no need to check for it.
-            // Fortunately, we do not have to account for onGround push here, as gliding does not work on ground.
             thisMove.xAllowedDistance += riptideVelocity.getX();
             thisMove.yAllowedDistance += riptideVelocity.getY();
             thisMove.zAllowedDistance += riptideVelocity.getZ();
@@ -587,8 +587,8 @@ public class SurvivalFly extends Check {
             tags.add("hdistrel");
         }
         if (debug) {
-            player.sendMessage("hDistance/Predicted " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
-            player.sendMessage("vDistance/Predicted " + StringUtil.fdec6.format(thisMove.yDistance) + " / " + StringUtil.fdec6.format(thisMove.yAllowedDistance));
+            player.sendMessage(ChatColor.RED + "[SurvivalFly] vdistrel: predict=" + StringUtil.fdec6.format(thisMove.yAllowedDistance) + ", actual=" + StringUtil.fdec6.format(thisMove.yDistance) + ", offset=" + StringUtil.fdec6.format(offsetV));
+            player.sendMessage(ChatColor.YELLOW + "[SurvivalFly] hdistrel: predict=" + StringUtil.fdec6.format(thisMove.hAllowedDistance) + ", actual=" + StringUtil.fdec6.format(thisMove.hDistance) + ", offset=" + StringUtil.fdec6.format(offsetH));
         }
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit, thisMove.yAllowedDistance, yDistanceAboveLimit};
     }
@@ -747,7 +747,9 @@ public class SurvivalFly extends Check {
         else hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
         if (hDistanceAboveLimit > 0.0) {
             tags.add("hdistrel");
-            if (debug) player.sendMessage("c/e: " + StringUtil.fdec6.format(thisMove.hDistance) + " / " + StringUtil.fdec6.format(thisMove.hAllowedDistance));
+            if (debug) {
+                player.sendMessage(ChatColor.YELLOW + "[SurvivalFly] hdistrel: predicted=" + StringUtil.fdec6.format(thisMove.hAllowedDistance) + ", actual=" + StringUtil.fdec6.format(thisMove.hDistance));
+            }
         }
         return new double[]{thisMove.hAllowedDistance, hDistanceAboveLimit};
     }
@@ -1158,6 +1160,7 @@ public class SurvivalFly extends Check {
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 // This is called with setOnGroundWithMovement at the same time of setting the ground flag but before setting the horizontal collision flags.
+                // NOTE: here the bounding box of the TO location must be used.
                 pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(thisMove.xAllowedDistance, thisMove.yDistance, thisMove.zAllowedDistance), to.getBoundingBox(), yDistanceBeforeCollide < 0.0 && yDistanceBeforeCollide != collisionVector.getY()));
             }
             // NOTE: Collision flags must be set before setting speed in thisMove.
@@ -1184,7 +1187,7 @@ public class SurvivalFly extends Check {
             thisMove.strafeImpulse = input.getStrafeDir();
             thisMove.forwardImpulse = input.getForwardDir();
             if (debug) {
-                player.sendMessage("[SurvivalFly] (postPredict) Direction: " + input.getForwardDir() +" | "+ input.getStrafeDir());
+                player.sendMessage(ChatColor.YELLOW + "[SurvivalFly] (postPredict) Direction: " + input.getForwardDir() +" | "+ input.getStrafeDir());
             }
             // If-else instead of an early return... Matter of preference. This makes code slightly easier to look at, as it avoids yet another indentation
             return isPredictable;
@@ -1211,23 +1214,19 @@ public class SurvivalFly extends Check {
             // Each slot in the array is initialized with the same momentum first.
             xTheoreticalDistance[i] = thisMove.xAllowedDistance;
             zTheoreticalDistance[i] = thisMove.zAllowedDistance;
-            // Then we proceed to compute all possible accelerations with all theoretical inputs.
-            double inputSq = MathUtil.square((double)theorInputs[i].getStrafe()) + MathUtil.square((double)theorInputs[i].getForward()); // Cast to a double because the client does it
+            // Then we proceed to compute all possible accelerations with all theoretical inputs and apply subsequent modifiers.
+            double inputSq = MathUtil.square((double)theorInputs[i].getStrafe()) + MathUtil.square((double)theorInputs[i].getForward());
             if (inputSq >= 1.0E-7) {
                 if (inputSq > 1.0) {
                     double inputForce = Math.sqrt(inputSq);
                     if (inputForce < 1.0E-4) {
-                        // Not enough force, reset.
                         theorInputs[i].operationToInt(0, 0, 0);
                     }
                     else {
-                        // Normalize
                         theorInputs[i].operationToInt(inputForce, inputForce, 2);
                     }
                 }
-                // Multiply all inputs by movement speed.
                 theorInputs[i].operationToInt(movementSpeed, movementSpeed, 1);
-                // The acceleration vector is added to each momentum.
                 xTheoreticalDistance[i] += theorInputs[i].getStrafe() * (double)cosYaw - theorInputs[i].getForward() * (double)sinYaw;
                 zTheoreticalDistance[i] += theorInputs[i].getForward() * (double)cosYaw + theorInputs[i].getStrafe() * (double)sinYaw;
             }
@@ -1270,13 +1269,14 @@ public class SurvivalFly extends Check {
                 // This theoretical speed would result in a collision. Remember it.
                 collideX[i] = true;
             }
+            if (yDistanceBeforeCollide != collisionVector.getY()) {
+                // This theoretical speed would result in a collision. Remember it.
+                // Only needed for supporting block detection.
+                collideY[i] = true;
+            }
             if (zTheoreticalDistance[i] != collisionVector.getZ()) {
                 // This theoretical speed would result in a collision. Remember it.
                 collideZ[i] = true;
-            }
-            if (yDistanceBeforeCollide != collisionVector.getY()) {
-                // This theoretical speed would result in a collision. Remember it.
-                collideY[i] = true;
             }
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
@@ -1338,7 +1338,7 @@ public class SurvivalFly extends Check {
                     // Found a candidate to set in this move; these collisions are valid.
                     // Also set the supporting block.
                     if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yAllowedDistance, zTheoreticalDistance[i]), to.getBoundingBox(), collideY[i] && yDistanceBeforeCollide < 0.0));
+                        pData.setSupportingBlockData(SupportingBlockUtils.checkSupportingBlock(to.getBlockCache(), player, pData.getSupportingBlockData(), new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to.getBoundingBox(), collideY[i] && yDistanceBeforeCollide < 0.0));
                     }
                     thisMove.collideX = collideX[i];
                     thisMove.collideZ = collideZ[i];
@@ -1374,7 +1374,7 @@ public class SurvivalFly extends Check {
         thisMove.strafeImpulse = theorInputs[isPredictable ? indexPair : xIdx].getStrafeDir();
         thisMove.forwardImpulse = theorInputs[isPredictable ? indexPair : zIdx].getForwardDir();
         if (debug) {
-            player.sendMessage("[SurvivalFly] (postPredict) " + (!isPredictable ? "Uncertain" : "Predicted") + " direction: " + theorInputs[isPredictable ? indexPair : xIdx].getForwardDir() +" | "+ theorInputs[isPredictable ? indexPair : xIdx].getStrafeDir());
+            player.sendMessage(ChatColor.YELLOW + "[SurvivalFly] (postPredict) " + (!isPredictable ? "Uncertain" : "Predicted") + " direction: " + theorInputs[isPredictable ? indexPair : xIdx].getForwardDir() +" | "+ theorInputs[isPredictable ? indexPair : xIdx].getStrafeDir());
         }
         return isPredictable;
     }
@@ -1446,7 +1446,7 @@ public class SurvivalFly extends Check {
                               final boolean toOnGround, final boolean resetTo,
                               final double yDistance, boolean isNormalOrPacketSplitMove,
                               final PlayerMoveData lastMove,
-                              final MovingData data, final MovingConfig cc, final IPlayerData pData,
+                              final MovingData data, final IPlayerData pData,
                               boolean forceResetMomentum, final boolean debug, boolean useBlockChangeTracker) {
         double yDistanceAboveLimit = 0.0;
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
@@ -1478,32 +1478,17 @@ public class SurvivalFly extends Check {
                 return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
             }
         }
-
-        if (onGround && thisMove.tridentRelease.decideOptimistically() && thisMove.multiMoveCount == 1 && !isNormalOrPacketSplitMove && Math.abs(thisMove.yDistance - 1.2) < Magic.PREDICTION_EPSILON) {
-            thisMove.yAllowedDistance = 1.2;
-            data.setTridentReleaseEvent(AlmostBoolean.YES);
-            yDistanceAboveLimit = 0.0;
-            tags.add("gnd_riptide_pre");
-            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
-        }
         
         
         //////////////////////////////////////////////////////////////////////////////
         // Test if this movement can fit into any pre-set envelope                  //
         //////////////////////////////////////////////////////////////////////////////
+        // NOTE: order of these checks should be from most common to least common.
         if (thisMove.yDistance == 0.0 && fromOnGround) {
             // No vertical motion in this case, as the player is on ground.
             thisMove.yAllowedDistance = 0.0;
             yDistanceAboveLimit = 0.0;
             tags.add("onground_env");
-            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
-        }
-        if (PhysicsEnvelope.isStepUpByNCPDefinition(pData, fromOnGround, toOnGround, player)) {
-            // Players can step anywhere, both in liquid and in air, so this must be checked before everything else.
-            thisMove.yAllowedDistance = thisMove.yDistance;
-            yDistanceAboveLimit = 0.0;
-            thisMove.isStepUp = true;
-            tags.add("step_env");
             return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
         }
         if (PhysicsEnvelope.isJumpMotion(from, to, player, fromOnGround, toOnGround)) {
@@ -1514,6 +1499,25 @@ public class SurvivalFly extends Check {
             thisMove.isJump = true;
             data.jumpDelay = Magic.MAX_JUMP_DELAY;
             tags.add("jump_env");
+            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
+        }
+        if (PhysicsEnvelope.isStepUpByNCPDefinition(pData, fromOnGround, toOnGround, player)) {
+            // Players can step anywhere, both in liquid and in air, so this must be checked before everything else.
+            thisMove.yAllowedDistance = thisMove.yDistance;
+            yDistanceAboveLimit = 0.0;
+            thisMove.isStepUp = true;
+            tags.add("step_env");
+            return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
+        }
+        if (onGround && thisMove.tridentRelease.decideOptimistically() && thisMove.multiMoveCount == 1 
+            && !isNormalOrPacketSplitMove && Math.abs(thisMove.yDistance - 1.2) < Magic.PREDICTION_EPSILON) {
+            // Riptide launch from ground.
+            // IMPORTANT NOTE: this move specifically will always cause NCP to fire a Bukkit-based split move on the first split move, no matter what.
+            thisMove.yAllowedDistance = 1.2;
+            data.setTridentReleaseEvent(AlmostBoolean.YES);
+            yDistanceAboveLimit = 0.0;
+            // Riptide from ground launch at the end of the movement stack; the actual riptide push will come next. Allowed this move as-is.
+            tags.add("gnd_riptide_pre");
             return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
         }
         
@@ -1578,9 +1582,6 @@ public class SurvivalFly extends Check {
         // *----------Gravity, friction and other medium-dependent modifiers in LivingEntity.travel() (water first, then lava and finally air)----------*
         data.nextGravity = attributeAccess.getHandle().getGravity(player);
         if (lastMove.from.inWater) {
-            // if (this.horizontalCollision && this.onClimbable()) {
-            //                vec3 = new Vec3(vec3.x, 0.2, vec3.z);
-            //  }
             if (lastMove.collidesHorizontally && lastMove.from.onClimbable && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
                 thisMove.yAllowedDistance = 0.2;
             }
@@ -1596,7 +1597,6 @@ public class SurvivalFly extends Check {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
                 // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
-                //TODO: Why the water use lastMove.yAllowedDistance but lava not??. Also new Vector use last or this??
                 Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
                 thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
             }
@@ -1641,7 +1641,7 @@ public class SurvivalFly extends Check {
         checkNegligibleMomentumVertical(pData, thisMove);
         // *----------LivingEntity.travel(), handleRelativeFrictionAndCalculateMovement() -> handleOnClimbable()----------*
         // TODO: Is it correct to put here?
-        if (!from.isInLiquid() && from.isOnClimbable()) {
+        if (!from.isInLiquid() && from.isOnClimbable() && from.canClimbUp(data.liftOffEnvelope.getMaxJumpHeight(data.jumpAmplifier))) {
             thisMove.yAllowedDistance = Math.max(thisMove.yAllowedDistance, -Magic.CLIMBABLE_MAX_SPEED);
             // Should replicate the condition: !this.getInBlockState().is(Blocks.SCAFFOLDING)
             final Material typeId = from.getBlockType();
@@ -1768,7 +1768,8 @@ public class SurvivalFly extends Check {
                     }
                 }
                 else thisMove.yAllowedDistance = riptideVelocity.getY() + fric;
-            } else {
+            } 
+            else {
                 if (yTheoreticalDistance != null) {
                     for (int i = 0; i < yTheoreticalDistance.length; i++) {
                         yTheoreticalDistance[i] += riptideVelocity.getY();
@@ -1846,7 +1847,7 @@ public class SurvivalFly extends Check {
             if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
                 thisMove.yAllowedDistance = thisMove.yDistance;
                 if (debug) {
-                    player.sendMessage("[SurvivalFly] VDistrel workaround ID: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
+                    player.sendMessage("[SurvivalFly] Workaround ID used: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
                 }
             }
             else if (data.getOrUseVerticalVelocity(yDistance).isEmpty()) {
@@ -1854,7 +1855,7 @@ public class SurvivalFly extends Check {
                 yDistanceAboveLimit = Math.max(yDistanceAboveLimit, Math.abs(offset));
                 tags.add("vdistrel");
                 if (debug) {
-                    player.sendMessage(ChatColor.RED + "VDistRel fail: offset= " + StringUtil.fdec6.format(offset) + " (yDistance= " + StringUtil.fdec6.format(yDistance) + ", yPredict="  + StringUtil.fdec6.format(thisMove.yAllowedDistance) + ")");
+                    player.sendMessage(ChatColor.RED + "[SurvivalFly] vdistrel: predicted=" + StringUtil.fdec6.format(thisMove.yAllowedDistance) + ", actual=" + StringUtil.fdec6.format(thisMove.yDistance) + ", offset=" + StringUtil.fdec6.format(offset));
                 }
             }
         }

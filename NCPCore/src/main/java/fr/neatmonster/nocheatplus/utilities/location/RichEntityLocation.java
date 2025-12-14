@@ -593,7 +593,7 @@ public class RichEntityLocation extends RichBoundsLocation {
 
     /**
      * Collide the given AABB with blocks.
-     * (From {@code Entity.class} -> {@code collide()}).
+     * (From {@code Entity.java} -> {@code collide()}).
      *
      * @param wantedInput Meant to represent the speed at which the entity <i>wants</i> to move. <br>
      *                 If a collision is found within the intended input, the method will return a new {@link Vector} that reflects the actually allowed movement.
@@ -604,7 +604,7 @@ public class RichEntityLocation extends RichBoundsLocation {
      * @param AABB     The axis-aligned bounding box of the entity at the position they moved from (in other words, the last AABB of the entity).
      *                 Only makes sense if you call this method during {@link PlayerMoveEvent}s, because the NMS bounding box will already be moved to the {@link PlayerMoveEvent#getTo()} {@link Location}, by the time this gets called by moving checks.
      *                 If null, a new AABB using NMS' parameters (width/height) will be created.
-     * @return A {@link Vector} containing the collision components on the respective axis.
+     * @return A {@link Vector} containing the collision components on the respective axis. If no collision is detected, the {@code wantedInput} is returned. Otherwise, the input allowed by collisions.
      */
     public Vector collide(Vector wantedInput, boolean onGround, double[] AABB) {
         if (wantedInput.getX() == 0.0 && wantedInput.getY() == 0.0 && wantedInput.getZ() == 0.0) { // NOTE: Do not call Vector#isZero, because the method is not available on 1.8
@@ -729,10 +729,11 @@ public class RichEntityLocation extends RichBoundsLocation {
                     // MODERN 1.13+
                     else {
                         double liquidHeight = BlockProperties.getLiquidHeightAt(blockCache, x, y, z, liquidTypeFlag, false);
-                        double liquidHeightToWorld = y + liquidHeight;
-                        if (liquidHeightToWorld >= minY + 0.001 && liquidHeight != 0.0 && !(entity instanceof Player && ((Player) entity).isFlying())) {
+                        // Height of the liquid surface
+                        double liquidSurfaceY = y + liquidHeight;
+                        if (liquidSurfaceY >= minY + 0.001 && liquidHeight != 0.0 && !(entity instanceof Player && ((Player) entity).isFlying())) {
                             // Collided.
-                            maxSubmersionDepth = Math.max(liquidHeightToWorld - minY + 0.001, maxSubmersionDepth); // 0.001 is the Magic number the game uses to expand the box with newer versions.
+                            maxSubmersionDepth = Math.max(liquidSurfaceY - minY + 0.001, maxSubmersionDepth); // 0.001 is the Magic number the game uses to expand the box with newer versions.
                             // Determine to push speed by using the current flow of the liquid.
                             Vector flowVector = getFlowForceVector(x, y, z, liquidTypeFlag);
                             if (maxSubmersionDepth < 0.4) {
@@ -977,13 +978,13 @@ public class RichEntityLocation extends RichBoundsLocation {
     }
 
     /**
-     * Check if a player may climb upwards.<br>
+     * Legacy check for if a player may climb upwards.<br>
      * Assuming this gets called after isOnClimbable returned true (with the player not moving from/to ground).<br>
      * Does not check for motion.
      *
      * @param jumpHeight
      *            Height the player is allowed to have jumped.
-     * @return true, if successful
+     * @return Always true for 1.14+. For older versions, checks if the climbable block is attached to something solid, or if the player is on ground.
      */
     public boolean canClimbUp(double jumpHeight) {
         if (GenericVersion.isAtLeast(entity, "1.14")) {
@@ -1006,7 +1007,6 @@ public class RichEntityLocation extends RichBoundsLocation {
                 }
             }
             // Finally check possible jump height.
-            // TODO: This too is inaccurate.
             // Here ladders are ok.
             return isOnGround(jumpHeight);
         }

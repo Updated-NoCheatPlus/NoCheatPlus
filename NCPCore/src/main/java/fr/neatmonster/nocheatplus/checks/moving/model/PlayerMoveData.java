@@ -46,7 +46,33 @@ public class PlayerMoveData extends MoveData {
     /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedWaterHeight;
     
-    /** Sets whether the player has just released a trident with riptide. Set on {@link org.bukkit.event.player.PlayerRiptideEvent}. */
+    /**
+     * A flag to handle the riptide effect/logic, particularly when on ground.<p>
+     * When the {@code releaseItem()} method is called, Minecraft checks whether
+     * the player is on ground. If so, the player is not only pushed by the
+     * calculated riptide vector, but is also moved upwards by {@code 1.2} blocks via a
+     * direct call to {@code move()}. This upward movement bypasses the normal physics
+     * pipeline, as no other physics-related methods are invoked ({@code LivingEntity.class}).<p>
+     * 
+     * This translates in a very odd movement on the server-side, as the client-side logic may not execute in a strictly linear order. 
+     * The final result depends on when the code is called relative to the movement update,
+     * whether at the start or at the end of the move tick: <p>
+     * <pre>
+     * Assume a hypothetical riptide velocity of {@code x1 y2 z1}:
+     * if the trident is released at the end of the movement while the player is on
+     * ground, the vertical move of 1.2 is processed first and the riptide push is applied
+     * afterwards. In this case, two separate packets are sent: {@code x0 y1.2 z0} and then {@code x1 y2 z1};
+     * the movement is, in a way, "split" into two distinct updates.
+     *
+     * If the trident is instead released at the start of the movement while the player is
+     * on ground, the code executes normally within a single movement update,
+     * resulting in a single packet of {@code x1 y3.2 z1}.
+     * </pre>
+     * The {@code MAYBE} flag represents the on ground state during riptide,
+     * when that state is handled separately/split, rather than representing the
+     * riptide action itself.
+     * 
+     */
     public AlmostBoolean tridentRelease;
     
     /**

@@ -37,13 +37,13 @@ public class PlayerKeyboardInput implements Cloneable {
     private boolean isSpaceBarPressed; 
     /** The last space bar pressing */
     private boolean wasSpaceBarPressed;
-    /** The last sprinting status */
+    /** The last sprint toggle */
     private boolean wasSprintingKeyPressed;
-    /** The last shift status */
+    /** The last shift toggle */
     private boolean wasShiftPressed;
-    /** The shift key, usually represents sneaking */
+    /** The shift key toggle, usually represents sneaking */
     private boolean isShiftPressed;
-    /** The sprint key */
+    /** The sprint key toggle */
     private boolean isSprintingKeyPressed;
     /** Enum direction of the forward value */
     private ForwardDirection fdir;
