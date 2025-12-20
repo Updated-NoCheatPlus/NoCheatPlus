@@ -65,8 +65,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         0.25, 0.125, 0.25, 0.75, 0.875, 0.75
     );
     private static final BukkitShapeModel MODEL_HOPPER = new BukkitHopper();
-    private static final BukkitShapeModel MODEL_CAULDRON = new BukkitCauldron(0.1875, 0.125, 0.8125, 0.0625);
-    private static final BukkitShapeModel MODEL_COMPOSTER = new BukkitCauldron(0.0, 0.125, 1.0, 0.125);
+    private static final BukkitShapeModel MODEL_CAULDRON = new BukkitCauldron();
+    private static final BukkitShapeModel MODEL_COMPOSTER = new BukkitComposter(0.0, 0.125, 1.0, 0.125);
     private static final BukkitShapeModel MODEL_PISTON_HEAD = new BukkitPistonHead();
     private static final BukkitShapeModel MODEL_BELL = new BukkitBell();
     private static final BukkitShapeModel MODEL_ANVIL = new BukkitAnvil();

@@ -15,34 +15,30 @@
 package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
 import org.bukkit.World;
-
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
-import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
-public class BukkitPowderSnow implements BukkitShapeModel {
+public class BukkitComposter implements BukkitShapeModel {
+    private final double[] bounds;
 
-    // Some what behave like ladder
-    double[] REDUCED_HEIGHT = {0.0, 0.0, 0.0, 1.0, 0.9, 1.0};
-    double[] FULL_HEIGHT = {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+    public BukkitComposter(double minY, double sideWidth, double sideHeight, double coreHeight) {
+        bounds = new double[] {
+                // Core
+                sideWidth, minY, sideWidth, 1 - sideWidth, minY + coreHeight, 1 - sideWidth,
+                // 4 side
+                0.0, minY, 0.0, 1.0, minY + sideHeight, sideWidth,
+                0.0, minY, 1.0 - sideWidth, 1.0, minY + sideHeight, 1.0,
+                0.0, minY, 0.0, sideWidth, minY + sideHeight, 1.0,
+                1.0 - sideWidth, minY, 0.0, 1.0, minY + sideHeight, 1.0
+        };
+    }
 
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
-        IPlayerData pData = blockCache.getPlayerData();
-        if (pData != null) {
-            MovingData data = pData.getGenericInstance(MovingData.class);
-            if (data.noFallFallDistance > 2.5) {
-                return REDUCED_HEIGHT;
-            } else if (data.lastY > y + 1 - 1e-5 && data.hasLeatherBoots && !pData.isShiftKeyPressed()) {
-                return FULL_HEIGHT;
-            }
-        }
-        return null;
+        return bounds;
     }
 
     @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
-
 }

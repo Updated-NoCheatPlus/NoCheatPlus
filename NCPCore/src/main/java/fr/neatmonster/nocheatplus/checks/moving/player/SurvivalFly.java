@@ -1575,7 +1575,7 @@ public class SurvivalFly extends Check {
             // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.wasInPowderSnow && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // TODO: We have to loop the jumping state for 1.21.1 and below... No other way to put it unfortunately. This will make the code an ugly mess than it already is.
             final boolean jumpedOrCollided = lastMove.collidesHorizontally || data.input.wasSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
-            if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.inPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { // this.wasInPowderSnow. The living entity field already checks for the past state, does that mean we need to check for the second last move?
+            if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { // this.wasInPowderSnow. The living entity field already checks for the past state, does that mean we need to check for the second last move?
                 thisMove.yAllowedDistance = 0.2;
             }
         }

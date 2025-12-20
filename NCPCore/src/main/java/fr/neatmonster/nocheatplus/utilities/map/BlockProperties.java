@@ -665,7 +665,7 @@ public class BlockProperties {
             stuckInFactor = 0.8D;
         }
         else if (eLoc.isInPowderSnow()) {
-            stuckInFactor = 0.8999999761581421D;
+            stuckInFactor = 0.9D;
         }
         blockCache.cleanup();
         eLoc.cleanup();
@@ -3251,11 +3251,13 @@ public class BlockProperties {
             // (Allow checking further entries.)
             return true; 
         }
+        // TODO: About to remove
         else if ((flags & BlockFlags.F_THICK_FENCE) != 0) {
             if (!collidesFence(fx, fz, dX, dZ, dT, 0.125)) {
                 return true;
             }
         }
+        // TODO: About to remove
         else if ((flags & BlockFlags.F_THIN_FENCE) != 0) {
             if (!collidesFence(fx, fz, dX, dZ, dT, 0.0625)) {
                 return true;
@@ -3263,21 +3265,21 @@ public class BlockProperties {
             // NOTE: 0.974 depends on Y_ON_GROUND_DEFAULT
             return Math.min(fy, fy + dY * dT) < 0.974 && !collidesBlock(access, minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, node, null, flags | BlockFlags.F_FAKEBOUNDS);
         }
-        else if (id == Material.CAULDRON || id == Material.HOPPER) {
-            if (Math.min(fy, fy + dY * dT) >= getGroundMinHeight(access, bx, by, bz, node, flags)) {
+        //else if (id == Material.CAULDRON || id == Material.HOPPER) {
+        //    if (Math.min(fy, fy + dY * dT) >= getGroundMinHeight(access, bx, by, bz, node, flags)) {
                 // Check for moving through walls or floor.
                 // TODO: Maybe this is too exact...
-                return isInsideCenter(fx, fz, dX, dZ, dT, 0.125);
-            }
-        }
+        //        return isInsideCenter(fx, fz, dX, dZ, dT, 0.125);
+        //    }
+        //}
         else if ((flags & BlockFlags.F_GROUND_HEIGHT) != 0
                 && getGroundMinHeight(access, bx, by, bz, node, flags) <= Math.min(fy, fy + dY * dT)) {
             return true;
         } 
         // TODO: Review. Is this still needed?
-        else if (id.toString().equals("CHORUS_PLANT") && !collidesFence(fx, fz, dX, dZ, dT, 0.3)) {
-             return true;
-        }
+        //else if (id.toString().equals("CHORUS_PLANT") && !collidesFence(fx, fz, dX, dZ, dT, 0.3)) {
+        //     return true;
+        //}
         // Nothing found.
         return false;
     }
@@ -4420,6 +4422,15 @@ public class BlockProperties {
             // The block does not have the ground flag.
             return AlmostBoolean.MAYBE;
         }
+        final IPlayerData pData = access.getPlayerData();
+        if (pData != null) {
+            boolean hasBoots = pData.getGenericInstance(MovingData.class).hasLeatherBoots;
+            if ((flags & BlockFlags.F_POWDER_SNOW) != 0) {
+                // Player is in/on powder snow.
+                final double result = maxY - y - 1.0;
+                return hasBoots && result >= 0 && result < 0.001 ? AlmostBoolean.YES : AlmostBoolean.MAYBE;
+            }
+        }
         final double[] blockAABB = node.getBounds(access, x, y, z);
         if (blockAABB == null) {
             // Ground flag has been collected, but the block's bounds are null.
@@ -4438,14 +4449,6 @@ public class BlockProperties {
         ////////////////////////////////////////////////////////////////////
         // Judge if the block collision can be considered as "ground"     //
         ////////////////////////////////////////////////////////////////////
-        final IPlayerData pData = access.getPlayerData();
-        if (pData != null) {
-            boolean hasBoots = pData.getGenericInstance(MovingData.class).hasLeatherBoots;
-            if ((flags & BlockFlags.F_POWDER_SNOW) != 0) {
-                // Player is in/on powder snow.
-                return hasBoots && (maxY - y >= 1.0) ? AlmostBoolean.YES : AlmostBoolean.NO;
-            }
-        }
         // Check if the collided block can be passed through with the bounding box (wall-climbing. Disregard the ignore flag).
         if (isPassableWorkaround(access, x, y, z, minX - x, minY - y, minZ - z, node, maxX - minX, maxY - minY, maxZ - minZ, minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {
             if ((flags & BlockFlags.F_GROUND_HEIGHT) == 0 || getGroundMinHeight(access, x, y, z, node, flags) > maxY - y) { // TODO: height >= ?

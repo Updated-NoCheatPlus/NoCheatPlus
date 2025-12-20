@@ -211,14 +211,14 @@ public class MagicWorkarounds {
                 * TODO: This needs to be handled in a more decent way in RichEntityLocation. Will be removed.
                 * TODO: Does this actually work?
                 */
-                || player.getFallDistance() > 2.5 && thisMove.from.inPowderSnow && !lastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
-                && data.ws.use(WRPT.W_M_SF_LANDING_ON_PWDSNW_FALLDIST_25)
+                //|| player.getFallDistance() > 2.5 && thisMove.from.inPowderSnow && !lastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
+                //&& data.ws.use(WRPT.W_M_SF_LANDING_ON_PWDSNW_FALLDIST_25)
                /*
                 * 0: Allow the subsequent move of the one above as well, as it will still yield a false positive.
-                * TODO: This needs to be handled in a more decent way in RichEntityLocation. Will be removed.
-                * TODO: Does this actually work?
+                * TODO: This can be fixed by reset ydist to 0 instead copy last(resetcond/flip toIsValid?). Still not sure how to do without uglier the code. Will be removed.
+                * TODO: In or touched?
                 */
-                || thisMove.to.inPowderSnow && !secondLastMove.from.inPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
+                || thisMove.to.touchedPowderSnow && !secondLastMove.from.touchedPowderSnow && thisMove.yDistance < 0.0 && lastMove.yDistance < 0.0
                 && data.ws.use(WRPT.W_M_SF_LANDING_ON_PWDSNW_FALLDIST_25)
                 /*
                  * 0: With players breaking blocks beneath them.

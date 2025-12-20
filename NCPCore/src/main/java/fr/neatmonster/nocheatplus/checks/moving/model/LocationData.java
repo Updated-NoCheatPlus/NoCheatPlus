@@ -36,7 +36,7 @@ public class LocationData implements IGetLocationWithLook {
     /** Must be checked before using any of the flags. */
     public boolean extraPropertiesValid = false;
     /** Basic environmental properties. */
-    public boolean onClimbable, inWeb, inPowderSnow, inSoulSand, inLava, inWater, inLiquid, onGround, onIce, onBlueIce, onSoulSand, onSlimeBlock, inBerryBush, onHoneyBlock, onBouncyBlock, inBubbleStream;
+    public boolean onClimbable, inWeb, inPowderSnow, touchedPowderSnow, inSoulSand, inLava, inWater, inLiquid, onGround, onIce, onBlueIce, onSoulSand, onSlimeBlock, inBerryBush, onHoneyBlock, onBouncyBlock, inBubbleStream;
     /** Aggregate properties (reset means potentially resetting fall damage or other data). */
     public boolean resetCond, onGroundOrResetCond;
 
@@ -98,6 +98,7 @@ public class LocationData implements IGetLocationWithLook {
         onSlimeBlock = loc.isOnSlimeBlock();
         onHoneyBlock = loc.isOnHoneyBlock();
         inPowderSnow = loc.isInPowderSnow();
+        touchedPowderSnow = loc.touchedPowderSnow();
         if (inLiquid) {
             inLava = loc.isInLava();
             inWater = loc.isInWater();
@@ -136,6 +137,7 @@ public class LocationData implements IGetLocationWithLook {
             onSlimeBlock = other.onSlimeBlock;
             onHoneyBlock = other.onHoneyBlock;
             inPowderSnow = other.inPowderSnow;
+            touchedPowderSnow = other.touchedPowderSnow;
             // Use aggregate properties 1:1, allowing for hacks.
             resetCond = other.resetCond;
             onBouncyBlock = other.onBouncyBlock;
@@ -159,6 +161,7 @@ public class LocationData implements IGetLocationWithLook {
         onHoneyBlock = false;
         inBerryBush = false;
         inPowderSnow = false;
+        touchedPowderSnow = false;
         onIce = false;
         onBlueIce = false;
         resetCond = false;

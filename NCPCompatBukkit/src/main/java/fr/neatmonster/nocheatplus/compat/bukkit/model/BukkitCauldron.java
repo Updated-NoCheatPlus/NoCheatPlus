@@ -16,13 +16,32 @@ package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
 import org.bukkit.World;
 
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitCauldron implements BukkitShapeModel {
-    private final double[] bounds;
+    private final static double[] new1_13_2Bounds = {
+            0.0, 0.0, 0.0, 0.125, 1.0, 0.25, 
+            0.0, 0.0, 0.75, 0.125, 1.0, 1.0, 
+            0.125, 0.0, 0.0, 0.25, 1.0, 0.125, 
+            0.125, 0.0, 0.875, 0.25, 1.0, 1.0, 
+            0.75, 0.0, 0.0, 1.0, 1.0, 0.125, 
+            0.75, 0.0, 0.875, 1.0, 1.0, 1.0, 
+            0.875, 0.0, 0.125, 1.0, 1.0, 0.25, 
+            0.875, 0.0, 0.75, 1.0, 1.0, 0.875, 
+            0.0, 0.1875, 0.25, 1.0, 0.25, 0.75, 
+            0.125, 0.1875, 0.125, 0.875, 0.25, 0.25, 
+            0.125, 0.1875, 0.75, 0.875, 0.25, 0.875, 
+            0.25, 0.1875, 0.0, 0.75, 1.0, 0.125, 
+            0.25, 0.1875, 0.875, 0.75, 1.0, 1.0, 
+            0.0, 0.25, 0.25, 0.125, 1.0, 0.75, 
+            0.875, 0.25, 0.25, 1.0, 1.0, 0.75};
+    private final static double[] new1_13Bounds = makeCauldron(0.1875, 0.125, 0.8125, 0.0625);
+    private final static double[] legacyBounds = makeCauldron(0.0, 0.125, 1.0, 0.3125);
 
-    public BukkitCauldron(double minY, double sideWidth, double sideHeight, double coreHeight) {
-        bounds = new double[] {
+    private static double[] makeCauldron(double minY, double sideWidth, double sideHeight, double coreHeight) {
+        return new double[] {
                 // Core
                 sideWidth, minY, sideWidth, 1 - sideWidth, minY + coreHeight, 1 - sideWidth,
                 // 4 side
@@ -35,7 +54,15 @@ public class BukkitCauldron implements BukkitShapeModel {
 
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
-        return bounds;
+        IPlayerData pData = blockCache.getPlayerData();
+        if (pData != null) {
+            if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+                return legacyBounds;
+            } else if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13_2)) {
+                return new1_13Bounds;
+            } else return new1_13_2Bounds;
+        }
+        return new1_13Bounds;
     }
 
     @Override

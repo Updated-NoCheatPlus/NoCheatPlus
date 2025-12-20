@@ -14,8 +14,6 @@
  */
 package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.IntStream;
 
 import org.bukkit.World;
@@ -25,8 +23,7 @@ import org.bukkit.block.data.Bisected.Half;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Stairs;
 
-import fr.neatmonster.nocheatplus.utilities.collision.Axis;
-import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
+import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitStairs implements BukkitShapeModel {
@@ -95,16 +92,16 @@ public class BukkitStairs implements BukkitShapeModel {
     private double[] makeStairShape(int flags, double[] slab, double[] octet_nn, double[] octet_pn, double[] octet_np, double[] octet_pp) {
         double[] res = slab;
         if ((flags & 1) != 0) {
-            res = merge(res, octet_nn);
+            res = ShapeUtils.merge(res, octet_nn);
         }
         if ((flags & 2) != 0) {
-            res = merge(res, octet_pn);
+            res = ShapeUtils.merge(res, octet_pn);
         }
         if ((flags & 4) != 0) {
-            res = merge(res, octet_np);
+            res = ShapeUtils.merge(res, octet_np);
         }
         if ((flags & 8) != 0) {
-            res = merge(res, octet_pp);
+            res = ShapeUtils.merge(res, octet_pp);
         }
         return res;
     }
@@ -130,77 +127,5 @@ public class BukkitStairs implements BukkitShapeModel {
         }
     }
 
-    // TODO: Poorly designed, Will recode better version later
-    private double[] merge(double[] bounds, double[] octet) {
-        double[] res = bounds;
-        final double minX = octet[0];
-        final double minY = octet[1];
-        final double minZ = octet[2];
-        final double maxX = octet[3];
-        final double maxY = octet[4];
-        final double maxZ = octet[5];
-        for (int i = 2; i <= AxisAlignedBBUtils.getNumberOfAABBs(bounds); i++) {
-                
-            final double tminX = bounds[i*6-6];
-            final double tminY = bounds[i*6-5];
-            final double tminZ = bounds[i*6-4];
-            final double tmaxX = bounds[i*6-3];
-            final double tmaxY = bounds[i*6-2];
-            final double tmaxZ = bounds[i*6-1];
-            if (sameshape(minX, minY, minZ, maxX, maxY, maxZ, tminX, tminY, tminZ, tmaxX, tmaxY, tmaxZ)) {
-                final List<Axis> a = getRelative(minX, minY, minZ, maxX, maxY, maxZ, tminX, tminY, tminZ, tmaxX, tmaxY, tmaxZ);
-                if (a.size() == 1) {
-                    Axis axis = a.get(0);
-                    switch (axis) {
-                        case X_AXIS:
-                            res[i*6-6] = Math.min(tminX, minX);
-                            res[i*6-3] = Math.max(tmaxX, maxX);
-                            return res;
-                        //case Y_AXIS:
-                        //  break;
-                        case Z_AXIS:
-                            res[i*6-4] = Math.min(tminZ, minZ);
-                            res[i*6-1] = Math.max(tmaxZ, maxZ);
-                            return res;
-                        default:
-                            break;
-                    }
-                }  
-            }
-        }
-        return add(res, octet);
-    }
-
-    private double[] add(final double[] array1, final double[] array2) {
-        final double[] newArray = new double[array1.length + array2.length];
-        System.arraycopy(array1, 0, newArray, 0, array1.length);
-        System.arraycopy(array2, 0, newArray, array1.length, array2.length);
-        return newArray;
-    }
-
-    private List<Axis> getRelative(double minX, double minY, double minZ, double maxX, double maxY, double maxZ,
-                                   double tminX, double tminY, double tminZ, double tmaxX, double tmaxY, double tmaxZ) {
-        final List<Axis> list = new ArrayList<Axis>();
-        if (minX == tmaxX || maxX == tminX) {
-            list.add(Axis.X_AXIS);
-        }
-        if (minY == tmaxY || maxY == tminY) {
-            list.add(Axis.Y_AXIS);
-        }
-        if (minZ == tmaxZ || maxZ == tminZ) {
-            list.add(Axis.Z_AXIS);
-        }
-        return list;
-    }
-
-    private boolean sameshape(double minX, double minY, double minZ, double maxX, double maxY, double maxZ, double tminX,
-                              double tminY, double tminZ, double tmaxX, double tmaxY, double tmaxZ) {
-        final double dx = maxX - minX;
-        final double dy = maxY - minY;
-        final double dz = maxZ - minZ;
-        final double tdx = tmaxX - tminX;
-        final double tdy = tmaxY - tminY;
-        final double tdz = tmaxZ - tminZ;
-        return dx == tdx && dy == tdy && dz == tdz;
-    }
+    
 }

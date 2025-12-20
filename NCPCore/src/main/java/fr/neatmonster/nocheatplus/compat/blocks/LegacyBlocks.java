@@ -14,10 +14,10 @@
  */
 package fr.neatmonster.nocheatplus.compat.blocks;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import org.bukkit.Material;
@@ -27,8 +27,7 @@ import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.Validate;
-import fr.neatmonster.nocheatplus.utilities.collision.Axis;
-import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
+import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
@@ -61,9 +60,13 @@ public class LegacyBlocks {
             );
         blocks.put(Material.SOUL_SAND, new BlockStatic(0.0, 0.0, 0.0, 1.0, 0.875, 1.0));
         blocks.put(Material.CACTUS, new BlockStatic(0.0625, 0.0, 0.0625, 0.9375, 0.9375, 0.9375));
+        blocks.put(Material.HOPPER, new BlockHopper());
+        blocks.put(Material.CAULDRON, new BlockCauldron());
         blocks.put(BridgeMaterial.LILY_PAD, new BlockWaterLily());
         blocks.put(BridgeMaterial.FARMLAND, new BlockFarmLand());
         if (BridgeMaterial.GRASS_PATH != null) blocks.put(BridgeMaterial.GRASS_PATH, new BlockGrassPath());
+        Material tmp = BridgeMaterial.getFirst("CHORUS_PLANT");
+        if (tmp != null) blocks.put(tmp, new BlockChorusPlant());
         return blocks;
     }
 
@@ -114,7 +117,7 @@ public class LegacyBlocks {
         @Override
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
             final IPlayerData data = cache.getPlayerData();
-            if (data != null && data.getClientVersion().isAtLeast(ClientVersion.V_1_13)) {
+            if (data != null && data.getClientVersion().isAtLeast(ClientVersion.V_1_9)) {
                 return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.09375, 0.9375};
             }
             return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375};
@@ -412,16 +415,16 @@ public class LegacyBlocks {
                 double[] octet_nn, double[] octet_pn, double[] octet_np, double[] octet_pp) {
             double[] res = slab;
             if ((flags & 1) != 0) {
-                res = merge(res, octet_nn);
+                res = ShapeUtils.merge(res, octet_nn);
             }
             if ((flags & 2) != 0) {
-                res = merge(res, octet_pn);
+                res = ShapeUtils.merge(res, octet_pn);
             }
             if ((flags & 4) != 0) {
-                res = merge(res, octet_np);
+                res = ShapeUtils.merge(res, octet_np);
             }
             if ((flags & 8) != 0) {
-                res = merge(res, octet_pp);
+                res = ShapeUtils.merge(res, octet_pp);
             }
             return res;
         }
@@ -460,80 +463,244 @@ public class LegacyBlocks {
             }
             return null;
         }
-
-        private double[] add(final double[] array1, final double[] array2) {
-            final double[] newArray = new double[array1.length + array2.length];
-            System.arraycopy(array1, 0, newArray, 0, array1.length);
-            System.arraycopy(array2, 0, newArray, array1.length, array2.length);
-            return newArray;
-        }
-
-        private double[] merge(double[] bounds, double[] octet) {
-            double[] res = bounds;
-            final double minX = octet[0];
-            final double minY = octet[1];
-            final double minZ = octet[2];
-            final double maxX = octet[3];
-            final double maxY = octet[4];
-            final double maxZ = octet[5];
-            for (int i = 2; i <= AxisAlignedBBUtils.getNumberOfAABBs(bounds); i++) {
-                    
-                final double tminX = bounds[i*6-6];
-                final double tminY = bounds[i*6-5];
-                final double tminZ = bounds[i*6-4];
-                final double tmaxX = bounds[i*6-3];
-                final double tmaxY = bounds[i*6-2];
-                final double tmaxZ = bounds[i*6-1];
-                if (sameshape(minX, minY, minZ, maxX, maxY, maxZ, 
-                         tminX, tminY, tminZ, tmaxX, tmaxY, tmaxZ)) {
-                    final List<Axis> a = getRelative(minX, minY, minZ, maxX, maxY, maxZ, 
-                            tminX, tminY, tminZ, tmaxX, tmaxY, tmaxZ);
-                    if (a.size() == 1) {
-                        Axis axis = a.get(0);
-                        switch (axis) {
-                        case X_AXIS:
-                            res[i*6-6] = Math.min(tminX, minX);
-                            res[i*6-3] = Math.max(tmaxX, maxX);
-                            return res;
-                        //case Y_AXIS:
-                        //        break;
-                        case Z_AXIS:
-                            res[i*6-4] = Math.min(tminZ, minZ);
-                            res[i*6-1] = Math.max(tmaxZ, maxZ);
-                            return res;
-                        default:
-                                break;
-                        }
-                    }  
+    }
+    
+    public static class BlockHopper implements Block {
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            IPlayerData pData = cache.getPlayerData();
+            if (pData != null && pData.getClientVersion().isHigherThan(ClientVersion.V_1_12_2)) {
+                BlockFace face = dataToDirection(cache.getData(x, y, z));
+                switch (face) {
+                    case NORTH:
+                        return new double[] {
+                            // Standing inside
+                            //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                            // Middle
+                            0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
+                            // Bottom
+                            0.375, 0.25, 0.0, 0.625, 0.5, 0.25,
+                            // Top
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            // 4 sides of hopper (top)
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
+                            0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
+                            0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
+                            0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            };
+                    case SOUTH:
+                        return new double[] {
+                            // Standing inside
+                            //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                            // Middle
+                            0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
+                            // Bottom
+                            0.375, 0.25, 0.75, 0.625, 0.5, 1.0,
+                            // Top
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            // 4 sides of hopper (top)
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
+                            0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
+                            0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
+                            0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            };
+                    case WEST:
+                        return new double[] {
+                            // Standing inside
+                            //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                            // Middle
+                            0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
+                            // Bottom
+                            0.0, 0.25, 0.375, 0.25, 0.5, 0.625,
+                            // Top
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            // 4 sides of hopper (top)
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
+                            0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
+                            0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
+                            0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            };
+                    case EAST:
+                        return new double[] {
+                            // Standing inside
+                            //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                            // Middle
+                            0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
+                            // Bottom
+                            0.75, 0.25, 0.375, 1.0, 0.5, 0.625,
+                            // Top
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            // 4 sides of hopper (top)
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
+                            0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
+                            0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
+                            0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            };
+                    default:  // DOWN
+                        return new double[] {
+                            // Standing inside
+                            //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                            // Middle
+                            0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
+                            // Bottom
+                            0.375, 0.0, 0.375, 0.625, 0.25, 0.625,
+                            // Top
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            // 4 sides of hopper (top)
+                            0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
+                            0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
+                            0.0, 0.6875, 0.0, 0.125, 1.0, 1.0,
+                            0.875, 0.6875, 0.0, 1.0, 1.0, 1.0,
+                            };
                 }
             }
-            return add(res, octet);
+            return new double[] {
+                    0, 0, 0, 1, 0.625, 1,
+                    0, 0.625, 0, 0.125, 1, 1,
+                    0.875, 0.625, 0, 1, 1, 1,
+                    0, 0.625, 0, 1, 1, 0.125,
+                    0, 0.625, 0.875, 1, 1, 1
+            };
+        }
+        private BlockFace dataToDirection(int data) {
+            switch (data & 7) {
+            case 0:
+                return BlockFace.DOWN;
+            case 1:
+                return BlockFace.UP;
+            case 2:
+                return BlockFace.NORTH;
+            case 3:
+                return BlockFace.SOUTH;
+            case 4:
+                return BlockFace.WEST;
+            case 5:
+                return BlockFace.EAST;
+            }
+            return null;
+        }
+    }
+    
+    public static class BlockCauldron implements Block {
+        private final static double[] new1_13_2Bounds = {
+                0.0, 0.0, 0.0, 0.125, 1.0, 0.25, 
+                0.0, 0.0, 0.75, 0.125, 1.0, 1.0, 
+                0.125, 0.0, 0.0, 0.25, 1.0, 0.125, 
+                0.125, 0.0, 0.875, 0.25, 1.0, 1.0, 
+                0.75, 0.0, 0.0, 1.0, 1.0, 0.125, 
+                0.75, 0.0, 0.875, 1.0, 1.0, 1.0, 
+                0.875, 0.0, 0.125, 1.0, 1.0, 0.25, 
+                0.875, 0.0, 0.75, 1.0, 1.0, 0.875, 
+                0.0, 0.1875, 0.25, 1.0, 0.25, 0.75, 
+                0.125, 0.1875, 0.125, 0.875, 0.25, 0.25, 
+                0.125, 0.1875, 0.75, 0.875, 0.25, 0.875, 
+                0.25, 0.1875, 0.0, 0.75, 1.0, 0.125, 
+                0.25, 0.1875, 0.875, 0.75, 1.0, 1.0, 
+                0.0, 0.25, 0.25, 0.125, 1.0, 0.75, 
+                0.875, 0.25, 0.25, 1.0, 1.0, 0.75};
+        private final static double[] new1_13Bounds = makeCauldron(0.1875, 0.125, 0.8125, 0.0625);
+        private final static double[] legacyBounds = makeCauldron(0.0, 0.125, 1.0, 0.3125);
+
+        private static double[] makeCauldron(double minY, double sideWidth, double sideHeight, double coreHeight) {
+            return new double[] {
+                    // Core
+                    sideWidth, minY, sideWidth, 1 - sideWidth, minY + coreHeight, 1 - sideWidth,
+                    // 4 side
+                    0.0, minY, 0.0, 1.0, minY + sideHeight, sideWidth,
+                    0.0, minY, 1.0 - sideWidth, 1.0, minY + sideHeight, 1.0,
+                    0.0, minY, 0.0, sideWidth, minY + sideHeight, 1.0,
+                    1.0 - sideWidth, minY, 0.0, 1.0, minY + sideHeight, 1.0
+            };
+        }
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            IPlayerData pData = cache.getPlayerData();
+            if (pData != null) {
+                if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+                    return legacyBounds;
+                } else if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13_2)) {
+                    return new1_13Bounds;
+                } else return new1_13_2Bounds;
+            }
+            return legacyBounds;
+        }
+        
+    }
+    
+    public static class BlockChorusPlant implements Block {
+        private static final BlockFace[] directions = new BlockFace[]{BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST, BlockFace.UP, BlockFace.DOWN};
+        private static final double[][] modernShapes = makeShapes();
+        private static double[][] makeShapes() {
+            float min = 0.5F - (float) 0.3125;
+            float max = 0.5F + (float) 0.3125;
+            double[] base = {min, min, min, max, max, max};
+            double[][] cs = new double[directions.length][];
+            
+            for (int i = 0; i < directions.length; i++) {
+                BlockFace dir = directions[i];
+                cs[i] = new double[] {0.5D + Math.min(-(float) 0.3125, (double) dir.getModX() * 0.5D), 0.5D + Math.min(-(float) 0.3125, (double) dir.getModY() * 0.5D), 0.5D + Math.min(-(float) 0.3125, (double) dir.getModZ() * 0.5D), 
+                                      0.5D + Math.max((float) 0.3125, (double) dir.getModX() * 0.5D), 0.5D + Math.max((float) 0.3125, (double) dir.getModY() * 0.5D), 0.5D + Math.max((float) 0.3125, (double) dir.getModZ() * 0.5D)
+                                      }; 
+            }
+            
+            double[][] cs2 = new double[64][];
+            for (int k = 0; k < 64; k++) {
+                double[] tmp = base;
+                
+                for (int j = 0; j < directions.length; j++) {
+                    if ((k & 1 << j) != 0) {
+                        tmp = ShapeUtils.merge(tmp, cs[j]);
+                    }
+                }
+                cs2[k] = tmp;
+            }
+            return cs2;
         }
 
-        private List<Axis> getRelative(double minX, double minY, double minZ, double maxX, double maxY, double maxZ,
-                double tminX, double tminY, double tminZ, double tmaxX, double tmaxY, double tmaxZ) {
-            final List<Axis> list = new ArrayList<Axis>();
-            if (minX == tmaxX || maxX == tminX) {
-                list.add(Axis.X_AXIS);
+        private Set<BlockFace> getLegacyFaces(BlockCache blockCache, int x, int y, int z) {
+            Set<BlockFace> faces = new HashSet<>();
+            Material upBlock = blockCache.getType(x, y+1, z);
+            Material downBlock = blockCache.getType(x, y-1, z);
+            Material northBlock = blockCache.getType(x, y, z-1);
+            Material southBlock = blockCache.getType(x, y, z+1);
+            Material westBlock = blockCache.getType(x-1, y, z);
+            Material eastBlock = blockCache.getType(x+1, y, z);
+            if (downBlock == Material.CHORUS_PLANT || downBlock == BridgeMaterial.END_STONE) {
+                faces.add(BlockFace.DOWN);
             }
-            if (minY == tmaxY || maxY == tminY) {
-                list.add(Axis.Y_AXIS);
+            if (upBlock == Material.CHORUS_PLANT) {
+                faces.add(BlockFace.UP);
             }
-            if (minZ == tmaxZ || maxZ == tminZ) {
-                list.add(Axis.Z_AXIS);
+            if (northBlock == Material.CHORUS_PLANT) {
+                faces.add(BlockFace.NORTH);
             }
-            return list;
+            if (southBlock == Material.CHORUS_PLANT) {
+                faces.add(BlockFace.SOUTH);
+            }
+            if (westBlock == Material.CHORUS_PLANT) {
+                faces.add(BlockFace.WEST);
+            }
+            if (eastBlock == Material.CHORUS_PLANT) {
+                faces.add(BlockFace.EAST);
+            }
+            return faces;
+        }
+        
+        private int getAABBIndex(Set<BlockFace> faces) {
+            int i = 0;
+
+            for (int j = 0; j < directions.length; ++j) {
+                if (faces.contains(directions[j])) {
+                    i |= 1 << j;
+                }
+            }
+            return i;
         }
 
-        private boolean sameshape(double minX, double minY, double minZ, double maxX, double maxY, double maxZ, double tminX,
-                double tminY, double tminZ, double tmaxX, double tmaxY, double tmaxZ) {
-            final double dx = maxX - minX;
-            final double dy = maxY - minY;
-            final double dz = maxZ - minZ;
-            final double tdx = tmaxX - tminX;
-            final double tdy = tmaxY - tminY;
-            final double tdz = tmaxZ - tminZ;
-            return dx == tdx && dy == tdy && dz == tdz;
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            Set<BlockFace> directions = getLegacyFaces(cache, x, y, z);
+            return modernShapes[getAABBIndex(directions)];
         }
     }
 }

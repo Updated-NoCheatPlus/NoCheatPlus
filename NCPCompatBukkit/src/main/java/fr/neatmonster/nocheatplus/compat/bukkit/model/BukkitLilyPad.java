@@ -27,7 +27,7 @@ public class BukkitLilyPad implements BukkitShapeModel {
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
         final IPlayerData data = blockCache.getPlayerData();
-        if (data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+        if (data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_9)) {
             return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375};
         }
         return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.09375, 0.9375};

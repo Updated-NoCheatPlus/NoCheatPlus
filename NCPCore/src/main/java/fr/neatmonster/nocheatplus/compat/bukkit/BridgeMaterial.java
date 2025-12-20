@@ -65,7 +65,7 @@ public class BridgeMaterial {
     }
 
     public static Material legacy(String name) {
-        return legacy.get(name.toLowerCase());
+        return legacy.get(name.toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -75,7 +75,7 @@ public class BridgeMaterial {
      * @return
      */
     public static Material get(String name) {
-        return all.get(name.toLowerCase());
+        return all.get(name.toLowerCase(Locale.ROOT));
     }
 
     /**
