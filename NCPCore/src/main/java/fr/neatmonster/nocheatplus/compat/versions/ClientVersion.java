@@ -101,10 +101,11 @@ public enum ClientVersion {
      * 1.21.9 / 1.21.10 have the same protocol version.
      */
     V_1_21_9(773),
+    V_1_21_11(774),
 
 
     LOWER_THAN_KNOWN_VERSIONS(V_1_7_2.protocolID - 1, false),
-    HIGHER_THAN_KNOWN_VERSIONS(V_1_21_9.protocolID + 1, false),
+    HIGHER_THAN_KNOWN_VERSIONS(V_1_21_11.protocolID + 1, false),
     UNKNOWN(-1, false);
 
     private final int protocolID;
