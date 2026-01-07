@@ -129,14 +129,16 @@ public class BlockProperties {
         WOOD(1, 2f),
         /** The stone. */
         STONE(2, 4f),
+        /** The copper. */
+        COPPER(3, 5f),
         /** The iron. */
-        IRON(3, 6f),
+        IRON(4, 6f),
         /** The diamond. */
-        DIAMOND(4, 8f),
+        DIAMOND(5, 8f),
         /** The netherite */
-        NETHERITE(5, 9f),
+        NETHERITE(6, 9f),
         /** The gold. */
-        GOLD(6, 12f);
+        GOLD(7, 12f);
 
         /** Index for array. */
         public final int index;
@@ -1408,6 +1410,14 @@ public class BlockProperties {
         tools.put(Material.STONE_AXE, new ToolProps(ToolType.AXE, MaterialBase.STONE));
         tools.put(Material.STONE_HOE, new ToolProps(ToolType.HOE, MaterialBase.STONE));
 
+        if (BridgeMaterial.COPPER_SWORD != null) {
+            tools.put(BridgeMaterial.COPPER_SWORD, new ToolProps(ToolType.SWORD, MaterialBase.COPPER));
+            tools.put(BridgeMaterial.COPPER_SHOVEL, new ToolProps(ToolType.SPADE, MaterialBase.COPPER));
+            tools.put(BridgeMaterial.COPPER_PICKAXE, new ToolProps(ToolType.PICKAXE, MaterialBase.COPPER));
+            tools.put(BridgeMaterial.COPPER_AXE, new ToolProps(ToolType.AXE, MaterialBase.COPPER));
+            tools.put(BridgeMaterial.COPPER_HOE, new ToolProps(ToolType.HOE, MaterialBase.COPPER));
+        }
+
         tools.put(Material.IRON_SWORD, new ToolProps(ToolType.SWORD, MaterialBase.IRON));
         tools.put(BridgeMaterial.IRON_SHOVEL, new ToolProps(ToolType.SPADE, MaterialBase.IRON));
         tools.put(Material.IRON_PICKAXE, new ToolProps(ToolType.PICKAXE, MaterialBase.IRON));
@@ -2557,6 +2567,7 @@ public class BlockProperties {
                 case GOLD:
                 case IRON:
                 case NETHERITE:
+                case COPPER:
                 case STONE:
                 case WOOD:
                     return isValidTool;
@@ -2566,6 +2577,7 @@ public class BlockProperties {
         }
         if (blockMat == MaterialBase.STONE) {
             switch (toolMat) {
+                case COPPER:
                 case DIAMOND:
                 case IRON:
                 case NETHERITE:
@@ -2577,6 +2589,7 @@ public class BlockProperties {
         }
         if (blockMat == MaterialBase.IRON) {
             switch (toolMat) {
+                case COPPER:
                 case DIAMOND:
                 case IRON:
                 case NETHERITE:
