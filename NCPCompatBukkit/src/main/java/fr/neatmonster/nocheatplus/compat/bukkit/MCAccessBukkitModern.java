@@ -99,8 +99,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_END_ROD = new BukkitDirectionalCentered(0.375, 1.0, false);
 
     // Blocks that have a different shape with neighbor blocks (bukkit takes care though).
-    private static final BukkitShapeModel MODEL_THIN_FENCE = new BukkitFence(0.4375, 1.0);
-    private static final BukkitShapeModel MODEL_THICK_FENCE = new BukkitFence(0.375, 1.5);
+    private static final BukkitShapeModel MODEL_THIN_FENCE = new BukkitFence(0.4375, 1.0, true);
+    private static final BukkitShapeModel MODEL_THICK_FENCE = new BukkitFence(0.375, 1.5, false);
     private static final BukkitShapeModel MODEL_THICK_FENCE2 = new BukkitWall(0.25, 1.5, 0.3125); // .75 .25 0 max: .25 .75 .5
     private static final BukkitShapeModel MODEL_WALL_HEAD = new BukkitWallHead();
 

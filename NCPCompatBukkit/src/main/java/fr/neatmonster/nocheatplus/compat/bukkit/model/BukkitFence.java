@@ -20,61 +20,124 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.MultipleFacing;
+import org.bukkit.util.BoundingBox;
 
+import fr.neatmonster.nocheatplus.compat.Bridge1_13;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
+import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitFence implements BukkitShapeModel {
+    private final double[] northplane;
+    private final double[] southplane;
+    private final double[] westplane;
+    private final double[] eastplane;
+    private final double[] northplaneB;
+    private final double[] southplaneB;
+    private final double[] westplaneB;
+    private final double[] eastplaneB;
+    private final double[] fullplane;
+    private final double[] eastwest;
+    private final double[] southnorth;
+    private final double[] baseState;
+    private final boolean cutEdgeOnLowVersions;
 
-    private final double minXZ;
-    private final double maxXZ;
-    private final double height;
-
-    public BukkitFence(double inset, double height) {
-        this(inset, 1.0 - inset, height);
+    public BukkitFence(double inset, double height, boolean cutEdgeOnLowVersions) {
+        this(inset, 1.0 - inset, height, cutEdgeOnLowVersions);
     }
 
-    public BukkitFence(double minXZ, double maxXZ, double height) {
-        this.minXZ = minXZ;
-        this.maxXZ = maxXZ;
-        this.height = height;
+    public BukkitFence(double minXZ, double maxXZ, double height, boolean cutEdgeOnLowVersions) {
+        this.cutEdgeOnLowVersions = cutEdgeOnLowVersions;
+        this.northplane = new double[] {minXZ, 0.0, 0.0, maxXZ, height, maxXZ};
+        this.southplane = new double[] {minXZ, 0.0, minXZ, maxXZ, height, 1.0};
+        this.westplane = new double[] {0.0, 0.0, minXZ, maxXZ, height, maxXZ};
+        this.eastplane = new double[] {minXZ, 0.0, minXZ, 1.0, height, maxXZ};
+        this.northplaneB = new double[] {minXZ, 0.0, 0.0, maxXZ, height, maxXZ - 0.0625};
+        this.southplaneB = new double[] {minXZ, 0.0, minXZ + 0.0625, maxXZ, height, 1.0};
+        this.westplaneB = new double[] {0.0, 0.0, minXZ, maxXZ - 0.0625, height, maxXZ};
+        this.eastplaneB = new double[] {minXZ + 0.0625, 0.0, minXZ, 1.0, height, maxXZ};
+        this.eastwest = ShapeUtils.merge(westplane, eastplane);
+        this.southnorth = ShapeUtils.merge(southplane, northplane);
+        this.fullplane = ShapeUtils.add(eastwest, southnorth);
+        this.baseState = new double[] {minXZ, 0.0, minXZ, maxXZ, height, maxXZ};
     }
 
     @Override
     public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
-        // 13749998807909
-        // 86250001192093
-        // 0.1375, 0.8625
         final Block block = world.getBlockAt(x, y, z);
-        final BlockState state = block.getState();
-        final BlockData blockData = state.getBlockData();
+        final IPlayerData data = blockCache.getPlayerData();
+        final boolean cutEdge = data != null && cutEdgeOnLowVersions && data.getClientVersion().isLowerThan(ClientVersion.V_1_9);
+        // Server is 1.13.2 higher and player not on 1.8
+        if (Bridge1_13.hasBuiltInRayTracing() && !cutEdge) {
+            double[] res = {};
+            for (BoundingBox box : block.getCollisionShape().getBoundingBoxes()) {
+                res = ShapeUtils.add(res, AxisAlignedBBUtils.toArray(box));
+            }
+            if (res.length == 0) return null;
+            return res;
+        } else {
+            boolean east = false;
+            boolean north = false;
+            boolean west = false;
+            boolean south = false;
+            final BlockState state = block.getState();
+            final BlockData blockData = state.getBlockData();
+            if (blockData instanceof MultipleFacing) {
+                final MultipleFacing fence = (MultipleFacing) blockData;
+                for (final BlockFace face : fence.getFaces()) {
+                    switch (face) {
+                        case EAST:
+                            east = true;
+                            break;
+                        case NORTH:
+                            north = true;
+                            break;
+                        case WEST:
+                            west = true;
+                            break;
+                        case SOUTH:
+                            south = true;
+                            break;
+                        default:
+                            break;
 
-        if (blockData instanceof MultipleFacing) {
-            // Note isPassableWorkaround for these (no voxel shapes / multi cuboid yet).
-            final MultipleFacing fence = (MultipleFacing) blockData;
-            // TODO: If height > 1.0, check if it needs to be capped, provided relevant.
-            double[] res = new double[] {minXZ, 0.0, minXZ, maxXZ, height, maxXZ};
-            for (final BlockFace face : fence.getFaces()) {
-                switch (face) {
-                    case EAST:
-                        res[3] = 1.0;
-                        break;
-                    case NORTH:
-                        res[2] = 0.0;
-                        break;
-                    case WEST:
-                        res[0] = 0.0;
-                        break;
-                    case SOUTH:
-                        res[5] = 1.0;
-                        break;
-                    default:
-                        break;
-
+                    }
                 }
             }
-            return res;
+            if (east && north && west && south) {
+                return fullplane;
+            }
+            double tmp[] = new double[0];
+            if (east && west) {
+                tmp = eastwest;
+                east = west = false;
+            } else if (south && north) {
+                tmp = southnorth;
+                south = north = false;
+            }
+            if (south) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? southplaneB : southplane);
+            }
+            if (north) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? northplaneB : northplane);
+            }
+            if (east) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? eastplaneB : eastplane);
+            }
+            if (west) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? westplaneB : westplane);
+            }
+            if (tmp.length == 0) {
+                tmp = ShapeUtils.add(tmp, cutEdge ? fullplane : baseState);
+            }
+            return tmp;
         }
-        return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+    }
+    
+    private boolean isNextDir(boolean east, boolean north, boolean west, boolean south) {
+        return (north || south) && (west || east);
     }
 
     @Override

@@ -78,7 +78,7 @@ public class BlockCacheSpigotCB1_8_R1 extends BlockCache {
         block.updateShape(world, new BlockPosition(x, y, z));
 
         // minX, minY, minZ, maxX, maxY, maxZ
-        return new double[]{block.z(), block.B(), block.D(), block.A(),  block.C(),  block.E()};
+        return LegacyBlocks.adjustBounds(this, mat, x, y, z, new double[]{block.z(), block.B(), block.D(), block.A(), block.C(), block.E()});
     }
 
     @Override

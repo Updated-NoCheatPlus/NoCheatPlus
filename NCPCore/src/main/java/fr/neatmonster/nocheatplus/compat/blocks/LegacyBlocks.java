@@ -29,18 +29,38 @@ import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.Validate;
 import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
+import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 
 public class LegacyBlocks {
     private static final BlockStairs STAIRS = new BlockStairs();
     private static final BlockTrapDoor TRAPDOOR = new BlockTrapDoor();
-    private static final Map<Material, Block> blocks = init(); // new HashMap<>(); //private final Map<Material, Block> block;
+    private static final Map<Material, Block> blocks = init();
+    private static final Map<Material, TransformationBlock> adjustingBlocks = init2();
 
-    //public LegacyBlocks() {
-    //    blocks = init();
-    //}
-
+    private static Map<Material, TransformationBlock> init2() {
+        Map<Material, TransformationBlock> blocks = new HashMap<>();
+        for (final Material mat : MaterialUtil.addBlocks(
+                MaterialUtil.GLASS_PANES, 
+                BridgeMaterial.IRON_BARS)) {
+            blocks.put(mat, new BlockFence(0.4375, 1.0, true));
+        }
+        for (Material mat : MaterialUtil.ALL_WALLS) {
+            blocks.put(mat, new BlockWall(0.25, 1.5, 0.3125));
+        }
+        for (final Material mat : Material.values()) {
+            final long flags = BlockFlags.getBlockFlags(mat);
+            if (BlockFlags.hasAnyFlag(flags, BlockFlags.F_THICK_FENCE)) {
+                if (BlockFlags.hasAnyFlag(flags, BlockFlags.F_PASSABLE_X4)) {
+                    // Gates
+                }
+                // Fences
+                else blocks.put(mat, new BlockFence(0.375, 1.5, false));
+            }
+        }
+        return blocks;
+    }
     private static Map<Material, Block> init() {
         Map<Material, Block> blocks = new HashMap<>();
         for (Material mat : MaterialUtil.ALL_STAIRS) {
@@ -90,8 +110,20 @@ public class LegacyBlocks {
         return null;
     }
 
+    public static double[] adjustBounds(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB) {
+        final TransformationBlock blockshape = adjustingBlocks.get(mat);
+        if (blockshape != null) {
+            return blockshape.adjustToCollisionBox(cache, mat, x, y, z, visualBB);
+        }
+        return visualBB;
+    }
+
     public static interface Block {
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old);
+    }
+    
+    public static interface TransformationBlock {
+        public double[] adjustToCollisionBox(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB);
     }
 
     public static class BlockStatic implements Block{
@@ -701,6 +733,180 @@ public class LegacyBlocks {
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
             Set<BlockFace> directions = getLegacyFaces(cache, x, y, z);
             return modernShapes[getAABBIndex(directions)];
+        }
+    }
+    public static class BlockFence implements TransformationBlock {
+        private final double[] northplane;
+        private final double[] southplane;
+        private final double[] westplane;
+        private final double[] eastplane;
+        private final double[] northplaneB;
+        private final double[] southplaneB;
+        private final double[] westplaneB;
+        private final double[] eastplaneB;
+        private final double[] fullplane;
+        private final double[] eastwest;
+        private final double[] southnorth;
+        private final double[] baseState;
+        private final boolean cutEdgeOnLowVersions;
+
+        public BlockFence(double inset, double height, boolean cutEdgeOnLowVersions) {
+            this(inset, 1.0 - inset, height, cutEdgeOnLowVersions);
+        }
+
+        public BlockFence(double minXZ, double maxXZ, double height, boolean cutEdgeOnLowVersions) {
+            this.cutEdgeOnLowVersions = cutEdgeOnLowVersions;
+            this.northplane = new double[] {minXZ, 0.0, 0.0, maxXZ, height, maxXZ};
+            this.southplane = new double[] {minXZ, 0.0, minXZ, maxXZ, height, 1.0};
+            this.westplane = new double[] {0.0, 0.0, minXZ, maxXZ, height, maxXZ};
+            this.eastplane = new double[] {minXZ, 0.0, minXZ, 1.0, height, maxXZ};
+            this.northplaneB = new double[] {minXZ, 0.0, 0.0, maxXZ, height, maxXZ - 0.0625};
+            this.southplaneB = new double[] {minXZ, 0.0, minXZ + 0.0625, maxXZ, height, 1.0};
+            this.westplaneB = new double[] {0.0, 0.0, minXZ, maxXZ - 0.0625, height, maxXZ};
+            this.eastplaneB = new double[] {minXZ + 0.0625, 0.0, minXZ, 1.0, height, maxXZ};
+            this.eastwest = ShapeUtils.merge(westplane, eastplane);
+            this.southnorth = ShapeUtils.merge(southplane, northplane);
+            this.fullplane = ShapeUtils.add(eastwest, southnorth);
+            this.baseState = new double[] {minXZ, 0.0, minXZ, maxXZ, height, maxXZ};
+        }
+        @Override
+        public double[] adjustToCollisionBox(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB) {
+            boolean east = visualBB[3] == 1.0;
+            boolean north = visualBB[2] == 0.0;
+            boolean west = visualBB[0] == 0.0;
+            boolean south = visualBB[5] == 1.0;
+            if (east && north && west && south) {
+                return fullplane;
+            }
+            final IPlayerData data = cache.getPlayerData();
+            final boolean cutEdge = data != null && cutEdgeOnLowVersions && data.getClientVersion().isLowerThan(ClientVersion.V_1_9);
+            double tmp[] = new double[0];
+            if (east && west) {
+                tmp = eastwest;
+                east = west = false;
+            } else if (south && north) {
+                tmp = southnorth;
+                south = north = false;
+            }
+            if (south) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? southplaneB : southplane);
+            }
+            if (north) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? northplaneB : northplane);
+            }
+            if (east) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? eastplaneB : eastplane);
+            }
+            if (west) {
+                tmp = ShapeUtils.add(tmp, cutEdge && isNextDir(east, north, west, south) ? westplaneB : westplane);
+            }
+            if (tmp.length == 0) {
+                tmp = ShapeUtils.add(tmp, cutEdge ? fullplane : baseState);
+            }
+            return tmp;
+        }
+        
+        private boolean isNextDir(boolean east, boolean north, boolean west, boolean south) {
+            return (north || south) && (west || east);
+        }
+    }
+    public static class BlockWall implements TransformationBlock {
+        private final double[] east;
+        private final double[] north;
+        private final double[] west;
+        private final double[] south;
+        private final double[] eastB;
+        private final double[] northB;
+        private final double[] westB;
+        private final double[] southB;
+        private final double[] eastwest;
+        private final double[] southnorth;
+        private final double[] baseState;
+
+        public BlockWall(double inset, double height) {
+            this(inset, height, inset);
+        }
+
+        public BlockWall(double inset, double height, double sideInset) {
+            this(inset, 1.0 - inset, height, sideInset, 1.0 - sideInset);
+        }
+
+        public BlockWall(double minXZ, double maxXZ, double height, double minSideXZ, double maxSideXZ) {
+            east = new double[] {maxXZ, 0.0, minSideXZ, 1.0, height, maxSideXZ};
+            north = new double[] {minSideXZ, 0.0, 0.0, maxSideXZ, height, minXZ};
+            west = new double[] {0.0, 0.0, minSideXZ, minXZ, height, maxSideXZ};
+            south = new double[] {minSideXZ, 0.0, maxXZ, maxSideXZ, height, 1.0};
+            eastB = new double[] {maxXZ, 0.0, minXZ, 1.0, height, maxXZ};
+            northB = new double[] {minXZ, 0.0, 0.0, maxXZ, height, minXZ};
+            westB = new double[] {0.0, 0.0, minXZ, minXZ, height, maxXZ};
+            southB = new double[] {minXZ, 0.0, maxXZ, maxXZ, height, 1.0};
+            eastwest = new double[] {0.0, 0.0, minSideXZ, 1.0, height, maxSideXZ};
+            southnorth = new double[] {minSideXZ, 0.0, 0.0, maxSideXZ, height, 1.0};
+            baseState = new double[] {minXZ, 0.0, minXZ, maxXZ, height, maxXZ};
+        }
+
+        @Override
+        public double[] adjustToCollisionBox(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB) {
+            boolean east = visualBB[3] == 1.0;
+            boolean north = visualBB[2] == 0.0;
+            boolean west = visualBB[0] == 0.0;
+            boolean south = visualBB[5] == 1.0;
+            boolean up = visualBB[0] == 0.25 || visualBB[2] == 0.25 || visualBB[3] == 0.75 || visualBB[5] == 0.75;
+            double tmp[] = new double[0];
+            final IPlayerData data = cache.getPlayerData();
+            final boolean legacy = data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_13);
+            if (legacy && isNextDir(east, north, west, south)) {
+                return new double[] {visualBB[0], 0.0, visualBB[2], visualBB[3], 1.5, visualBB[5]};
+            }
+            
+            //if (legacy && east && west && south && north) {
+            //    return new double[] {0.0, 0.0, 0.0, 1.0, 1.5, 1.0};
+            //}
+
+            if (east && west) {
+                //if (legacy) {
+                //    if (south) {
+                //        return new double[] {0.0, 0.0, 0.25, 1.0, 1.5, 1.0}; 
+                //    }
+                //    if (north) {
+                //        return new double[] {0.0, 0.0, 0.0, 1.0, 1.5, 0.75}; 
+                //    }
+                //}
+                tmp = eastwest;
+                east = west = false;
+            } else if (south && north) {
+                //if (legacy) {
+                //    if (west) {
+                //        return new double[] {0.0, 0.0, 0.0, 0.75, 1.5, 1.0}; 
+                //    }
+                //    if (east) {
+                //        return new double[] {0.25, 0.0, 0.0, 1.0, 1.5, 1.0}; 
+                //    }
+                //}
+                tmp = southnorth;
+                south = north = false;
+            }
+
+            if (south) {
+                tmp = ShapeUtils.add(tmp, legacy ? this.southB : this.south);
+            }
+            if (north) {
+                tmp = ShapeUtils.add(tmp, legacy ? this.northB : this.north);
+            }
+            if (east) {
+                tmp = ShapeUtils.add(tmp, legacy ? this.eastB : this.east);
+            }
+            if (west) {
+                tmp = ShapeUtils.add(tmp, legacy ? this.westB : this.west);
+            }
+            if (tmp.length == 0 || up) {
+                tmp = ShapeUtils.add(tmp, this.baseState);
+            }
+            return tmp;
+        }
+
+        private boolean isNextDir(boolean east, boolean north, boolean west, boolean south) {
+            return (north || south) && (west || east);
         }
     }
 }

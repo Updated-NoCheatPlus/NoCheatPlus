@@ -49,7 +49,7 @@ public class BlockCacheCBReflect extends BlockCacheBukkit {
         final double[] shape = LegacyBlocks.getShape(this, mat, x, y, z, true);
         if (shape != null) return shape;
         try {
-            return helper.nmsWorld_fetchBlockShape(this.nmsWorld, this.getType(x, y, z), x, y, z);
+            return LegacyBlocks.adjustBounds(this, mat, x, y, z, helper.nmsWorld_fetchBlockShape(this.nmsWorld, this.getType(x, y, z), x, y, z));
         }
         catch (ReflectFailureException ex) {
             return super.fetchBounds(x, y, z);

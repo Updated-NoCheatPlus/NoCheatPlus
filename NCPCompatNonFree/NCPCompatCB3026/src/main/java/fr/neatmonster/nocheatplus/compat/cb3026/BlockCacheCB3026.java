@@ -104,7 +104,7 @@ public class BlockCacheCB3026 extends BlockCache {
         block.updateShape(iBlockAccess, x, y, z); // getData from cache.
 
         // minX, minY, minZ, maxX, maxY, maxZ
-        return new double[]{block.x(), block.z(), block.B(), block.y(),  block.A(),  block.C()};
+        return LegacyBlocks.adjustBounds(this, mat, x, y, z, new double[]{block.x(), block.z(), block.B(), block.y(), block.A(), block.C()});
     }
 
     @Override

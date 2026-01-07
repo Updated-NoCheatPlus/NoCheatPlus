@@ -161,6 +161,9 @@ public class BlockFlags {
 
     /** Thick fences: actual fences. */
     public static final long F_THICK_FENCE                  = f_flag();
+
+    /** Walls */
+    public static final long F_WALL                         = f_flag();
     
     /** Fence gate style with 0x04 being fully passable. */
     public static final long F_PASSABLE_X4                  = f_flag();
@@ -292,7 +295,7 @@ public class BlockFlags {
     public static final long F_BUBBLE_COLUMN                = f_flag();
     
     /** Flag used to workaround bugged block bounds in older servers for thin fences. */
-    public static final long F_FAKEBOUNDS                   = f_flag();
+    //public static final long F_FAKEBOUNDS                   = f_flag();
     
     /** Like powder snow: climbable and ground with leather shoes on. */
     public static final long F_POWDER_SNOW                  = f_flag();

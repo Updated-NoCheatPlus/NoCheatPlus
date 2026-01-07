@@ -1576,7 +1576,9 @@ public class BlockProperties {
 
         // 1.5 high blocks (fences, walls, gates)
         final long flags150 = BlockFlags.F_HEIGHT150 | BlockFlags.F_VARIABLE | BlockFlags.F_THICK_FENCE;
-        for (final Material mat : new Material[]{BridgeMaterial.NETHER_BRICK_FENCE, BridgeMaterial.COBBLESTONE_WALL,}) {
+        final long flags1502 = BlockFlags.F_HEIGHT150 | BlockFlags.F_VARIABLE | BlockFlags.F_WALL;
+        BlockFlags.setFlag(BridgeMaterial.COBBLESTONE_WALL, flags1502);
+        for (final Material mat : new Material[]{BridgeMaterial.NETHER_BRICK_FENCE}) {
             BlockFlags.setFlag(mat, flags150);
         }
         for (final Material mat : MaterialUtil.WOODEN_FENCES) {
@@ -3260,24 +3262,22 @@ public class BlockProperties {
         if ((flags & BlockFlags.F_POWDER_SNOW) != 0) {
             return true;
         } 
-        else if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (access.getData(bx, by, bz) & 0x4) != 0) {
+        //else if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (access.getData(bx, by, bz) & 0x4) != 0) {
             // (Allow checking further entries.)
-            return true; 
-        }
-        // TODO: About to remove
-        else if ((flags & BlockFlags.F_THICK_FENCE) != 0) {
-            if (!collidesFence(fx, fz, dX, dZ, dT, 0.125)) {
-                return true;
-            }
-        }
-        // TODO: About to remove
-        else if ((flags & BlockFlags.F_THIN_FENCE) != 0) {
-            if (!collidesFence(fx, fz, dX, dZ, dT, 0.0625)) {
-                return true;
-            }
+        //    return true; 
+        //}
+        //else if ((flags & BlockFlags.F_THICK_FENCE) != 0) {
+        //    if (!collidesFence(fx, fz, dX, dZ, dT, 0.125)) {
+        //        return true;
+        //    }
+        //}
+        //else if ((flags & BlockFlags.F_THIN_FENCE) != 0) {
+        //    if (!collidesFence(fx, fz, dX, dZ, dT, 0.0625)) {
+        //        return true;
+        //    }
             // NOTE: 0.974 depends on Y_ON_GROUND_DEFAULT
-            return Math.min(fy, fy + dY * dT) < 0.974 && !collidesBlock(access, minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, node, null, flags | BlockFlags.F_FAKEBOUNDS);
-        }
+        //    return Math.min(fy, fy + dY * dT) < 0.974 && !collidesBlock(access, minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, node, null, flags | BlockFlags.F_FAKEBOUNDS);
+        //}
         //else if (id == Material.CAULDRON || id == Material.HOPPER) {
         //    if (Math.min(fy, fy + dY * dT) >= getGroundMinHeight(access, bx, by, bz, node, flags)) {
                 // Check for moving through walls or floor.
@@ -3289,7 +3289,6 @@ public class BlockProperties {
                 && getGroundMinHeight(access, bx, by, bz, node, flags) <= Math.min(fy, fy + dY * dT)) {
             return true;
         } 
-        // TODO: Review. Is this still needed?
         //else if (id.toString().equals("CHORUS_PLANT") && !collidesFence(fx, fz, dX, dZ, dT, 0.3)) {
         //     return true;
         //}
@@ -4196,45 +4195,44 @@ public class BlockProperties {
         ////////////////////////////
         // Special cases...       //
         ////////////////////////////
-        // TODO: Deprecate and use a client-specific workaround now that we support client versions.
         // Fake the blockBounds of thin glass
         // (Bugged blocks bounds around 1.8. Mojang...)
-        if ((flags & BlockFlags.F_FAKEBOUNDS) != 0) {
+        //if ((flags & BlockFlags.F_FAKEBOUNDS) != 0) {
             // Length / Margin of the blockBounds along the X axis
-            final double aaBBLengthZ = bMaxZ - bMinZ;
+        //    final double aaBBLengthZ = bMaxZ - bMinZ;
             // Length / Margin of the blockBounds along the Z axis
-            final double aaBBLengthX = bMaxX - bMinX;
-            if (aaBBLengthZ == 0.125 && aaBBLengthX != 1.0) {
-                if (bMinX == 0.0) {
-                    bMaxX = 0.5;
-                }
-                if (bMaxX == 1.0) {
-                    bMinX = 0.5;
-                }
-            } 
-            else if (aaBBLengthX == 0.125 && aaBBLengthZ != 1.0) {
-                if (bMinZ == 0.0) {
-                    bMaxZ = 0.5;
-                }
-                if (bMaxZ == 1.0) {
-                    bMinZ = 0.5;
-                }
-            } 
-            else if (aaBBLengthX == aaBBLengthZ && aaBBLengthX != 1.0) {
-                if (bMaxX == 0.5625) {
-                    bMaxX = 0.5;
-                }
-                else if (bMaxZ == 0.5625) {
-                    bMaxZ = 0.5;
-                }
-                else if (bMinX == 0.4375) {
-                    bMinX = 0.5;
-                }
-                else if (bMinZ == 0.4375) {
-                    bMinZ = 0.5;
-                }
-            }
-        }
+        //    final double aaBBLengthX = bMaxX - bMinX;
+        //    if (aaBBLengthZ == 0.125 && aaBBLengthX != 1.0) {
+        //        if (bMinX == 0.0) {
+        //            bMaxX = 0.5;
+        //        }
+        //        if (bMaxX == 1.0) {
+        //            bMinX = 0.5;
+        //        }
+        //    } 
+        //    else if (aaBBLengthX == 0.125 && aaBBLengthZ != 1.0) {
+        //        if (bMinZ == 0.0) {
+        //            bMaxZ = 0.5;
+        //        }
+        //        if (bMaxZ == 1.0) {
+        //            bMinZ = 0.5;
+        //        }
+        //    } 
+        //    else if (aaBBLengthX == aaBBLengthZ && aaBBLengthX != 1.0) {
+        //        if (bMaxX == 0.5625) {
+        //            bMaxX = 0.5;
+        //        }
+        //        else if (bMaxZ == 0.5625) {
+        //            bMaxZ = 0.5;
+        //        }
+        //        else if (bMinX == 0.4375) {
+        //            bMinX = 0.5;
+        //        }
+        //        else if (bMinZ == 0.4375) {
+        //            bMinZ = 0.5;
+        //        }
+        //    }
+        //}
         
         //////////////////////////////////
         // Check for collision          //

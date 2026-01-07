@@ -85,7 +85,7 @@ public class BlockCacheSpigotCB1_12_R1 extends BlockCache {
             //return null;
         }
         // minX, minY, minZ, maxX, maxY, maxZ
-        return new double[]{bb.a, bb.b, bb.c, bb.d,  bb.e, bb.f};
+        return LegacyBlocks.adjustBounds(this, mat, x, y, z, new double[]{bb.a, bb.b, bb.c, bb.d, bb.e, bb.f});
     }
 
     @Override
