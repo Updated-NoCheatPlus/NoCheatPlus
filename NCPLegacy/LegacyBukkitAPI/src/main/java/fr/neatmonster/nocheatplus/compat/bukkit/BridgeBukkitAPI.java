@@ -14,29 +14,36 @@
  */
 package fr.neatmonster.nocheatplus.compat.bukkit;
 
+import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
-import org.bukkit.Sound;
 
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.utility.MinecraftVersion;
 
+import fr.neatmonster.nocheatplus.compat.registry.IBukkitAccess;
+
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-//import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
-
-public class BridgeBukkitAPI {
-    private static final boolean isServerModern = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.AQUATIC_UPDATE);
-    public static String getNamedSound(PacketContainer packet) {
+public class BridgeBukkitAPI implements IBukkitAccess {
+    public BridgeBukkitAPI() {
+        if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.v1_21_0)) {
+            throw new RuntimeException("Not supported.");
+        }
+    }
+    private final boolean isServerModern = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.AQUATIC_UPDATE);
+    private String getNamedSound(PacketContainer packet) {
         String soundName = "";
         Class<?> soundEffectCls = MinecraftReflection.getSoundEffectClass();
         //if (soundEffectCls == null) {
@@ -63,7 +70,7 @@ public class BridgeBukkitAPI {
 
         return soundName.replace('.', '_').toUpperCase(Locale.ROOT);
     }
-    public static boolean matchSounds(PacketContainer packetContainer, Set<String> effectNames) {
+    public boolean matchSounds(PacketContainer packetContainer, Set<String> effectNames) {
         if (isServerModern) {
             final StructureModifier<Sound> sounds = packetContainer.getSoundEffects();
             final Sound sound = sounds.read(0);
@@ -72,77 +79,68 @@ public class BridgeBukkitAPI {
         return effectNames.contains(getNamedSound(packetContainer));
     }
     
-    public static Inventory getTopInventory(Player p) {
+    public Inventory getTopInventory(Player p) {
         return p.getOpenInventory().getTopInventory();
     }
     
-    public static Inventory getTopInventory(InventoryClickEvent event) {
+    public Inventory getTopInventory(InventoryClickEvent event) {
         return getInventoryView(event).getTopInventory();
     }
     
-    public static Inventory getBottomInventory(InventoryClickEvent event) {
+    public Inventory getBottomInventory(InventoryClickEvent event) {
         return getInventoryView(event).getBottomInventory();
     }
     
-    public static InventoryView getInventoryView(InventoryClickEvent event) {
+    public InventoryView getInventoryView(InventoryClickEvent event) {
         return event.getView();
     }
     
-    public static String getInventoryTitle(InventoryClickEvent event) {
+    public String getInventoryTitle(InventoryClickEvent event) {
         return getInventoryView(event).getTitle();
     }
-	
-    public static boolean hasInventoryOpenOwnExcluded(final Player player) {
+    
+    public boolean hasInventoryOpenOwnExcluded(final Player player) {
         final InventoryView view = player.getOpenInventory();
         return view != null && view.getType() != InventoryType.CRAFTING && view.getType() != InventoryType.CREATIVE; // Exclude the CRAFTING and CREATIVE inv type.
     }
     
-    public static AttributeInstance getSpeedAttributeInstance(final Player player) {
+    public AttributeInstance getSpeedAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED);
     }
     
-    public static AttributeInstance getGravityAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getGravityAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_GRAVITY);
     }
     
-    public static AttributeInstance getSafeFallAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getSafeFallAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_SAFE_FALL_DISTANCE);
     }
     
-    public static AttributeInstance getFallMultAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getFallMultAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_FALL_DAMAGE_MULTIPLIER);
     }
     
-    public static AttributeInstance getBreakSpeedAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getBreakSpeedAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.PLAYER_BLOCK_BREAK_SPEED);
     }
     
-    public static AttributeInstance getJumpPowerAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getJumpPowerAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_JUMP_STRENGTH);
     }
     
-    public static AttributeInstance getBlockInteractionRangeAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getBlockInteractionRangeAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.PLAYER_BLOCK_INTERACTION_RANGE);
     }
     
-    public static AttributeInstance getEntityInteractionRangeAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getEntityInteractionRangeAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.PLAYER_BLOCK_INTERACTION_RANGE);
     }
     
-    public static AttributeInstance getStepHeightAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getStepHeightAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_STEP_HEIGHT);
     }
     
-    public static AttributeInstance getScaleAttributeInstance(final Player player) {
-        //if (isServerLowerThan1_20_5) return null;
+    public AttributeInstance getScaleAttributeInstance(final Player player) {
         return player.getAttribute(Attribute.GENERIC_SCALE);
     }
 }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>fr.neatmonster</groupId>
+        <artifactId>ncplegacy</artifactId>
+        <version>1.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>ncpbukkitapiaggregated</artifactId>
+    <version>1.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>NCPBukkitAPIAggregated</name>
+    <description>Aggregator for the bukkit compat modules.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>fr.neatmonster</groupId>
+            <artifactId>ncplegacybukkit</artifactId>
+            <version>1.1-SNAPSHOT</version>
+        </dependency>
+        <!-- ... -->
+        <dependency>
+            <groupId>fr.neatmonster</groupId>
+            <artifactId>ncpmodernbukkit</artifactId>
+            <version>1.1-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -11,9 +11,15 @@
 
     <artifactId>ncplegacy</artifactId>
     <version>1.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
     <name>NCPLegacy</name>
     <description>Compatibility for using the Bukkit API only.</description>
+    <modules>
+        <module>NCPBukkitAPIAggregated</module>
+        <module>LegacyBukkitAPI</module>
+        <module>ModernBukkitAPI</module>
+    </modules>
 
     <repositories>
         <repository>
@@ -21,21 +27,5 @@
             <url>https://repo.dmulloy2.net/repository/public/</url>
         </repository>
     </repositories>
-
-    <dependencies>
-        <dependency>
-            <!-- Do not bump -->
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
-            <version>1.20.6-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>5.3.0</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
 
 </project>

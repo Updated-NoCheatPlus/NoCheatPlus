@@ -27,6 +27,7 @@ import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.AttribUtil;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
+import fr.neatmonster.nocheatplus.compat.registry.BukkitAPIAccessFactory;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.modifier.IAttributeAccess;
@@ -87,7 +88,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
     
     @Override
     public double getSpeedMultiplier(final Player player) {
-        final AttributeInstance attrInst = BridgeBukkitAPI.getSpeedAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getSpeedAttributeInstance(player);
         final double val = attrInst.getValue() / attrInst.getBaseValue();
         final AttributeModifier mod = getModifier(attrInst, AttribUtil.ID_SPRINT_BOOST);
         return mod == null ? val : (val / getMultiplier(mod));
@@ -95,7 +96,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
     
     @Override
     public double getSprintMultiplier(final Player player) {
-        final AttributeInstance attrInst = BridgeBukkitAPI.getSpeedAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getSpeedAttributeInstance(player);
         final AttributeModifier mod = getModifier(attrInst, AttribUtil.ID_SPRINT_BOOST);
         return mod == null ? 1.0 : getMultiplier(mod);
     }
@@ -112,7 +113,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             gravity = thisMove.yDistance <= 0.0 && !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player)) ? Magic.SLOW_FALL_GRAVITY : Magic.DEFAULT_GRAVITY;
         }
         else {
-            final AttributeInstance attrInst = BridgeBukkitAPI.getGravityAttributeInstance(player);
+            final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getGravityAttributeInstance(player);
             // Fail-safe.
             if (attrInst == null) {
                 gravity = thisMove.yDistance <= 0.0 && !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player)) ? Magic.SLOW_FALL_GRAVITY : Magic.DEFAULT_GRAVITY;
@@ -131,7 +132,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return Magic.FALL_DAMAGE_DIST;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getSafeFallAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getSafeFallAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return Magic.FALL_DAMAGE_DIST;
         return MathUtil.clamp(attrInst.getValue(), -1024.0, 1024.0);
@@ -143,7 +144,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return 1.0;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getFallMultAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getFallMultAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return 1.0;
         return MathUtil.clamp(attrInst.getValue(), 1.0, 100.0);
@@ -155,7 +156,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return 1.0;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getBreakSpeedAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getBreakSpeedAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return 1.0;
         return  MathUtil.clamp(attrInst.getValue(), 1.0, 1024.0);
@@ -167,7 +168,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return 1.0;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getJumpPowerAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getJumpPowerAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return 1.0;
         final double val = attrInst.getValue() / attrInst.getBaseValue();
@@ -186,7 +187,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return 4.5;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getBlockInteractionRangeAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getBlockInteractionRangeAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return 4.5;
         return MathUtil.clamp(attrInst.getValue(), 0.0, 64.0);
@@ -198,7 +199,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             // Doesn't exist. Calculate manually.
             return 3.0;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getEntityInteractionRangeAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getEntityInteractionRangeAttributeInstance(player);
         // Fail-safe
         if (attrInst == null) return 3.0;
         return MathUtil.clamp(attrInst.getValue(), 0.0, 64.0);
@@ -219,7 +220,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
             final MovingConfig cc = DataManager.getPlayerData(player).getGenericInstance(MovingConfig.class);
             return cc.sfStepHeight;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getStepHeightAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getStepHeightAttributeInstance(player);
         if (attrInst == null) {
             // Fail-safe.
             if (player.isInsideVehicle()) {
@@ -277,7 +278,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
         if (ServerVersion.isLowerThan("1.20.5")) {
             return 1.0;
         }
-        final AttributeInstance attrInst = BridgeBukkitAPI.getScaleAttributeInstance(player);
+        final AttributeInstance attrInst = BukkitAPIAccessFactory.getBukkitAccess().getScaleAttributeInstance(player);
         // Fail-safe.
         if (attrInst == null) return 1.0;
         return MathUtil.clamp(attrInst.getValue(), 0.0625, 16.0);

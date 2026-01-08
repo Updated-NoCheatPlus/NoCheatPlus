@@ -59,7 +59,7 @@ import fr.neatmonster.nocheatplus.checks.combined.Combined;
 import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeBukkitAPI;
+import fr.neatmonster.nocheatplus.compat.registry.BukkitAPIAccessFactory;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
@@ -241,7 +241,7 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
                 boolean check = true;
                 try {
                     // Exempted inventories are not checked.
-                    check = !cc.inventoryExemptions.contains(ChatColor.stripColor(BridgeBukkitAPI.getInventoryTitle(event)));
+                    check = !cc.inventoryExemptions.contains(ChatColor.stripColor(BukkitAPIAccessFactory.getBukkitAccess().getInventoryTitle(event)));
                 }
                 catch (IllegalStateException e) {
                     // Uhm... Can this ISE be fixed?
@@ -587,7 +587,7 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
         }
         final CombinedData cData = pData.getGenericInstance(CombinedData.class);
         final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
-        final Inventory inv = BridgeBukkitAPI.getTopInventory(event.getPlayer());
+        final Inventory inv = BukkitAPIAccessFactory.getBukkitAccess().getTopInventory(event.getPlayer());
         boolean moreInvCheck = false;
         if (moreInv.isEnabled(event.getPlayer(), pData) 
             && moreInv.check(event.getPlayer(), cData, pData, inv.getType(), inv, PoYdiff)) {
@@ -685,10 +685,10 @@ public class InventoryListener  extends CheckListener implements JoinLeaveListen
         //builder.append(view.getClass().getName());
 
         // Bottom inventory.
-        addInventory(BridgeBukkitAPI.getBottomInventory(event), BridgeBukkitAPI.getInventoryTitle(event), " , Bottom: ", builder);
+        addInventory(BukkitAPIAccessFactory.getBukkitAccess().getBottomInventory(event), BukkitAPIAccessFactory.getBukkitAccess().getInventoryTitle(event), " , Bottom: ", builder);
 
         // Top inventory.
-        addInventory(BridgeBukkitAPI.getTopInventory(event), BridgeBukkitAPI.getInventoryTitle(event), " , Top: ", builder);
+        addInventory(BukkitAPIAccessFactory.getBukkitAccess().getTopInventory(event), BukkitAPIAccessFactory.getBukkitAccess().getInventoryTitle(event), " , Top: ", builder);
         
         if (action != null) {
             builder.append(" , Action: ");

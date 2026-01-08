@@ -29,7 +29,7 @@ import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeBukkitAPI;
+import fr.neatmonster.nocheatplus.compat.registry.BukkitAPIAccessFactory;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.registry.event.IHandle;
 import fr.neatmonster.nocheatplus.components.registry.feature.IDisableListener;
@@ -83,7 +83,7 @@ public class Open extends Check implements IDisableListener {
      * @return True, if the inventory has been successfully closed. This will also reset the inventory open time and interaction time.
      */
     public boolean check(final Player player) {
-        final boolean isShulkerBox = BridgeBukkitAPI.getTopInventory(player).getType().toString().equals("SHULKER_BOX");
+        final boolean isShulkerBox = BukkitAPIAccessFactory.getBukkitAccess().getTopInventory(player).getType().toString().equals("SHULKER_BOX");
         if (
             // TODO: POC: Item duplication with teleporting NPCS, having their inventory open.
             exeSet.getHandle().isRegardedAsNpc(player)
@@ -139,7 +139,7 @@ public class Open extends Check implements IDisableListener {
         final InventoryConfig cc = pData.getGenericInstance(InventoryConfig.class);
         final InventoryData data = pData.getGenericInstance(InventoryData.class);
         final boolean creative = player.getGameMode() == GameMode.CREATIVE && ((data.clickedSlotType == SlotType.QUICKBAR) || cc.openDisableCreative);
-        final boolean isMerchant = BridgeBukkitAPI.getTopInventory(player).getType() == InventoryType.MERCHANT;
+        final boolean isMerchant = BukkitAPIAccessFactory.getBukkitAccess().getTopInventory(player).getType() == InventoryType.MERCHANT;
         final PlayerMoveData thisMove = mData.playerMoves.getCurrentMove();
         // Skipping conditions first.
         if (
