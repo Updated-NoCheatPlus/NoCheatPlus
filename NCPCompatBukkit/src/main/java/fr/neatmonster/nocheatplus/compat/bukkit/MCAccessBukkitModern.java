@@ -228,9 +228,25 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             addModel(mat, MODEL_AUTO_FETCH);
         }
 
+        // Stonecutter and legacy chains
         for (Material mat : BridgeMaterial.getAllBlocks(
             "stonecutter", "chain")) {
             addModel(mat, MODEL_AUTO_FETCH_LEGACY);
+        }
+        
+        // Modern iron chains
+        if (BridgeMaterial.IRON_CHAIN != null) {
+            addModel(BridgeMaterial.IRON_CHAIN, MODEL_AUTO_FETCH);
+        }
+        
+        // Copper chains
+        for (Material mat : MaterialUtil.COPPER_CHAINS) {
+            addModel(mat, MODEL_AUTO_FETCH_LEGACY);
+        }
+        
+        // Copper golem statues.
+        for (Material mat : MaterialUtil.COPPER_GOLEM_STATUES) {
+            addModel(mat, MODEL_AUTO_FETCH);
         }
 
         // Camp fire
@@ -263,7 +279,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         addModel(BridgeMaterial.CAKE, MODEL_CAKE);
 
         // End Rod / Lightning Rod.
-        for (Material mat : MaterialUtil.RODS) {
+        // TODO: Do they actually have the same model? Doesn't the lightning rod have a slightly different box/bulb at the top?
+        for (Material mat : MaterialUtil.END_RODS) {
             addModel(mat, MODEL_END_ROD);
         }
 
@@ -317,10 +334,13 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             addModel(mat, MODEL_XZ100_HEIGHT16_15);
         }
 
-        // Thin fence: Glass panes, iron bars.
+        // Thin fence: Glass panes, iron bars, copper bars.
         for (final Material mat : MaterialUtil.addBlocks(
             MaterialUtil.GLASS_PANES, 
             BridgeMaterial.IRON_BARS)) {
+            addModel(mat, MODEL_THIN_FENCE);
+        }
+        for (final Material mat : MaterialUtil.COPPER_BARS) {
             addModel(mat, MODEL_THIN_FENCE);
         }
 
@@ -338,6 +358,9 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // TOOD: Might add a facing/directional extension for double chests.
         for (Material mat : BridgeMaterial.getAllBlocks(
             "chest", "trapped_chest", "ender_chest")) {
+            addModel(mat, MODEL_SINGLE_CHEST);
+        }
+        for (Material mat : MaterialUtil.COPPER_CHESTS) {
             addModel(mat, MODEL_SINGLE_CHEST);
         }
 
@@ -409,6 +432,9 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         // Lantern.
         for (Material mat : BridgeMaterial.getAllBlocks(
             "lantern", "soul_lantern")) {
+            addModel(mat, MODEL_LANTERN);
+        }
+        for (Material mat : MaterialUtil.COPPER_LANTERNS) {
             addModel(mat, MODEL_LANTERN);
         }
 

@@ -18,6 +18,7 @@ import org.bukkit.Material;
 
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.config.ConfPaths;
 import fr.neatmonster.nocheatplus.config.ConfigFile;
@@ -26,6 +27,7 @@ import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 
 public class BlocksMC1_21 implements BlockPropertiesSetup {
     public BlocksMC1_21() {
@@ -87,6 +89,43 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
         if (ServerVersion.isAtLeast("1.21.6")) {
             BlockProperties.setBlockProps("DRIED_GHAST", new BlockProperties.BlockProps(BlockProperties.noTool, 0.0f));
             BlockFlags.setBlockFlags("DRIED_GHAST", BlockFlags.F_GROUND);
+        }
+        
+        if (ServerVersion.isAtLeast("1.21.9")) {
+            for (Material mat : MaterialUtil.COPPER_CHESTS) {    
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.COPPER_BARS) {
+                 BlockInit.setAs(mat, Material.IRON_BLOCK);
+                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            if (BridgeMaterial.IRON_CHAIN != null) {
+                // Re-define legacy chain as iron chain.
+                BlockInit.setAs(BridgeMaterial.IRON_CHAIN, Material.IRON_BLOCK);
+                BlockFlags.addFlags(BridgeMaterial.IRON_CHAIN, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.COPPER_CHAINS) {
+                BlockInit.setAs(mat, Material.IRON_BLOCK);
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.COPPER_LIGHTNING_RODS) {
+                // THis will override the definition in BlocksMC1_17, but that's fine.
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.COPPER_LANTERNS) {
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.WOODEN_SHELVES) {
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodAxe, 2f, true));
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
+            for (Material mat : MaterialUtil.COPPER_GOLEM_STATUES) {
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+            }
         }
                
         ConfigFile config = ConfigManager.getConfigFile();

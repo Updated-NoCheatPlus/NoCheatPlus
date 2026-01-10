@@ -30,6 +30,7 @@ import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
+import fr.neatmonster.nocheatplus.utilities.moving.Magic;
 
 /**
  * Lots of content for a location a player is supposed to be at. Constructors
@@ -112,10 +113,8 @@ public class PlayerLocation extends RichEntityLocation {
                 // The player is moved by 1.2 blocks from the ground the instant they release the trident
                 // This is NOT velocity, but a direct move of the player’s position upward, ignoring physics (the travel function isn't called), almost like a teleport offset.
                 // Because the move function is called, this offset is collision-aware.
-                double offset = 1.2;
-                Vector offsetVector = collide(new Vector(0.0, offset, 0.0), true, getBoundingBox());
-                double clampedOffset = offsetVector.getY();
-                return new Vector(x, y + clampedOffset, z);
+                Vector allowedVerticalMove = collide(new Vector(0.0, Magic.RIPTIDE_ON_GROUND_MOVE, 0.0), true, getBoundingBox());
+                return new Vector(x, y + allowedVerticalMove.getY(), z);
             }
             return new Vector(x, y, z);
         }
@@ -240,6 +239,29 @@ public class PlayerLocation extends RichEntityLocation {
         }
         vector = new Vector(xDistance, 0.0, zDistance);
         return vector;
+    }
+    
+    
+    /**
+     * From {@code ApplyEntityImpulse.java} and {@code Enchantments.java}.<br>
+     * Gets the lunging motion vector for the player.
+     * @return
+     */
+    public Vector tryApplyLungingMotion() {
+        // (same as entity.getLookAngle() in vanilla).
+        Vector lookVec = TrigUtil.getLookingDirection(getLocation(), player);
+        // Convert local direction to world coordinates using player's rotation.
+        // TODO: ISSUE: this eye loc isn't updated to split moves!
+        Location eye = player.getEyeLocation();
+        float pitch = eye.getPitch();
+        float yaw = eye.getYaw();
+        Vector worldLocal = TrigUtil.applyLocalCoordinatesToRotation(pitch, yaw, new Vector(0.0, 0.0, 1.0)); // The new Vector represents the Local direction (0,0,1)
+        // sum = lookVec + worldLocal
+        Vector sum = lookVec.clone().add(worldLocal);
+        // Multiply with coordinateScale (vec3 1.0,0.0,1.0): x *= sx, y *= sy, z *= sz
+        Vector scaled = new Vector(sum.getX() * 1.0, sum.getY() * 0.0, sum.getZ() * 1.0);
+        // final delta, scaled to magnitude level
+        return scaled.multiply(0.458 * BridgeEnchant.getLungeLevel(player));
     }
 
     /**

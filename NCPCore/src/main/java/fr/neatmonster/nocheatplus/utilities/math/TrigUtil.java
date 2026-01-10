@@ -143,6 +143,41 @@ public class TrigUtil {
     }
     
     /**
+     * From Vec3.java in Minecraft source.
+     * Applies local coordinates to a rotation defined by pitch and yaw.
+     *
+     * @param pitchDeg
+     * @param yawDeg
+     * @param local
+     * @return
+     */
+    public static Vector applyLocalCoordinatesToRotation(float pitchDeg, float yawDeg, Vector local) {
+        // Convert degrees to radians
+        double yaw = yawDeg * toRadians ;
+        double pitch = pitchDeg * toRadians;
+        
+        double f = cos((yawDeg + 90.0) * toRadians);
+        double f1 = sin((yawDeg + 90.0) * toRadians);
+        double f2 = cos(-pitchDeg * toRadians);
+        double f3 = sin(-pitchDeg * toRadians);
+        double f4 = cos((-pitchDeg + 90.0) * toRadians);
+        double f5 = sin((-pitchDeg + 90.0) * toRadians);
+        
+        Vector vec3 = new Vector(f * f2, f3, f1 * f2);   // corresponds to "forward" basis component
+        Vector vec31 = new Vector(f * f4, f5, f1 * f4);  // corresponds to "up" basis component
+        
+        // vec32 = vec3.cross(vec31).scale(-1.0)
+        Vector vec32 = vec3.clone().crossProduct(vec31).multiply(-1.0);
+        
+        // local: x = local.getX() -> right, y = up, z = forward
+        double wx = vec3.getX() * local.getZ() + vec31.getX() * local.getY() + vec32.getX() * local.getX();
+        double wy = vec3.getY() * local.getZ() + vec31.getY() * local.getY() + vec32.getY() * local.getX();
+        double wz = vec3.getZ() * local.getZ() + vec31.getZ() * local.getY() + vec32.getZ() * local.getX();
+
+        return new Vector(wx, wy, wz);
+    }
+    
+    /**
      * Returns the looking direction vector of the player.
      * (This uses MC's trigonometric look-up table)
      * @param loc

@@ -35,12 +35,13 @@ public class BridgeMaterial {
     
     // TODO: Should be non static, ideally.
 
-    /** Legacy Material by lower case name without preceding 'legacy_' part. */
+    /** Legacy Material map keyed by lower-case name without the preceding 'legacy_' prefix. */
     private static final Map<String, Material> legacy = new HashMap<String, Material>();
 
-    /** Actual lower case name to Material map for all existing materials. */
+    /** Map of all material lower-case names to their {@link Material} instance. */
     private static final Map<String, Material> all = new HashMap<String, Material>();
 
+    /** Map from block material to the corresponding sign item material, when applicable. */
     private static final Map<Material, Material> signblocksmap = new HashMap<Material, Material>();
 
     static {
@@ -70,19 +71,19 @@ public class BridgeMaterial {
 
     /**
      * Get current Material by case-insensitive name.
-     * 
-     * @param name
-     * @return
+     *
+     * @param name material name (case-insensitive)
+     * @return the {@link Material} instance or null if not found
      */
     public static Material get(String name) {
         return all.get(name.toLowerCase(Locale.ROOT));
     }
 
     /**
-     * Like {@link BridgeMaterial#get(String)}, but return null for non-blocks.
-     * 
-     * @param name
-     * @return
+     * Like {@link BridgeMaterial#get(String)}, but returns null for non-block materials.
+     *
+     * @param name material name (case-insensitive)
+     * @return the block {@link Material} instance or null if not found or not a block
      */
     public static Material getBlock(String name) {
         Material mat = get(name);
@@ -96,10 +97,10 @@ public class BridgeMaterial {
 
     /**
      * Get current Material by case-insensitive name.
-     * 
-     * @param name
-     * @return
-     * @throws NullPointerException If the material is not present.
+     *
+     * @param name material name (case-insensitive)
+     * @return the {@link Material} instance
+     * @throws NullPointerException if the material is not present
      */
     public static Material getNotNull(String name) {
         final Material mat = get(name);
@@ -112,11 +113,10 @@ public class BridgeMaterial {
     }
 
     /**
-     * Get current Material by case-insensitive names, return the first Material
-     * instance that exists for a given name.
-     * 
-     * @param name
-     * @return
+     * Get the first existing material from a list of case-insensitive names.
+     *
+     * @param names material names (case-insensitive)
+     * @return the first matching {@link Material} or null if none match
      */
     public static Material getFirst(String... names) {
         for (String name : names) {
@@ -129,13 +129,11 @@ public class BridgeMaterial {
     }
 
     /**
-     * Get current Material by case-insensitive names, return the first Material
-     * instance that exists for a given name.
-     * 
-     * @param name
-     * @return
-     * @throws NullPointerException
-     *             If no material is present.
+     * Like {@link #getFirst(String...)}, but throws if no material is found.
+     *
+     * @param names material names (case-insensitive)
+     * @return the first matching {@link Material}
+     * @throws NullPointerException if no material is present
      */
     public static Material getFirstNotNull(String... names) {
         final Material mat = getFirst(names);
@@ -176,7 +174,14 @@ public class BridgeMaterial {
     /////////////////////////////////////////////////////////
     // Specific unique material instances for items (only).
     /////////////////////////////////////////////////////////
-
+    public static final Material WOODEN_SPEAR = getFirst("wooden_spear"); // Wood or wooden?
+    public static final Material STONE_SPEAR = getFirst("stone_spear");
+    public static final Material COPPER_SPEAR = getFirst("copper_spear");
+    public static final Material IRON_SPEAR = getFirst("iron_spear");
+    public static final Material GOLDEN_SPEAR = getFirst("golden_spear"); // Golden or gold?
+    public static final Material DIAMOND_SPEAR = getFirst("diamond_spear");
+    public static final Material NETHERITE_SPEAR = getFirst("netherite_spear");
+    
     public static final Material DIAMOND_SHOVEL = getFirstNotNull("diamond_shovel", "diamond_spade");
 
     public static final Material TRIDENT = getFirst("trident");
@@ -214,6 +219,10 @@ public class BridgeMaterial {
     // Specific unique material instances for blocks.
     ///////////////////////////////////////////////////
     public static final Material SEA_LANTERN = get("sea_lantern");
+    
+    public static final Material IRON_CHAIN = get("iron_chain"); // May be null on legacy spigot.
+    
+    public static final Material LEGACY_CHAIN = get("chain"); // May be null on modern spigot.
     
     public static final Material COMPOSTER = get("composter");
     
@@ -374,11 +383,15 @@ public class BridgeMaterial {
     }
 
     /**
-     * 
-     * @param suffix
-     * @param isBlock
-     * @param excludePrefixes
-     * @return
+     * Return a set of materials whose lower-case names end with the given suffix.
+     * Excluded prefixes (if provided) are ignored. The {@code isBlock} parameter
+     * controls whether only block materials, only non-block materials or both are
+     * returned.
+     *
+     * @param suffix name suffix (case-insensitive)
+     * @param isBlock filter for block/material (use {@link AlmostBoolean})
+     * @param excludePrefixes optional prefixes to exclude
+     * @return set of matching {@link Material} instances
      */
     public static Set<Material> getBySuffix(final String suffix, 
             final AlmostBoolean isBlock, final String... excludePrefixes) {
@@ -390,13 +403,14 @@ public class BridgeMaterial {
     }
 
     /**
-     * Collect materials for all suffices as
-     * {@link #getBySuffix(String, AlmostBoolean, String...)} does for one. <br>
-     * 
-     * @param suffices
-     * @param isBlock
-     * @param excludePrefixes
-     * @return
+     * Collect materials that match any of the provided suffixes. Excluded prefixes
+     * (if provided) are ignored. The {@code isBlock} parameter controls whether
+     * only block materials, only non-block materials or both are returned.
+     *
+     * @param suffices collection of name suffixes (case-insensitive)
+     * @param isBlock filter for block/material (use {@link AlmostBoolean})
+     * @param excludePrefixes optional prefixes to exclude
+     * @return set of matching {@link Material} instances
      */
     public static Set<Material> getBySuffix(final Collection<String> suffices, 
             final AlmostBoolean isBlock, final String... excludePrefixes) {
@@ -409,6 +423,15 @@ public class BridgeMaterial {
         return res;
     }
 
+    /**
+     * Return materials whose lower-case names start with the given prefix.
+     * The {@code isBlock} parameter controls whether only block materials,
+     * only non-block materials or both are returned.
+     *
+     * @param prefix name prefix (case-insensitive)
+     * @param isBlock filter for block/material (use {@link AlmostBoolean})
+     * @return set of matching {@link Material} instances
+     */
     public static Set<Material> getByPrefix(final String prefix, final AlmostBoolean isBlock) {
         final Set<Material> res = new LinkedHashSet<Material>();
         for (final Entry<String, Material> entry : all.entrySet()) {
@@ -423,6 +446,17 @@ public class BridgeMaterial {
         return res;
     }
 
+    /**
+     * Return materials whose lower-case names contain any of the provided substrings
+     * and do not contain any of the excludeContains substrings. The {@code isBlock}
+     * parameter controls whether only block materials, only non-block materials or
+     * both are returned.
+     *
+     * @param isBlock filter for block/material (use {@link AlmostBoolean})
+     * @param contains collection of substrings that must be contained in the name
+     * @param excludeContains optional substrings that must not be present in the name
+     * @return set of matching {@link Material} instances
+     */
     public static Set<Material> getByContains(final AlmostBoolean isBlock, final Collection<String> contains, final String... excludeContains) {
         final Set<Material> res = new LinkedHashSet<Material>();
         final List<String> useExcludeContains = new LinkedList<String>();
@@ -451,15 +485,15 @@ public class BridgeMaterial {
     }
 
     /**
-     * Return materials for which all prefixes and suffices match but none of
-     * excludeContains is contained, respecting the isBlock filter.
-     * 
-     * @param prefixes
-     *            If prefixes is null, all prefixes will match.
-     * @param suffices
-     * @param isBlock
-     * @param excludeContains
-     * @return
+     * Return materials for which any of the given prefixes match and any of the
+     * given suffices match, while none of the excludeContains substrings are
+     * present. The {@code isBlock} parameter allows filtering by block vs item.
+     *
+     * @param prefixes collection of allowed prefixes (null to allow any prefix)
+     * @param suffices collection of allowed suffixes
+     * @param isBlock filter for block/material (use {@link AlmostBoolean})
+     * @param excludeContains optional substrings that must not be present
+     * @return set of matching {@link Material} instances
      */
     public static Set<Material> getByPrefixAndSuffix(final Collection<String> prefixes,
             final Collection<String> suffices, final AlmostBoolean isBlock,

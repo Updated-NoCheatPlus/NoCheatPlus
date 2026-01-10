@@ -21,6 +21,7 @@ import org.bukkit.inventory.PlayerInventory;
 
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 
 public final class BridgeEnchant {
@@ -69,6 +70,8 @@ public final class BridgeEnchant {
     public final static Enchantment EFFICIENCY = getFirstNotNull("EFFICIENCY", "DIG_SPEED");
 
     public final static Enchantment AQUA_AFFINITY = getFirstNotNull("AQUA_AFFINITY", "WATER_WORKER");
+    
+    public final static Enchantment LUNGE = parseEnchantment("LUNGE");
 
     /**
      * Retrieve the maximum level for an enchantment, present in any armor slot.
@@ -346,6 +349,17 @@ public final class BridgeEnchant {
         // Cap at three.
         return Math.min(3, getBootsLevelArmor(player, SOUL_SPEED));
     }
+    
+    /**
+     * 
+     * @param player
+     * @return Maximum level of LUNGE found on spear item, capped at 3.
+     *         Will return 0 if not available.
+     */
+    public static int getLungeLevel(final Player player) {
+        // Cap at three
+        return Math.min(3, getSpear(player, LUNGE));
+    }
 
     /**
      * 
@@ -393,6 +407,37 @@ public final class BridgeEnchant {
         return level;
     }
     
+    /**
+     * Retrieve the maximum level for an enchantment, present in main and off hand slot.
+     *
+     * @param player
+     * @param enchantment
+     *            If null, 0 will be returned.
+     * @return 0 if none found, or the maximum found.
+     */
+    private static int getSpear(final Player player, final Enchantment enchantment) {
+        if (enchantment == null) {
+            return 0;
+        }
+        int level = 0;
+        // Find the maximum level for the given enchantment.
+        final ItemStack mainHand = player.getInventory().getItemInMainHand();
+        final ItemStack offHand = player.getInventory().getItemInOffHand();
+        if (MaterialUtil.isSpear(mainHand.getType())) {
+            // Found in main hand already, return.
+            return Math.max(mainHand.getEnchantmentLevel(enchantment), level);
+        }
+        if (MaterialUtil.isSpear(offHand.getType())) {
+            level = Math.max(offHand.getEnchantmentLevel(enchantment), level);
+        }
+        return level;
+    }
+    /**
+     * 
+     * @param player
+     * @return Maximum level of RIPTIDE found on trident item, capped at 3.
+     *         Will return 0 if not available.
+     */
     public static int getRiptideLevel(final Player player) {
     	return Math.min(3, getTrident(player, RIPTIDE));
     }

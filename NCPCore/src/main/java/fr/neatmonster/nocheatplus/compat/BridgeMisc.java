@@ -35,12 +35,14 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
+import fr.neatmonster.nocheatplus.utilities.map.MaterialUtil;
 
 
 /**
@@ -200,6 +202,18 @@ public class BridgeMisc {
     }
     
     /**
+     * Test if the player is using an item that can slow them down.
+     * Currently, this excludes spears.
+     * 
+     * @param player
+     * @return
+     */
+    public static boolean isSlowedDownByUsingAnItem(final Player player) {
+        return isUsingItem(player) && !MaterialUtil.isSpear(DataManager.getPlayerData(player).getItemInUse());
+        
+    }
+    
+    /**
      * Get the Material type of the item the player is currently using.
      *
      * @param player
@@ -282,6 +296,18 @@ public class BridgeMisc {
         }
         final ItemStack boots = player.getInventory().getBoots();
         return boots != null && boots.getType() == Material.LEATHER_BOOTS;
+    }
+    
+    /**
+     * Test if a player can lunge forward with a Lunge enchantement-equipped spear.
+     * @param player
+     * @return
+     */
+    public static boolean mayLungeForward(final Player player) {
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        return pData.getClientVersion().isAtLeast(ClientVersion.V_1_21_11) 
+               && (player.getFoodLevel() > 6 || player.getAllowFlight())
+               && BridgeEnchant.getLungeLevel(player) > 0;
     }
 
     /**

@@ -115,6 +115,8 @@ public class BlockProperties {
         PICKAXE,
         /** The hoe. */
         HOE,
+        /** The spear. */
+        SPEAR,
     }
 
     /**
@@ -1002,7 +1004,10 @@ public class BlockProperties {
         if (mat == null) {
             return false;
         }
-        if (MaterialUtil.SHULKER_BOXES.contains(mat) || mat == BridgeMaterial.BARREL) {
+        if (MaterialUtil.SHULKER_BOXES.contains(mat) 
+            || mat == BridgeMaterial.BARREL 
+            || MaterialUtil.COPPER_CHESTS.contains(mat)
+            || MaterialUtil.WOODEN_SHELVES.contains(mat)) {
             return true;
         }
         // Must be one of the following material:
@@ -1442,6 +1447,16 @@ public class BlockProperties {
             tools.put(BridgeMaterial.NETHERITE_PICKAXE, new ToolProps(ToolType.PICKAXE, MaterialBase.NETHERITE));
             tools.put(BridgeMaterial.NETHERITE_AXE, new ToolProps(ToolType.AXE, MaterialBase.NETHERITE));
             tools.put(BridgeMaterial.NETHERITE_HOE, new ToolProps(ToolType.HOE, MaterialBase.NETHERITE));
+        }
+        
+        if (BridgeMaterial.DIAMOND_SPEAR != null) {
+            tools.put(BridgeMaterial.DIAMOND_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.DIAMOND));
+            tools.put(BridgeMaterial.NETHERITE_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.NETHERITE));
+            tools.put(BridgeMaterial.IRON_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.IRON));
+            tools.put(BridgeMaterial.STONE_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.STONE));
+            tools.put(BridgeMaterial.WOODEN_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.WOOD));
+            tools.put(BridgeMaterial.GOLDEN_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.GOLD));
+            tools.put(BridgeMaterial.COPPER_SPEAR, new ToolProps(ToolType.SPEAR, MaterialBase.COPPER));
         }
 
         tools.put(Material.SHEARS, new ToolProps(ToolType.SHEARS, MaterialBase.NONE));

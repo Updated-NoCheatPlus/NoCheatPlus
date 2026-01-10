@@ -350,6 +350,11 @@ public class UseItemAdapter extends BaseAdapter {
                 data.offHandUse = e.getHand() == EquipmentSlot.OFF_HAND;
                 return;
             }
+            // 1.21.11: Spears...
+            if (MaterialUtil.isSpear(m)) {
+                pData.setItemInUse(m);
+                data.offHandUse = e.getHand() == EquipmentSlot.OFF_HAND;
+            }
         } 
         else {
             // No item in hands, no deal.

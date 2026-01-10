@@ -84,6 +84,8 @@ public class Magic {
     public static final double FRICTION_MEDIUM_AIR = 0.98;
     /** EntityHuman, attack */
     public static final double ATTACK_SLOWDOWN = 0.6;
+    /** TridentItem/ItemTrident, releaseItem */
+    public static final double RIPTIDE_ON_GROUND_MOVE = 1.2;
     
     
     

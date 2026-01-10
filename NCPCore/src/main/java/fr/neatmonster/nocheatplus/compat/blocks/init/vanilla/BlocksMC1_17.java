@@ -2,10 +2,13 @@ package fr.neatmonster.nocheatplus.compat.blocks.init.vanilla;
 
 import org.bukkit.Material;
 
-import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
 import fr.neatmonster.nocheatplus.compat.blocks.init.BlockInit;
-import fr.neatmonster.nocheatplus.config.*;
+import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
+import fr.neatmonster.nocheatplus.config.ConfPaths;
+import fr.neatmonster.nocheatplus.config.ConfigFile;
+import fr.neatmonster.nocheatplus.config.ConfigManager;
+import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.utilities.map.BlockFlags;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -152,6 +155,9 @@ public class BlocksMC1_17 implements BlockPropertiesSetup {
         BlockInit.setPropsAs("WATER_CAULDRON", Material.CAULDRON);
         BlockInit.setPropsAs("LAVA_CAULDRON", Material.CAULDRON);
         BlockProperties.setBlockProps("MOSS_BLOCK", new BlockProperties.BlockProps(BlockProperties.woodHoe, 0.1f));
+        // In 1.21.9, lighting rod is explicitly made out of copper and has oxidised variants.
+        // THis will add a definition only for the copper lightning rod (which is the default one).
+        // For the other variants, see blocksMC1_21.
         BlockFlags.addFlags("LIGHTNING_ROD", BlockFlags.SOLID_GROUND);
         BlockProperties.setBlockProps("LIGHTNING_ROD", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
         BlockInit.setAs("SMOOTH_BASALT", BridgeMaterial.TERRACOTTA);

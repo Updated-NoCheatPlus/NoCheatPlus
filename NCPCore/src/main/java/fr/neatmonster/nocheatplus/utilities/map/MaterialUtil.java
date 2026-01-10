@@ -175,6 +175,24 @@ public class MaterialUtil {
 
     public static final Set<Material> COPPER_GRATES = Collections.unmodifiableSet(
             BridgeMaterial.getBySuffix("copper_grate", AlmostBoolean.YES));
+            
+    public static final Set<Material> COPPER_BARS = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("copper_bars", AlmostBoolean.YES));
+    
+    public static final Set<Material> COPPER_CHESTS = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("copper_chest", AlmostBoolean.YES));
+    
+    public static final Set<Material> COPPER_CHAINS = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("copper_chain", AlmostBoolean.YES));
+    
+    public static final Set<Material> COPPER_LANTERNS = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("copper_lantern", AlmostBoolean.YES));
+    
+    public static final Set<Material> COPPER_LIGHTNING_RODS = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("lightning_rod", AlmostBoolean.YES));
+            
+    public static final Set<Material> COPPER_GOLEM_STATUES = Collections.unmodifiableSet(
+            BridgeMaterial.getBySuffix("copper_golem_statue", AlmostBoolean.YES));
 
     public static final Set<Material> ALL_TUFF = Collections.unmodifiableSet(
             BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("tuff")));
@@ -206,7 +224,7 @@ public class MaterialUtil {
     public static final Set<Material> ALL_PRESSURE_PLATES = Collections.unmodifiableSet(
             BridgeMaterial.getBySuffix("_pressure_plate", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> RODS = Collections.unmodifiableSet(
+    public static final Set<Material> END_RODS = Collections.unmodifiableSet(
             BridgeMaterial.getBySuffix("_rod", AlmostBoolean.YES, "legacy"));
 
     public static final Set<Material> AMETHYST = Collections.unmodifiableSet(addBlocks(
@@ -230,17 +248,21 @@ public class MaterialUtil {
 
     public static final Set<Material> BOATS;
     public static final Set<Material> ALL_SEEDS;
+    public static final Set<Material> ALL_SPEARS;
     static {
         HashSet<Material> temp = new HashSet<Material>();
         HashSet<Material> seedsTemp = new HashSet<Material>();
+        HashSet<Material> spearTemp = new HashSet<Material>();
         if (BridgeMaterial.get("boat") != null) {
             temp.add(BridgeMaterial.get("boat"));
         }
         seedsTemp.addAll(InventoryUtil.collectItemsBySuffix("_SEEDS"));
         temp.addAll(InventoryUtil.collectItemsByPrefix("BOAT_"));
         temp.addAll(InventoryUtil.collectItemsBySuffix("_BOAT"));
+        spearTemp.addAll(InventoryUtil.collectItemsBySuffix("_SPEAR"));
         BOATS = Collections.unmodifiableSet(temp);
         ALL_SEEDS = Collections.unmodifiableSet(seedsTemp);
+        ALL_SPEARS = Collections.unmodifiableSet(spearTemp);
     }
 
     private static final List<EntityType> BOATS_TYPE = collectTypesBySuffix("BOAT");
@@ -429,6 +451,7 @@ public class MaterialUtil {
     /** All water blocks. */
     public static final Set<Material> WATER = Collections.unmodifiableSet(
             BridgeMaterial.getAllBlocks("water", "stationary_water"));
+            
      public static final Set<Material> WATER_PLANTS = Collections.unmodifiableSet(
             BridgeMaterial.getAllBlocks("TALL_SEAGRASS", "KELP_PLANT", "SEAGRASS", "KELP"));
 
@@ -440,6 +463,13 @@ public class MaterialUtil {
                     AlmostBoolean.YES
                     // , ...
                     ), "wood"));
+                    
+    public static final Set<Material> WOODEN_SHELVES = Collections.unmodifiableSet(addBlocks(
+            BridgeMaterial.getByPrefixAndSuffix(
+                    woodTypes, 
+                    Arrays.asList("_shelf"),
+                    AlmostBoolean.YES
+                    ), "shelf"));
 
     public static final Set<Material> WOODEN_SIGNS = Collections.unmodifiableSet(addBlocks(
             BridgeMaterial.getByPrefixAndSuffix(
@@ -651,6 +681,16 @@ public class MaterialUtil {
      */
     public static boolean isSword(final Material mat) {
         return ALL_SWORDS.contains(mat);
+    }
+    
+    /**
+     * Test if the material is a spear
+     * 
+     * @param mat
+     * @return
+     */
+    public static boolean isSpear(final Material mat) {
+        return ALL_SPEARS.contains(mat);
     }
 
     /**

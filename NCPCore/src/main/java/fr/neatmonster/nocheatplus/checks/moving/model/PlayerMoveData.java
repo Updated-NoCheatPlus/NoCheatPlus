@@ -46,6 +46,9 @@ public class PlayerMoveData extends MoveData {
     /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
     public double submergedWaterHeight;
     
+    /** A flag to indicate that the player is currenrtly lunging forward due to left clicking with a Spear in hand with Lunge enchantement. Set in CombatListener. */
+    public boolean lungingForward;
+    
     /**
      * A flag to handle the riptide effect/logic, particularly when on ground.<p>
      * When the {@code releaseItem()} method is called, Minecraft checks whether

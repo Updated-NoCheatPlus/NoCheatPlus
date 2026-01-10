@@ -899,7 +899,7 @@ public class SurvivalFly extends Check {
                 tags.add("crouching");
             }
             // From LocalPlayer.java.aiStep()
-            if (BridgeMisc.isUsingItem(player)) {
+            if (BridgeMisc.isSlowedDownByUsingAnItem(player)) {
                 input.operationToInt(Magic.USING_ITEM_MULTIPLIER, Magic.USING_ITEM_MULTIPLIER, 1);
                 tags.add("usingitem");
             }
@@ -923,7 +923,7 @@ public class SurvivalFly extends Check {
                 }
             }
             // From LocalPlayer.java.aiStep()
-            if (BridgeMisc.isUsingItem(player)) {
+            if (BridgeMisc.isSlowedDownByUsingAnItem(player)) {
                 tags.add("usingitem");
                 for (i = 0; i < 9; i++) {
                     theorInputs[i].operationToInt(Magic.USING_ITEM_MULTIPLIER, Magic.USING_ITEM_MULTIPLIER, 1);
@@ -1143,6 +1143,15 @@ public class SurvivalFly extends Check {
                 Vector riptideVelocity = to.getRiptideVelocity(onGround);
                 thisMove.xAllowedDistance += riptideVelocity.getX();
                 thisMove.zAllowedDistance += riptideVelocity.getZ();
+            }
+            // Lunging forward if applicable: the effect only adds the lunging motion on the current delta.
+            // TODO: TOTALLY RANDOM PLACEMENT !
+            // The addition is called on any left click, provided the player has a Spear in hand with Lunge enchant.
+            // NOTE: Does not need to be brute forced, since lunging is supported only by clients that can send WASD inputs.
+            if (thisMove.lungingForward) {
+                Vector lungeVelocity = to.tryApplyLungingMotion(); // Use to as we're working with rotations here
+                thisMove.xAllowedDistance += lungeVelocity.getX();
+                thisMove.zAllowedDistance += lungeVelocity.getZ();
             }
             // Try to back off players from edges, if sneaking.
             // NOTE: this is after the riptiding propelling force.
@@ -1510,10 +1519,11 @@ public class SurvivalFly extends Check {
             return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
         }
         if (onGround && thisMove.tridentRelease.decideOptimistically() && thisMove.multiMoveCount == 1 
-            && !isNormalOrPacketSplitMove && Math.abs(thisMove.yDistance - 1.2) < Magic.PREDICTION_EPSILON) {
+            && !isNormalOrPacketSplitMove && MathUtil.isOffsetWithinPredictionEpsilon(thisMove.yDistance, Magic.RIPTIDE_ON_GROUND_MOVE)) {
             // Riptide launch from ground.
             // IMPORTANT NOTE: this move specifically will always cause NCP to fire a Bukkit-based split move on the first split move, no matter what.
-            thisMove.yAllowedDistance = 1.2;
+            thisMove.yAllowedDistance = Magic.RIPTIDE_ON_GROUND_MOVE;
+            // Signal that the trident was released, but the actual riptide push will come next.
             data.setTridentReleaseEvent(AlmostBoolean.YES);
             yDistanceAboveLimit = 0.0;
             // Riptide from ground launch at the end of the movement stack; the actual riptide push will come next. Allowed this move as-is.
@@ -1779,15 +1789,16 @@ public class SurvivalFly extends Check {
             }
         }
         // ???-Next stage after ground riptide(integrated, no gnd_riptide_pre)
+        // In this case, the release of the trident happened at the start of the movement tick
         if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
             final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
             if (lastMove.from.onGround || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {
                 if (yTheoreticalDistance != null) {
                     for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                        yTheoreticalDistance[i] -= 1.2 * data.lastFrictionVertical;
+                        yTheoreticalDistance[i] -= Magic.RIPTIDE_ON_GROUND_MOVE * data.lastFrictionVertical;
                     }
                 }
-                else thisMove.yAllowedDistance -= 1.2 * data.lastFrictionVertical;
+                else thisMove.yAllowedDistance -= Magic.RIPTIDE_ON_GROUND_MOVE * data.lastFrictionVertical;
             }
         }
         // *----------Entity.move(), call the collide() function----------*
@@ -1910,11 +1921,11 @@ public class SurvivalFly extends Check {
         /*
          * 0: If we got a speed violation and the player is using an item, assume it to be a "noslowdown" violation.
          */
-        if (cc.survivalFlyResetItem && BridgeMisc.isUsingItem(player) && !Bridge1_9.isGliding(player)) {
+        if (cc.survivalFlyResetItem && BridgeMisc.isSlowedDownByUsingAnItem(player) && !Bridge1_9.isGliding(player)) {
             // Forcibly release the item in use.
             pData.requestItemUseResync();
             tags.add("itemresync");
-            if (!BridgeMisc.isUsingItem(player) && hDistanceAboveLimit > 0.0) {
+            if (!BridgeMisc.isSlowedDownByUsingAnItem(player) && hDistanceAboveLimit > 0.0) {
                 // Re-estimate with released item (if it still throws a VL, the player is actually cheating, if the item is still in use, then it wasn't desync'ed).
                 double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
                 hAllowedDistance = res[0];
