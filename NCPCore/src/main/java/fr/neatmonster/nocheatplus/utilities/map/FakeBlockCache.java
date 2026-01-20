@@ -478,4 +478,16 @@ public class FakeBlockCache extends BlockCache {
         boundsMapStored.clear();
     }
 
+    @Override
+    public double[] fetchVisualBounds(int x, int y, int z) {
+        final double[] bounds = boundsMapStored.get(x, y, z);
+        //return new double[]{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+        return bounds;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(int x, int y, int z) {
+        return true;
+    }
+
 }

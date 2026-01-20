@@ -132,7 +132,22 @@ public class BukkitHopper implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        IPlayerData pData = blockCache.getPlayerData();
+        if (pData != null && pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+            return new double[] {0, 0, 0, 1, 1, 1};
+        }
+        return new double[] {0.0, 0.625, 0.0, 1.0, 1.0, 1.0, 0.25, 0.25, 0.25, 0.75, 0.625, 0.75}; 
+        //return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
     }
 }

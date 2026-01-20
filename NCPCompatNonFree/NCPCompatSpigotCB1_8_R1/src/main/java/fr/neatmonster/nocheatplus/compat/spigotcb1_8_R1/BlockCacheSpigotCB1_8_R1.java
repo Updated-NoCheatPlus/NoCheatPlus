@@ -82,6 +82,30 @@ public class BlockCacheSpigotCB1_8_R1 extends BlockCache {
     }
 
     @Override
+    public boolean isCollisionSameVisual(int x, int y, int z) {
+        final Material mat = getType(x, y, z);
+        return LegacyBlocks.isCollisionSameVisual(this, mat, x, y, z);
+    }
+
+    @Override
+    public double[] fetchVisualBounds(final int x, final int y, final int z){
+        final Material mat = getType(x, y, z);
+        @SuppressWarnings("deprecation")
+        final int id = mat.getId();
+        final net.minecraft.server.v1_8_R1.Block block = net.minecraft.server.v1_8_R1.Block.getById(id);
+        if (block == null) {
+            // TODO: Convention for null bounds -> full ?
+            return null;
+        }
+        final double[] shape = LegacyBlocks.getVisualShape(this, mat, x, y, z);
+        if (shape != null) return shape;    
+        block.updateShape(world, new BlockPosition(x, y, z));
+
+        // minX, minY, minZ, maxX, maxY, maxZ
+        return LegacyBlocks.adjustBounds(this, mat, x, y, z, new double[]{block.z(), block.B(), block.D(), block.A(), block.C(), block.E()});
+    }
+
+    @Override
     public boolean standsOnEntity(final Entity entity, final double minX, final double minY, final double minZ, final double maxX, final double maxY, final double maxZ){
         try{
             // TODO: Find some simplification!

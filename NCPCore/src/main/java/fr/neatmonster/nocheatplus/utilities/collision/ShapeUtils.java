@@ -133,8 +133,16 @@ public class ShapeUtils {
     }
     
     public static double[] merge(double[] a, double[] b) {
+        return optimize(add(a,b));
+    }
+
+    public static double[] optimize(double[] shape) {
+        if (shape.length <= 6) {
+            return shape; // already minimal
+        }
+
         double[] prev;
-        double[] cur = add(a,b);
+        double[] cur = shape;
 
         do {
             prev = cur;

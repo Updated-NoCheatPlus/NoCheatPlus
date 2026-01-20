@@ -39,4 +39,15 @@ public class BukkitRail implements BukkitShapeModel {
         }
         return 0;
     }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        // TODO Hold on, this model doesn't seem right, will fix later
+        return null;
+    }
+    
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
+    }
 }

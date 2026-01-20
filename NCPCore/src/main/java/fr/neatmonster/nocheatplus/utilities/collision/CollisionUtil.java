@@ -680,7 +680,7 @@ public class CollisionUtil {
      *
      * @return true if can.
      */
-     // TODO: Lots of cleanup pending for this function: add more comments; split into helper methods; readability improvements.
+     // TODO: Lots of cleanup pending for this function: add more comments; split into helper methods; overall efficiency improvement; readability improvements.
     public static boolean canPassThrough(InteractAxisTracing rayTracing, BlockCache blockCache, BlockCoord lastBlock, int x, int y, int z, Vector direction, double eyeX, double eyeY, double eyeZ, double eyeHeight,
                                          BlockCoord sCollidingBox, BlockCoord eCollidingBox, boolean mightEdgeInteraction, Axis.RichAxisData axisData) {
         //////////////////////////
@@ -698,8 +698,6 @@ public class CollisionUtil {
         int dy = y - lastBlock.getY();
         int dx = x - lastBlock.getX();
         int dz = z - lastBlock.getZ();
-        // TODO: This is wrong, liquid should have no bound but still have height. But instead of messing up entire collision system, this hack work well
-        mightEdgeInteraction |= (BlockFlags.getBlockFlags(blockCache.getType(lastBlock.getX(), lastBlock.getY(), lastBlock.getZ())) & BlockFlags.F_LIQUID) != 0;
         
         ////////////////////////
         /// 1: Set axis data  //

@@ -69,4 +69,16 @@ public class BukkitCauldron implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return new double[] {0.0, 0.1875, 0.0, 1.0, 1.0, 1.0};
+        //return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        // Should be true , but current implementation of Visible check of NCP can't do complex ray-trace for performance wise and technical limitations
+        return false;
+    }
 }

@@ -66,6 +66,11 @@ public class BukkitDripStone implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
+    
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
 
     private float calcOffset(long x, boolean shift, boolean bedrock) {
         if (shift) x >>=8;
@@ -84,5 +89,10 @@ public class BukkitDripStone implements BukkitShapeModel {
 
     private double[] offset(double[] input, double x, double y, double z) {
         return new double[] {input[0] + x, input[1] + y, input[2] + z, input[3] + x, input[4] + y, input[5] + z};
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
     }
 }

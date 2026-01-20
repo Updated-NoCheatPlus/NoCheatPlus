@@ -20,6 +20,8 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
+import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitAnvil implements BukkitShapeModel {
@@ -28,11 +30,14 @@ public class BukkitAnvil implements BukkitShapeModel {
     public double[] getShape(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockData blockData = block.getBlockData();
+        final IPlayerData data = blockCache.getPlayerData();
+        final boolean legacy = data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_13);
         if (blockData instanceof Directional) {
             BlockFace face = ((Directional) blockData).getFacing();
             switch (face) {
                 case NORTH:
                 case SOUTH:
+                    if (legacy) return new double[] {0.125, 0.0, 0.0, 0.875, 1.0, 1.0};
                     return new double[] {
                         // Bottom
                         0.125, 0.0, 0.125, 0.875, 0.25, 0.875,
@@ -42,6 +47,7 @@ public class BukkitAnvil implements BukkitShapeModel {
                         };
                 case WEST:
                 case EAST:
+                    if (legacy) return new double[] {0.0, 0.0, 0.125, 1.0, 1.0, 0.875};
                     return new double[] {
                         // Bottom
                         0.125, 0.0, 0.125, 0.875, 0.25, 0.875,
@@ -59,5 +65,15 @@ public class BukkitAnvil implements BukkitShapeModel {
     @Override
     public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
-    }   
+    }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
+    }
 }

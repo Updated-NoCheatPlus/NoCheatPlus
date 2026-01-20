@@ -70,6 +70,26 @@ public class BlockCacheBukkitModern extends BlockCacheBukkit {
     }
     
     @Override
+    public double[] fetchVisualBounds(int x, int y, int z) {
+        Material mat = getType(x, y, z);
+        final BukkitShapeModel shapeModel = shapeModels.get(mat);
+        if (shapeModel == null) {
+            return super.fetchVisualBounds(x, y, z);
+        }
+        return shapeModel.getVisualShape(this, world, x, y, z);
+    }
+    
+    @Override
+    public boolean isCollisionSameVisual(int x, int y, int z) {
+        Material mat = getType(x, y, z);
+        final BukkitShapeModel shapeModel = shapeModels.get(mat);
+        if (shapeModel == null) {
+            return super.isCollisionSameVisual(x, y, z);
+        }
+        return shapeModel.isCollisionSameVisual(this, world, x, y, z);
+    }
+    
+    @Override
     public boolean standsOnEntity(final Entity entity, final double minX, final double minY, final double minZ, final double maxX, final double maxY, final double maxZ) {
         try {
             // TODO: Probably check vehicle ids too before doing this ?

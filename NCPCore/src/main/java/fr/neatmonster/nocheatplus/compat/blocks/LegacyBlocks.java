@@ -82,6 +82,7 @@ public class LegacyBlocks {
         blocks.put(Material.CACTUS, new BlockStatic(0.0625, 0.0, 0.0625, 0.9375, 0.9375, 0.9375));
         blocks.put(Material.HOPPER, new BlockHopper());
         blocks.put(Material.CAULDRON, new BlockCauldron());
+        blocks.put(Material.ANVIL, new BlockAnvil());
         blocks.put(BridgeMaterial.LILY_PAD, new BlockWaterLily());
         blocks.put(BridgeMaterial.FARMLAND, new BlockFarmLand());
         if (BridgeMaterial.GRASS_PATH != null) blocks.put(BridgeMaterial.GRASS_PATH, new BlockGrassPath());
@@ -91,7 +92,7 @@ public class LegacyBlocks {
     }
 
     /**
-     * Get block bounding boxes for legacy version
+     * Get block visual bounding boxes for legacy version
      * 
      * @param cache the BlockCache
      * @param mat Material of the block
@@ -101,7 +102,25 @@ public class LegacyBlocks {
      * @param old if server is below 1.9
      * @return bounds, can be null if that block doesn't need.
      */
-    //public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+    public static double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+        final Block blockshape = blocks.get(mat);
+        if (blockshape != null) {
+            return blockshape.getVisualShape(cache, mat, x, y, z);
+        }
+        return null;
+    }
+
+    /**
+     * Get block collision bounding boxes for legacy version
+     * 
+     * @param cache the BlockCache
+     * @param mat Material of the block
+     * @param x Block location
+     * @param y Block location
+     * @param z Block location
+     * @param old if server is below 1.9
+     * @return bounds, can be null if that block doesn't need.
+     */
     public static double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
         final Block blockshape = blocks.get(mat);
         if (blockshape != null) {
@@ -110,6 +129,17 @@ public class LegacyBlocks {
         return null;
     }
 
+    /**
+     * Get block bounding boxes for legacy version by guessing from given bound from NMS for performance wise, currently for walls and fences
+     * 
+     * @param cache the BlockCache
+     * @param mat Material of the block
+     * @param x Block location
+     * @param y Block location
+     * @param z Block location
+     * @param visualBB given NMS bounding box
+     * @return bounds
+     */
     public static double[] adjustBounds(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB) {
         final TransformationBlock blockshape = adjustingBlocks.get(mat);
         if (blockshape != null) {
@@ -118,12 +148,30 @@ public class LegacyBlocks {
         return visualBB;
     }
 
+    public static boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+        final Block blockshape = blocks.get(mat);
+        if (blockshape != null) {
+            return blockshape.isCollisionSameVisual(cache, mat, x, y, z);
+        }
+        final TransformationBlock blockshape2 = adjustingBlocks.get(mat);
+        if (blockshape2 != null) {
+            return blockshape2.isCollisionSameVisual(cache, mat, x, y, z);
+        }
+        return true;
+    }
+
     public static interface Block {
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old);
+        
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z);
+        
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z);
     }
     
     public static interface TransformationBlock {
         public double[] adjustToCollisionBox(BlockCache cache, Material mat, int x, int y, int z, double[] visualBB);
+        
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z);
     }
 
     public static class BlockStatic implements Block{
@@ -141,6 +189,16 @@ public class LegacyBlocks {
         @Override
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
             return bounds;
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         }    
     }
 
@@ -153,6 +211,14 @@ public class LegacyBlocks {
                 return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.09375, 0.9375};
             }
             return new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.125, 0.9375};
+        }
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         } 
     }
 
@@ -165,6 +231,14 @@ public class LegacyBlocks {
                 return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
             }
             return new double[] {0.0, 0.0, 0.0, 1.0, 0.9375, 1.0};
+        }
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         } 
     }
 
@@ -177,6 +251,14 @@ public class LegacyBlocks {
                 return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
             }
             return new double[] {0.0, 0.0, 0.0, 1.0, 0.9375, 1.0};
+        }
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         } 
     }
 
@@ -234,6 +316,75 @@ public class LegacyBlocks {
                 }
             return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
         }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
+        }
+    }
+    
+    public static class BlockAnvil implements Block {
+        @Override
+        public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
+            final IPlayerData data = cache.getPlayerData();
+            final boolean legacy = data != null && data.getClientVersion().isLowerThan(ClientVersion.V_1_13);
+            BlockFace face = dataToDirection(cache.getData(x, y, z));
+            if (face == null) return null;
+            switch (face) {
+                case NORTH:
+                case SOUTH:
+                    if (legacy) return new double[] {0.125, 0.0, 0.0, 0.875, 1.0, 1.0};
+                    return new double[] {
+                            // Bottom
+                            0.125, 0.0, 0.125, 0.875, 0.25, 0.875,
+                            // Top
+                            0.1875, 0.625, 0.0, 0.8125, 1.0, 1.0
+                            // Body... maybe not need
+                        };
+                case WEST:
+                case EAST:
+                    if (legacy) return new double[] {0.0, 0.0, 0.125, 1.0, 1.0, 0.875};
+                    return new double[] {
+                            // Bottom
+                            0.125, 0.0, 0.125, 0.875, 0.25, 0.875,
+                            // Top
+                            0.0, 0.625, 0.1875, 1.0, 1.0, 0.8125
+                            // Body... maybe not need
+                    };
+                default:
+                    break;
+            }
+            return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+        }
+
+        public BlockFace dataToDirection(int data) {
+            switch (data & 3) {
+            case 0:
+                return BlockFace.NORTH;
+            case 1:
+                return BlockFace.SOUTH;
+            case 2:
+                return BlockFace.WEST;
+            case 3:
+                return BlockFace.EAST;
+            }
+            return null;
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
+        }
     }
 
     public static class BlockEndPortalFrame implements Block {
@@ -253,6 +404,16 @@ public class LegacyBlocks {
         @Override
         public double[] getShape(BlockCache cache, Material mat, int x, int y, int z, boolean old) {
             return getShapeLegacy(cache.getData(x, y, z));
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         }
     }
 
@@ -338,6 +499,16 @@ public class LegacyBlocks {
                 return BlockFace.EAST;
             }
             return null;
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return false;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
         }
     }
 
@@ -495,6 +666,16 @@ public class LegacyBlocks {
             }
             return null;
         }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
+        }
     }
     
     public static class BlockHopper implements Block {
@@ -611,6 +792,18 @@ public class LegacyBlocks {
             }
             return null;
         }
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return false;
+        }
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            IPlayerData pData = cache.getPlayerData();
+            if (pData != null && pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+                return new double[] {0, 0, 0, 1, 1, 1};
+            }
+            return new double[] {0.0, 0.625, 0.0, 1.0, 1.0, 1.0, 0.25, 0.25, 0.25, 0.75, 0.625, 0.75}; 
+        }
     }
     
     public static class BlockCauldron implements Block {
@@ -655,6 +848,14 @@ public class LegacyBlocks {
                 } else return new1_13_2Bounds;
             }
             return legacyBounds;
+        }
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return false;
+        }
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return new double[] {0.0, 0.1875, 0.0, 1.0, 1.0, 1.0};
         }
         
     }
@@ -734,6 +935,16 @@ public class LegacyBlocks {
             Set<BlockFace> directions = getLegacyFaces(cache, x, y, z);
             return modernShapes[getAABBIndex(directions)];
         }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            return true;
+        }
+
+        @Override
+        public double[] getVisualShape(BlockCache cache, Material mat, int x, int y, int z) {
+            return getShape(cache, mat, x, y, z, false);
+        }
     }
     public static class BlockFence implements TransformationBlock {
         private final double[] northplane;
@@ -808,6 +1019,12 @@ public class LegacyBlocks {
         
         private boolean isNextDir(boolean east, boolean north, boolean west, boolean south) {
             return (north || south) && (west || east);
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            // Should be no different as current implementation doesn't do exact ray trace check
+            return true;
         }
     }
     public static class BlockWall implements TransformationBlock {
@@ -907,6 +1124,12 @@ public class LegacyBlocks {
 
         private boolean isNextDir(boolean east, boolean north, boolean west, boolean south) {
             return (north || south) && (west || east);
+        }
+
+        @Override
+        public boolean isCollisionSameVisual(BlockCache cache, Material mat, int x, int y, int z) {
+            // Should be no different as current implementation doesn't do exact ray trace check
+            return true;
         }
     }
 }

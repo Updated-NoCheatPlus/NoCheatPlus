@@ -109,6 +109,30 @@ public class BlockCacheCB3100 extends BlockCache {
     }
 
     @Override
+    public boolean isCollisionSameVisual(int x, int y, int z) {
+        final Material mat = getType(x, y, z);
+        return LegacyBlocks.isCollisionSameVisual(this, mat, x, y, z);
+    }
+
+    @Override
+    public double[] fetchVisualBounds(final int x, final int y, final int z){
+        final Material mat = getType(x, y, z);
+        @SuppressWarnings("deprecation")
+        final int id = mat.getId();
+        final net.minecraft.server.v1_7_R4.Block block = net.minecraft.server.v1_7_R4.Block.getById(id);
+        if (block == null) {
+            // TODO: Convention for null bounds -> full ?
+            return null;
+        }
+        final double[] shape = LegacyBlocks.getVisualShape(this, mat, x, y, z);
+        if (shape != null) return shape;
+        block.updateShape(iBlockAccess, x, y, z); // getData from cache.
+
+        // minX, minY, minZ, maxX, maxY, maxZ
+        return LegacyBlocks.adjustBounds(this, mat, x, y, z, new double[]{block.x(), block.z(), block.B(), block.y(),  block.A(),  block.C()});
+    }
+
+    @Override
     public boolean standsOnEntity(final Entity entity, final double minX, final double minY, final double minZ, final double maxX, final double maxY, final double maxZ){
         try{
             // TODO: Find some simplification!

@@ -141,7 +141,21 @@ public class BukkitFence implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        double a[] = getShape(blockCache, world, x, y, z);
+        for (int i = 1; i < (int)a.length / 6; i++) a[i*6-2] = 1.0;
+        return a;
+    }
+
+    @Override
     public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        // TODO: Which one is better, return true and cap the height or return false and fetch twice?
+        // NOTE: Should be no different as current implementation doesn't do exact ray trace check
+        return true;
     }
 }

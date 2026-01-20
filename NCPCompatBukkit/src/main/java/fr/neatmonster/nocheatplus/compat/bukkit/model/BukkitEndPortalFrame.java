@@ -35,6 +35,11 @@ public class BukkitEndPortalFrame implements BukkitShapeModel {
         return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
     }
 
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
     private double[] getShape(boolean hasEye) {
         return hasEye ? new double[] {0.0, 0.0, 0.0, 1.0, 0.8125, 1.0, 0.25, 0.8125, 0.25, 0.75, 1.0, 0.75}
                       : new double[] {0.0, 0.0, 0.0, 1.0, 0.8125, 1.0};
@@ -43,5 +48,10 @@ public class BukkitEndPortalFrame implements BukkitShapeModel {
     @Override
     public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
     }
 }

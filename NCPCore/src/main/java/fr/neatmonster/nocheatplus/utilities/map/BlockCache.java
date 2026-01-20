@@ -45,6 +45,8 @@ public abstract class BlockCache {
 
         public boolean isBoundsFetched();
 
+        public boolean isVisualBoundsFetched();
+
         /**
          * Test for (useful) bounds being there, i.e. fetched and bounds being
          * null.
@@ -72,6 +74,12 @@ public abstract class BlockCache {
          * @return
          */
         public double[] getBounds();
+        
+        /**
+         * Ensure to test with isBoundsSet().
+         * @return
+         */
+        public double[] getVisualBounds();
 
         /**
          * Convenience method to return either the set data, or return data
@@ -101,6 +109,20 @@ public abstract class BlockCache {
          */
         public double[] getBounds(BlockCache blockCache, int x, int y, int z);
 
+        /**
+         * Convenience method to return either the set visual shape bounds, or return bounds
+         * fetched from the given BlockCache instance. The internal state of
+         * this node is not updated by this call, unless the BlockCache instance
+         * does so.
+         * 
+         * @param blockCache
+         * @param x
+         * @param y
+         * @param z
+         * @return
+         */
+        public double[] getVisualBounds(BlockCache blockCache, int x, int y, int z);
+
 
     }
 
@@ -109,11 +131,13 @@ public abstract class BlockCache {
         private static final short FETCHED_ID = 0x01;
         private static final short FETCHED_DATA = 0x02;
         private static final short FETCHED_BOUNDS = 0x04;
+        private static final short FETCHED_VISUAL_BOUNDS = 0x08;
 
         private short fetched;
         private Material id;
         private int data = 0;
         private double[] bounds = null;
+        private double[] visualbounds = null;
 
         public BlockCacheNode(Material id) {
             this.id = id;
@@ -128,6 +152,11 @@ public abstract class BlockCache {
         @Override
         public boolean isBoundsFetched() {
             return (fetched & FETCHED_BOUNDS) != 0;
+        }
+        
+        @Override
+        public boolean isVisualBoundsFetched() {
+            return (fetched & FETCHED_VISUAL_BOUNDS) != 0;
         }
 
         @Override
@@ -149,6 +178,11 @@ public abstract class BlockCache {
         public double[] getBounds() {
             return bounds;
         }
+        
+        @Override
+        public double[] getVisualBounds() {
+            return visualbounds;
+        }
 
         @Override
         public int getData(BlockCache blockCache, int x, int y, int z) {
@@ -159,6 +193,11 @@ public abstract class BlockCache {
         public double[] getBounds(BlockCache blockCache, int x, int y, int z) {
             return isBoundsFetched() ? bounds : blockCache.getBounds(x, y, z);
         }
+        
+        @Override
+        public double[] getVisualBounds(BlockCache blockCache, int x, int y, int z) {
+            return isVisualBoundsFetched() ? visualbounds : blockCache.getVisualBounds(x, y, z);
+        }
 
         public void setData(int data) {
             this.data = data;
@@ -168,6 +207,11 @@ public abstract class BlockCache {
         public void setBounds(double[] bounds) {
             this.bounds = bounds;
             fetched |= FETCHED_BOUNDS;
+        }
+        
+        public void setVisualBounds(double[] visualbounds) {
+            this.visualbounds = visualbounds;
+            fetched |= FETCHED_VISUAL_BOUNDS;
         }
 
         @Override
@@ -271,6 +315,33 @@ public abstract class BlockCache {
      * @return the double[]
      */
     public abstract double[] fetchBounds(int x, int y, int z);
+    
+    /**
+     * Find out visual bounds for the block, this should not return null for
+     * performance reasons.
+     *
+     * @param x
+     *            the x
+     * @param y
+     *            the y
+     * @param z
+     *            the z
+     * @return the double[]
+     */
+    public abstract double[] fetchVisualBounds(int x, int y, int z);
+    
+    /**
+     * Find out visual bounds of the block is the same with collision bounds of the block
+     *
+     * @param x
+     *            the x
+     * @param y
+     *            the y
+     * @param z
+     *            the z
+     * @return if true
+     */
+    public abstract boolean isCollisionSameVisual(int x, int y, int z);
 
     /**
      * This is a on-ground type check just for standing on minecarts / boats.
@@ -421,9 +492,42 @@ public abstract class BlockCache {
         if (node.isBoundsFetched()) {
             return node.getBounds();
         }
+        if (node.isVisualBoundsFetched() && isCollisionSameVisual(x, y, z)) {
+            node.setBounds(node.getVisualBounds());
+            return node.getVisualBounds();
+        }
         final double[] nBounds = fetchBounds(x, y, z);
         // TODO: Convention for null bounds -> full ?
         node.setBounds(nBounds);
+        return nBounds;
+    }
+    
+    /**
+     * Get block bounds - <b>Do not change these in-place, because the returned
+     * array is cached internally.</b>
+     *
+     * @param x
+     *            the x
+     * @param y
+     *            the y
+     * @param z
+     *            the z
+     * @return Array of doubles (minX, minY, minZ, maxX, maxY, maxZ), may be null
+     *         theoretically. Do not change these in place, because they might
+     *         get cached.
+     */
+    public double[] getVisualBounds(final int x, final int y, final int z) {
+        final BlockCacheNode node = getOrCreateNode(x, y, z);
+        if (node.isVisualBoundsFetched()) {
+            return node.getVisualBounds();
+        }
+        if (node.isBoundsFetched() && isCollisionSameVisual(x, y, z)) {
+            node.setVisualBounds(node.getBounds());
+            return node.getBounds();
+        }
+        final double[] nBounds = fetchVisualBounds(x, y, z);
+        // TODO: Convention for null bounds -> full ?
+        node.setVisualBounds(nBounds);
         return nBounds;
     }
 
@@ -449,6 +553,9 @@ public abstract class BlockCache {
             }
             if (!node.isBoundsFetched()) {
                 node.setBounds(fetchBounds(x, y, z));
+            }
+            if (!node.isVisualBoundsFetched()) {
+                if (isCollisionSameVisual(x, y, z)) node.setVisualBounds(node.getBounds()); else node.setVisualBounds(fetchVisualBounds(x, y, z));
             }
         }
         return node;

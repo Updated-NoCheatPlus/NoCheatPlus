@@ -20,6 +20,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.VoxelShape;
 
 import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
+import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 /**
@@ -39,41 +40,24 @@ public class BukkitFetchableBounds implements BukkitShapeModel {
         final VoxelShape blockShape = block.getCollisionShape();
         double[] res = {};
         for (BoundingBox box : blockShape.getBoundingBoxes()) {
-            res = add(res, AxisAlignedBBUtils.toArray(box));
+            res = ShapeUtils.add(res, AxisAlignedBBUtils.toArray(box));
         }
         if (res.length == 0) return null;
         return res;
     }
-    
-    /**
-     * Concatenates two {@code double[]} arrays into a single array.
-     * <p>
-     * The contents of {@code array1} are placed first, followed by the contents
-     * of {@code array2}. The resulting array has a length equal to the sum of
-     * the lengths of the two input arrays.
-     * </p>
-     *
-     * <pre>
-     * Example:
-     * array1 = {1.0, 2.0}
-     * array2 = {3.0, 4.0}
-     * result = {1.0, 2.0, 3.0, 4.0}
-     * </pre>
-     *
-     * @param array1 the first array, may be empty but not {@code null}
-     * @param array2 the second array, may be empty but not {@code null}
-     * @return a new array containing all elements of {@code array1} followed by
-     *         all elements of {@code array2}
-     */
-    private double[] add(final double[] array1, final double[] array2) {
-        final double[] newArray = new double[array1.length + array2.length];
-        System.arraycopy(array1, 0, newArray, 0, array1.length);
-        System.arraycopy(array2, 0, newArray, array1.length, array2.length);
-        return newArray;
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
     }
 
     @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
     }
 }

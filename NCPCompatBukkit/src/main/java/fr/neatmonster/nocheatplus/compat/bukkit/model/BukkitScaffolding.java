@@ -104,4 +104,20 @@ public class BukkitScaffolding implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        final Block block = world.getBlockAt(x, y, z);
+        final BlockData data = block.getBlockData();
+        if (data instanceof Scaffolding) {
+            Scaffolding scaff = (Scaffolding) data;
+            return (scaff.getDistance() != 0 && scaff.isBottom()) ? UNSTABLE_SHAPE : STABLE_SHAPE;
+        }
+        return null;
+    }
+    
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
+    }
 }

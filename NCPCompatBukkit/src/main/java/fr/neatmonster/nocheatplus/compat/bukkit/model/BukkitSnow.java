@@ -49,6 +49,16 @@ public class BukkitSnow implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
+    }
+
+    @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();

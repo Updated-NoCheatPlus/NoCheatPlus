@@ -38,6 +38,16 @@ public class BukkitLevelled implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return null;
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
+    }
+
+    @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         final Block block = world.getBlockAt(x, y, z);
         final BlockState state = block.getState();

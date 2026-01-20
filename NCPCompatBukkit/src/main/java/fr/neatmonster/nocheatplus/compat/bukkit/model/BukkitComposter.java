@@ -41,4 +41,14 @@ public class BukkitComposter implements BukkitShapeModel {
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
+    }
 }

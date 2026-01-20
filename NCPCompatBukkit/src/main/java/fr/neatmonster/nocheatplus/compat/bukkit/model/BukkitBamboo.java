@@ -63,4 +63,14 @@ public class BukkitBamboo implements BukkitShapeModel {
     public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;
     }
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
+    }
 }

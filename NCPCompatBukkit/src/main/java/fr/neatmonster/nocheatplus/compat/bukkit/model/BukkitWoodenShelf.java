@@ -14,19 +14,13 @@
  */
 package fr.neatmonster.nocheatplus.compat.bukkit.model;
 
-import java.util.Arrays;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
-import org.bukkit.util.BoundingBox;
 
-import fr.neatmonster.nocheatplus.compat.Bridge1_13;
-import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
-import fr.neatmonster.nocheatplus.players.IPlayerData;
-import fr.neatmonster.nocheatplus.utilities.collision.AxisAlignedBBUtils;
 import fr.neatmonster.nocheatplus.utilities.collision.ShapeUtils;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
@@ -133,7 +127,17 @@ public class BukkitWoodenShelf implements BukkitShapeModel {
         
         return res.length == 0.0 ? new double[]{0.0,0.0,0.0,1.0,1.0,1.0} : res; // Defensive
     }
-    
+
+    @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
+    }
+
     @Override
     public int getFakeData(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
         return 0;

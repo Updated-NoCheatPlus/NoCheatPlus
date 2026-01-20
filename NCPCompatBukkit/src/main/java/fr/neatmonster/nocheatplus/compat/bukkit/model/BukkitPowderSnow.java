@@ -41,6 +41,16 @@ public class BukkitPowderSnow implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return FULL_HEIGHT;
+    }
+    
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return false;
+    }
+
+    @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }

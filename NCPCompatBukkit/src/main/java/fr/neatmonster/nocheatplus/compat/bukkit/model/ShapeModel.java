@@ -19,7 +19,6 @@ import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 public interface ShapeModel<W> {
 
     // TODO: Rather fill in all into node directly (data as well), avoid redundant casting etc.
-    // TODO: Best route passable workaround through here too (base on a flag), + getGroundMinHeight?.
     // TODO: Refine +- might have BukkitBlockCacheNode etc.
     
     /**
@@ -39,20 +38,17 @@ public interface ShapeModel<W> {
      */
     public double[] getShape(BlockCache blockCache, W world, int x, int y, int z);
     
-    // TODO: Implement later.
-    
     /**
-     * Get the collision shape of the block at the given position. <br>
-     * This is the shape to be used for collision checks and can affect the player movement-wise <br>
+     * Tell if collision shape is the same as visual shape <br>
      * 
      * @param blockCache
      * @param world
      * @param x
      * @param y
      * @param z
-     * @return
+     * @return if true
      */
-    // public double[] getCollisionShape(BlockCache blockCache, W world, int x, int y, int z);
+    public boolean isCollisionSameVisual(BlockCache blockCache, W world, int x, int y, int z);
     
     /**
      * Get the visual shape of the block at the given position. <br>
@@ -65,7 +61,7 @@ public interface ShapeModel<W> {
      * @param z
      * @return
      */
-    // public double[] getVisualShape(BlockCache blockCache, W world, int x, int y, int z);
+    public double[] getVisualShape(BlockCache blockCache, W world, int x, int y, int z);
 
     /**
      * Allow faking data.

@@ -101,4 +101,21 @@ public class BlockCacheBukkit extends BlockCache {
         super.cleanup();
         world = null;
     }
+
+    @Override
+    public double[] fetchVisualBounds(int x, int y, int z) {
+        Material mat = getType(x, y, z);
+        long flags = BlockFlags.getBlockFlags(mat);
+        if (flags == BlockFlags.F_IGN_PASSABLE) {
+            return null;
+        }
+        // TODO: Want to maintain a list with manual entries or at least half / full blocks ?
+        // Always return full bounds, needs extra adaption to BlockProperties (!).
+        return new double[]{0D, 0D, 0D, 1D, 1D, 1D};
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(int x, int y, int z) {
+        return true;
+    }
 }

@@ -4262,6 +4262,112 @@ public class BlockProperties {
     }
     
     /**
+     * Check if the given bounds collide with the block for the given type id at the
+     * given position. This does not check workarounds for ground_height nor
+     * passable.
+     *
+     * @param access
+     *            the access <- we all love the access!
+     * @param minX
+     *            the min x
+     *            Player's AABB coordinates...
+     * @param minY
+     *            the min y
+     * @param minZ
+     *            the min z
+     * @param maxX
+     *            the max x
+     * @param maxY
+     *            the max y
+     * @param maxZ
+     *            the max z
+     * @param x
+     *            the x
+     * @param y
+     *            the y
+     * @param z
+     *            the z
+     * @param node
+     *            The node at the given block coordinates (not null, bounds need
+     *            not be fetched).
+     * @param nodeAbove
+     *            The node above the given block coordinates (may be null). Pass
+     *            for efficiency, if it should already have been fetched for
+     *            some reason.
+     * @param flags
+     *            Block flags for the block at x, y, z. Mix in BlockFlags.F_COLLIDE_EDGES
+     *            to disallow the "high edges" of blocks (for which this method will return false then).
+     * @return true, if successful
+     */
+    public static final boolean collidesBlockVisually(final BlockCache access, final double minX, double minY, final double minZ, 
+                                              final double maxX, final double maxY, final double maxZ, 
+                                              final int x, final int y, final int z, 
+                                              final IBlockCacheNode node, final IBlockCacheNode nodeAbove, 
+                                              final long flags) {
+        // Get the block's blockBounds (shape)
+        // Bounds are stored in order of minXYZ... maxXYZ
+        final double[] blockBounds = node.getVisualBounds(access, x, y, z);
+        if (blockBounds == null) {
+            // Somehow null, early return.
+            return false;
+        }
+        
+        /* Coordinates of the first axis aligned bounding box in the array */
+        double bMinX, bMinZ, bMinY, bMaxX, bMaxY, bMaxZ;
+        //////////////////////////////////////////////////////////////////
+        // Fill in the horizontal bounds (minX, maxX, minZ, maxZ)...    //
+        //////////////////////////////////////////////////////////////////
+        if ((flags & BlockFlags.F_XZ100) != 0) {
+            bMinX = bMinZ = 0;
+            bMaxX = bMaxZ = 1;
+        }
+        else {
+            // Auto-fill, if the block does not have full horizontal bounds.
+            bMinX = blockBounds[0]; 
+            bMinZ = blockBounds[2];
+            bMaxX = blockBounds[3]; 
+            bMaxZ = blockBounds[5]; 
+        }
+        
+        //////////////////////////////////////////////////////////
+        // Fill in the vertical bounds (minY, maxY)...          //
+        //////////////////////////////////////////////////////////
+        if ((flags & BlockFlags.F_HEIGHT_8_INC) != 0) {
+            bMinY = 0;
+            final int data = (node.getData(access, x, y, z) & 0xF) % 8;
+            bMaxY = 0.125 * data;
+        }
+        else if ((flags & BlockFlags.F_HEIGHT150) != 0) {
+            bMinY = 0;
+            // TODO: Should fill all sub bounding box not only primary
+            bMaxY = 1.0;
+        }
+        else if ((flags & BlockFlags.F_HEIGHT100) != 0) {
+            bMinY = 0;
+            bMaxY = 1.0;
+        }
+        else if ((flags & BlockFlags.F_HEIGHT_8SIM_DEC) != 0) {
+            return false;
+        }
+        else {
+            // Auto-fill.
+            bMinY = blockBounds[1]; // minY
+            bMaxY = blockBounds[4]; // maxY
+        }
+        
+        //////////////////////////////////
+        // Check for collision          //
+        //////////////////////////////////
+        final boolean allowEdge = (flags & BlockFlags.F_COLLIDE_EDGES) == 0;
+        // Still keep this primary bounds check stand alone with loop below for flags compatibility
+        if (AxisAlignedBBUtils.isCollided(new double[]{bMinX, bMinY, bMinZ, bMaxX, bMaxY, bMaxZ}, x, y, z, new double[]{minX, minY, minZ, maxX, maxY, maxZ}, allowEdge)) {
+            return true;
+        }
+        // Check for multi-bounding-box double arrays (starting from the 2nd box in the array. 1st has already been checked above).
+        return !AxisAlignedBBUtils.isSimpleShape(blockBounds) && AxisAlignedBBUtils.isCollided(blockBounds, x, y, z, new double[]{minX, minY, minZ, maxX, maxY, maxZ}, allowEdge, 2);
+    }
+    
+    /**
      * Ground check covering a range between two positions.<br>
      * <br>
      * Similar to {@link #isOnGround(BlockCache, double, double, double, double, double, double, long)},
@@ -4804,6 +4910,59 @@ public class BlockProperties {
                                                  minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {
             return true;
         }
+        // Does collide (most likely).
+        return false;
+    }
+    
+    /**
+     * Check passability with an arbitrary bounding box vs. a block.
+     *
+     * @param access
+     *            the access
+     * @param blockX
+     *            the block x
+     * @param blockY
+     *            the block y
+     * @param blockZ
+     *            the block z
+     * @param minX
+     *            the min x
+     * @param minY
+     *            the min y
+     * @param minZ
+     *            the min z
+     * @param maxX
+     *            the max x
+     * @param maxY
+     *            the max y
+     * @param maxZ
+     *            the max z
+     * @return true, if is passable box
+     */
+    public static final boolean isPassableVisualBox(final BlockCache access, 
+                                              final int blockX, final int blockY, final int blockZ,
+                                              final double minX, final double minY, final double minZ,
+                                              final double maxX, final double maxY, final double maxZ) {
+        // TODO: This mostly is copy and paste from isPassableBox.
+        final IBlockCacheNode node = access.getOrCreateBlockCacheNode(blockX, blockY, blockZ, false);
+        final Material id = node.getType();
+        if (BlockProperties.isPassable(id)) {
+            return true;
+        }
+        double[] bounds = access.getVisualBounds(blockX, blockY, blockZ);
+        if (bounds == null) {
+            return true;
+        }
+        // (Coordinates are already passed in an ordered form.)
+        if (!collidesBlockVisually(access, minX, minY, minZ, maxX, maxY, maxZ, blockX, blockY, blockZ, node, null, BlockFlags.getBlockFlags(id) | BlockFlags.F_COLLIDE_EDGES)) {
+            return true;
+        }
+
+        // Check for workarounds.
+        //if (BlockProperties.isPassableWorkaround(access, blockX, blockY, blockZ, minX - blockX, minY - blockY, minZ - blockZ, node, maxX - minX, maxY - minY, maxZ - minZ, 
+        //                                         minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {
+        //    return true;
+        //}
         // Does collide (most likely).
         return false;
     }

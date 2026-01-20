@@ -34,6 +34,16 @@ public class BukkitWaterPlant implements BukkitShapeModel {
     }
 
     @Override
+    public double[] getVisualShape(BlockCache blockCache, World world, int x, int y, int z) {
+        return getShape(blockCache, world, x, y, z);
+    }
+
+    @Override
+    public boolean isCollisionSameVisual(BlockCache blockCache, World world, int x, int y, int z) {
+        return true;
+    }
+
+    @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
         return 0;
     }
