@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.utilities.ds.prefixtree;
 
 import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.CharPrefixTree.SimpleCharNode;
 import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.SimpleCharPrefixTree.SimpleCharLookupEntry;
+import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.CharPrefixTree.CharLookupEntry;
 
 /**
  * Adding some convenience methods.

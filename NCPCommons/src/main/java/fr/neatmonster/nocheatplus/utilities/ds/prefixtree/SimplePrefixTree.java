@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.utilities.ds.prefixtree;
 
 import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.PrefixTree.SimpleNode;
 import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.SimplePrefixTree.SimpleLookupEntry;
+import fr.neatmonster.nocheatplus.utilities.ds.prefixtree.PrefixTree.LookupEntry;
 
 /**
  * Simple prefix tree, for one given key type.
