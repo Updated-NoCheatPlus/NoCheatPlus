@@ -147,7 +147,7 @@ public class BlocksMC1_14 implements BlockPropertiesSetup{
         BlockFlags.addFlags("BELL", BlockFlags.SOLID_GROUND);
         BlockProperties.setBlockProps("BELL", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
 
-        BlockProperties.setBlockProps("LANTERN", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3.5f, true));
+        BlockProperties.setBlockProps("LANTERN", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3.5f, false));
         BlockFlags.addFlags("LANTERN", BlockFlags.F_GROUND);
 
         BlockFlags.addFlags("SWEET_BERRY_BUSH", BlockFlags.F_BERRY_BUSH);

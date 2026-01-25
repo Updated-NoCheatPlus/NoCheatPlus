@@ -224,7 +224,8 @@ public class MaterialUtil {
     public static final Set<Material> ALL_PRESSURE_PLATES = Collections.unmodifiableSet(
             BridgeMaterial.getBySuffix("_pressure_plate", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> END_RODS = Collections.unmodifiableSet(
+    /** Includes Lightning rods besides end rods!! To be used only if you deal with shapes, because while they share the same shape, the block-breaking properties differ */
+    public static final Set<Material> RODS = Collections.unmodifiableSet(
             BridgeMaterial.getBySuffix("_rod", AlmostBoolean.YES, "legacy"));
 
     public static final Set<Material> AMETHYST = Collections.unmodifiableSet(addBlocks(

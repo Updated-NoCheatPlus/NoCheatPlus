@@ -156,7 +156,7 @@ public class BlocksMC1_17 implements BlockPropertiesSetup {
         BlockInit.setPropsAs("LAVA_CAULDRON", Material.CAULDRON);
         BlockProperties.setBlockProps("MOSS_BLOCK", new BlockProperties.BlockProps(BlockProperties.woodHoe, 0.1f));
         // In 1.21.9, lighting rod is explicitly made out of copper and has oxidised variants.
-        // THis will add a definition only for the copper lightning rod (which is the default one).
+        // THis will add a definition only for the copper lightning rod (which is the default one. Minecraft doesn't enumerate copper lightning rods as such. Just "Lightning rod", "Waxed lightning rod" etc...).
         // For the other variants, see blocksMC1_21.
         BlockFlags.addFlags("LIGHTNING_ROD", BlockFlags.SOLID_GROUND);
         BlockProperties.setBlockProps("LIGHTNING_ROD", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));

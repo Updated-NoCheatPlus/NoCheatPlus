@@ -88,7 +88,7 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
         
         if (ServerVersion.isAtLeast("1.21.6")) {
             BlockProperties.setBlockProps("DRIED_GHAST", new BlockProperties.BlockProps(BlockProperties.noTool, 0.0f));
-            BlockFlags.setBlockFlags("DRIED_GHAST", BlockFlags.F_GROUND);
+            BlockFlags.setBlockFlags("DRIED_GHAST", BlockFlags.F_GROUND | BlockFlags.F_SOLID);
         }
         
         if (ServerVersion.isAtLeast("1.21.9")) {
@@ -97,16 +97,16 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_BARS) {
-                 BlockInit.setAs(mat, Material.IRON_BLOCK);
-                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
+                BlockProperties.setBlockProps(BridgeMaterial.IRON_CHAIN, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
+                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_THIN_FENCE | BlockFlags.F_VARIABLE); // Variable ?
             }
             if (BridgeMaterial.IRON_CHAIN != null) {
                 // Re-define legacy chain as iron chain.
-                BlockInit.setAs(BridgeMaterial.IRON_CHAIN, Material.IRON_BLOCK);
+                BlockProperties.setBlockProps(BridgeMaterial.IRON_CHAIN, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
                 BlockFlags.addFlags(BridgeMaterial.IRON_CHAIN, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_CHAINS) {
-                BlockInit.setAs(mat, Material.IRON_BLOCK);
+                BlockProperties.setBlockProps(BridgeMaterial.IRON_CHAIN, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_LIGHTNING_RODS) {
@@ -115,15 +115,15 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_LANTERNS) {
-                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, false));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.WOODEN_SHELVES) {
-                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodAxe, 2f, true));
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodAxe, 2f, false));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_GOLEM_STATUES) {
-                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, false));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
         }

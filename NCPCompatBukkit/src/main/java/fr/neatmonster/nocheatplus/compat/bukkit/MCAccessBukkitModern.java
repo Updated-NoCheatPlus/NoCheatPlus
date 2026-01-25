@@ -71,7 +71,6 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_BELL = new BukkitBell();
     private static final BukkitShapeModel MODEL_ANVIL = new BukkitAnvil();
     private static final BukkitShapeModel MODEL_GRIND_STONE = new BukkitGrindStone();
-    private static final BukkitShapeModel MODEL_SHELF = new BukkitWoodenShelf();
 
     // Blocks that change shape based on interaction or redstone.
     private static final BukkitShapeModel MODEL_DOOR = new BukkitDoor();
@@ -213,6 +212,11 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         for (Material mat : MaterialUtil.AMETHYST) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
+        
+        // Shelves
+        for (Material mat : MaterialUtil.WOODEN_SHELVES) {
+            addModel(mat, MODEL_AUTO_FETCH);
+        }
 
         // new flower, and others
         for (Material mat : BridgeMaterial.getAllBlocks(
@@ -249,10 +253,6 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         for (Material mat : MaterialUtil.COPPER_GOLEM_STATUES) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
-        
-        for (Material mat : MaterialUtil.WOODEN_SHELVES) {
-            addModel(mat, MODEL_SHELF);
-        }
 
         // Camp fire
         for (Material mat : BridgeMaterial.getAllBlocks(
@@ -284,8 +284,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         addModel(BridgeMaterial.CAKE, MODEL_CAKE);
 
         // End Rod / Lightning Rod.
-        // TODO: Do they actually have the same model? Doesn't the lightning rod have a slightly different box/bulb at the top?
-        for (Material mat : MaterialUtil.END_RODS) {
+        // Do they actually have the same model? Doesn't the lightning rod have a slightly different box/bulb at the top? <- No, purely visual.
+        for (Material mat : MaterialUtil.RODS) {
             addModel(mat, MODEL_END_ROD);
         }
 

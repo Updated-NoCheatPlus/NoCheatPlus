@@ -22,17 +22,18 @@ public interface ShapeModel<W> {
     // TODO: Refine +- might have BukkitBlockCacheNode etc.
     
     /**
-     * Get the shape of the block at the given position. <br>
-     * <strong>Do note that this represents the <i>collision</i> shape, not necessarily the visual shape of the block, which can diverge from the former.</strong> <br>
-     * I.e.: A fence gate in the open position has no collision shape, but has a visual and interactable shape. The same goes for fences which have a collision shape with 1.5 height, 
-     * but a visual shape of 1.0 height and so on.<br>
+     * Get the <i>collision</i> shape of the block at the given position. <br>
+     * <strong> Do note that not all blocks have a collision shape, like all plants/farmable blocks, which do have a visual shape that can be interacted with, but don't have a collision one;
+     * other have a collision shape that exceeds their visual one, like fences, which have a height of 1.0 block visually, but 1.5 collision-wise and such. </strong> <br>
+     * Most of the time, the collision shape will be the same as its visual shape, but not always. <br>
+     * To check for any divergence, use {@link #isCollisionSameVisual(BlockCache, W, int, int, int)}. <br>
      * 
      * @param blockCache The block cache.
      * @param world The world.
      * @param x The x coordinate of the block.
      * @param y The y coordinate of the block.
      * @param z The z coordinate of the block.
-     * @return An array of doubles representing the shape, in the format
+     * @return An array of doubles representing the collision shape, in the format
      *         {minX, minY, minZ, maxX, maxY, maxZ, ...} for each box in the shape.
      *         Coordinates are in the range [0.0, 1.0].
      */
@@ -52,7 +53,8 @@ public interface ShapeModel<W> {
     
     /**
      * Get the visual shape of the block at the given position. <br>
-     * This is the shape to be used for interaction checks/cases. <br>
+     * Call this method if dealing with visual interactions, like ray tracing for line of sight, block targeting, etc. <br>
+     * @See {@link #getShape(BlockCache, W, int, int, int)} for collision shape. <br>
      * 
      * @param blockCache
      * @param world

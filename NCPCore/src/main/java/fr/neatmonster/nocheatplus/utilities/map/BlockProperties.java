@@ -266,11 +266,11 @@ public class BlockProperties {
          *            than MaterialBase.NONE.
          * @param hardness
          *            the hardness
-         * @param requireCorrectTool
+         * @param requiresCorrectToolToLoot
          *            false if block can be collected (meaning, dropped) using bare hands
          */
-        public BlockProps(ToolProps tool, float hardness, boolean requireCorrectTool) {
-            this(tool, hardness, 1, requireCorrectTool);
+        public BlockProps(ToolProps tool, float hardness, boolean requiresCorrectToolToLoot) {
+            this(tool, hardness, 1, requiresCorrectToolToLoot);
         }
 
         /**
