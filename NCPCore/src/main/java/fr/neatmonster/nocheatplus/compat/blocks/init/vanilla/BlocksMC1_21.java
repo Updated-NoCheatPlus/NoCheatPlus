@@ -97,7 +97,7 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_BARS) {
-                BlockProperties.setBlockProps(BridgeMaterial.IRON_CHAIN, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
                  BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_THIN_FENCE | BlockFlags.F_VARIABLE); // Variable ?
             }
             if (BridgeMaterial.IRON_CHAIN != null) {
@@ -106,7 +106,7 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
                 BlockFlags.addFlags(BridgeMaterial.IRON_CHAIN, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_CHAINS) {
-                BlockProperties.setBlockProps(BridgeMaterial.IRON_CHAIN, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
+                BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
             for (Material mat : MaterialUtil.COPPER_LIGHTNING_RODS) {
