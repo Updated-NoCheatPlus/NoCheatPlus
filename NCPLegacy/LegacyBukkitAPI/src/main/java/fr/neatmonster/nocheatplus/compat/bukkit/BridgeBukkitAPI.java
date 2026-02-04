@@ -27,7 +27,6 @@ import org.bukkit.inventory.InventoryView;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.utility.MinecraftReflection;
-import com.comphenix.protocol.utility.MinecraftVersion;
 
 import fr.neatmonster.nocheatplus.compat.registry.IBukkitAccess;
 
@@ -38,11 +37,22 @@ import java.util.Set;
 
 public class BridgeBukkitAPI implements IBukkitAccess {
     public BridgeBukkitAPI() {
-        if (MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.v1_21_0)) {
+        // Ugly as no version checking utils available yet!
+        if (getClass("org.bukkit.event.player.PlayerInputEvent") != null) {
             throw new RuntimeException("Not supported.");
         }
     }
-    private final boolean isServerModern = MinecraftVersion.getCurrentVersion().isAtLeast(MinecraftVersion.AQUATIC_UPDATE);
+    
+    private static Class<?> getClass(String fullName) {
+        try {
+            return Class.forName(fullName);
+        } catch (ClassNotFoundException e) {
+            // Ignore.
+        }
+        return null;
+    }
+    
+    private final boolean isServerModern = getClass("org.bukkit.util.BoundingBox") != null;
     private String getNamedSound(PacketContainer packet) {
         String soundName = "";
         Class<?> soundEffectCls = MinecraftReflection.getSoundEffectClass();

@@ -100,7 +100,7 @@ public class SupportingBlockUtils {
      * @return A {@link Vector} containing the position of the block.
      */
     public static BlockCoord getOnPos(BlockCache access, Location eLoc, SupportingBlockData data, float yBelow) {
-        BlockCoord blockPos = data.getBlockPos();
+        BlockCoord blockPos = data == null ? null : data.getBlockPos();
         if (blockPos != null) {
             final BlockCache.IBlockCacheNode node = access.getOrCreateBlockCacheNode(blockPos.getX(), blockPos.getY(), blockPos.getZ(), false);
             final long flags = BlockFlags.getBlockFlags(node.getType());

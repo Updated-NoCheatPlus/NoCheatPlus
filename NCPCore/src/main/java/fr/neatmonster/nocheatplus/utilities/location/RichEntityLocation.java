@@ -191,7 +191,7 @@ public class RichEntityLocation extends RichBoundsLocation {
      */
     public boolean isSupportedBy(long flag) {
         final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
-        BlockCoord supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData.getSupportingBlockData(), (float)0.5000001D);
+        BlockCoord supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData == null ? null : pData.getSupportingBlockData(), (float)0.5000001D);
         final Material supportingBlock = getBlockType(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ());
         return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0;
     }
