@@ -198,7 +198,7 @@ public class BridgeMisc {
         }
         // Very old server (1.11 and below), use NCP's adapter.
         final IPlayerData pData = DataManager.getPlayerData(player);
-        return pData.getItemInUse() != null;
+        return pData != null && pData.getItemInUse() != null;
     }
     
     /**
@@ -209,7 +209,7 @@ public class BridgeMisc {
      * @return
      */
     public static boolean isSlowedDownByUsingAnItem(final Player player) {
-        return isUsingItem(player) && !MaterialUtil.isSpear(DataManager.getPlayerData(player).getItemInUse());
+        return isUsingItem(player) && (player.getItemInUse() == null || !MaterialUtil.isSpear(getItemInUse(player)));
         
     }
     
@@ -217,11 +217,21 @@ public class BridgeMisc {
      * Get the Material type of the item the player is currently using.
      *
      * @param player
-     * @return True, if either {@link Player#getItemInUse()} or {@link IPlayerData#getItemInUse()} returns true
+     * @return The material of the item (from {@link Player#getItemInUse()} or {@link IPlayerData#getItemInUse()}) or <code>null</code>
      */
     public static Material getItemInUse(final Player player) {
-    	final IPlayerData pData = DataManager.getPlayerData(player);
-        return hasGetItemInUseMethod() ? player.getItemInUse().getType() : pData.getItemInUse();
+        if (hasGetItemInUseMethod()) {
+            final ItemStack item = player.getItemInUse();
+            if (item != null) {
+                return item.getType();
+            }
+        } else {
+            final IPlayerData pData = DataManager.getPlayerData(player);
+            if (pData != null) {
+                return pData.getItemInUse();
+            }
+        }
+        return null;
     }
     
     /**

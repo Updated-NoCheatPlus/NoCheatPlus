@@ -429,6 +429,8 @@ public interface IPlayerData extends IData, IBaseDataAccess, IGetGenericInstance
     
     /**
      * Get the item currently in use, as set by PlayerData#setItemInUse
+     *
+     * Should not be used directly but via {@link fr.neatmonster.nocheatplus.compat.BridgeMisc#getItemInUse(Player)}!
      * 
      * @return The enum Material of the item in use.
      */
