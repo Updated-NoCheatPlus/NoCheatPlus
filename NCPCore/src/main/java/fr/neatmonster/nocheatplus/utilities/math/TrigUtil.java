@@ -59,8 +59,8 @@ public class TrigUtil {
 
    /**
     * NMS table of sin values computed from 0 (inclusive) to 2*pi (exclusive), with steps of 2*PI / 65536.
-    * (Optifine uses a different table, but let's pretend it doesn't exist for the moment... :))
-    * From MathHelper.java 
+    * (Optifine uses a different table!)
+    * From MathHelper.java/Mth.java
     */
     private static float[] SIN = new float[65536];
 

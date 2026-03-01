@@ -547,7 +547,7 @@ public class SurvivalFly extends Check {
             thisMove.zAllowedDistance *= (double) data.nextStuckInBlockHorizontal;
         }
         // Collisions last.
-        Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.touchedGroundWorkaround, from.getBoundingBox());
+        Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, thisMove.yAllowedDistance, thisMove.zAllowedDistance), fromOnGround || thisMove.fromLostGround, from.getBoundingBox());
         thisMove.collideX = collisionVector.getX() != thisMove.xAllowedDistance;
         thisMove.collideY = collisionVector.getY() != thisMove.yAllowedDistance;
         thisMove.collideZ = collisionVector.getZ() != thisMove.zAllowedDistance;
@@ -1007,19 +1007,20 @@ public class SurvivalFly extends Check {
                 thisMove.xAllowedDistance = thisMove.zAllowedDistance = 0.0;
             }
         }
-        // ???-Next stage after ground riptide(integrated, no gnd_riptide_pre)
-        boolean newFriction = false;
-        if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
-            final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
-            if (lastMove.from.onGround || secondLastMove.tridentRelease.decideOptimistically() || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {
-                newFriction = true;
-            }
-        }
         
         // Block speed
         thisMove.xAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
         thisMove.zAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
         // Friction next.
+        // ???-Next stage after ground riptide(the move isn't split here)
+        boolean newFriction = false;
+        if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
+            final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
+            if (lastMove.from.onGround || secondLastMove.tridentRelease.decideOptimistically() 
+                || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {
+                newFriction = true;
+            }
+        }
         thisMove.xAllowedDistance *= (double) (newFriction ? data.nextInertia : data.lastInertia);
         thisMove.zAllowedDistance *= (double) (newFriction ? data.nextInertia : data.lastInertia);
         // Apply entity-pushing speed
@@ -1520,13 +1521,13 @@ public class SurvivalFly extends Check {
         }
         if (onGround && thisMove.tridentRelease.decideOptimistically() && thisMove.multiMoveCount == 1 
             && !isNormalOrPacketSplitMove && MathUtil.isOffsetWithinPredictionEpsilon(thisMove.yDistance, Magic.RIPTIDE_ON_GROUND_MOVE)) {
-            // Riptide launch from ground.
+            // Riptide from ground launch at the end of the movement stack; the actual riptide push will come next. Allowed this move as-is.
             // IMPORTANT NOTE: this move specifically will always cause NCP to fire a Bukkit-based split move on the first split move, no matter what.
             thisMove.yAllowedDistance = Magic.RIPTIDE_ON_GROUND_MOVE;
-            // Signal that the trident was released, but the actual riptide push will come next.
+            // The riptide move was split into two moves: 1.2 upwards from ground and then the actual riptide push.
+            // We can therefore set the flag to YES from here on. The push will be handled below.
             data.setTridentReleaseEvent(AlmostBoolean.YES);
             yDistanceAboveLimit = 0.0;
-            // Riptide from ground launch at the end of the movement stack; the actual riptide push will come next. Allowed this move as-is.
             tags.add("gnd_riptide_pre");
             return new double[]{thisMove.yAllowedDistance, yDistanceAboveLimit};
         }
@@ -1580,12 +1581,9 @@ public class SurvivalFly extends Check {
         }
         // *----------Finalization of handleRelativeFrictionAndCalculateMovement; this check/condition is called after having called the move() function. The former method is called only when the player is traveling in air, thus the liquid and gliding checks ----------*
         if (!lastMove.from.inLiquid && !lastMove.isGliding) {
-            // TODO: Which condition is correct ??? Check for past versions to see when this check changed... Fun. 
-            // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.getInBlockState().is(Blocks.POWDER_SNOW) && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
-            // if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.wasInPowderSnow && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
             // TODO: We have to loop the jumping state for 1.21.1 and below... No other way to put it unfortunately. This will make the code an ugly mess than it already is.
             final boolean jumpedOrCollided = lastMove.collidesHorizontally || data.input.wasSpaceBarPressed() && BridgeMisc.isSpaceBarImpulseKnown(player);
-            if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { // this.wasInPowderSnow. The living entity field already checks for the past state, does that mean we need to check for the second last move?
+            if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { 
                 thisMove.yAllowedDistance = 0.2;
             }
         }

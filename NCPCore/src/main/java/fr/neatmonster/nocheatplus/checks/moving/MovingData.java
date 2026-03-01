@@ -830,8 +830,9 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         fireworksBoostDuration = 0; 
         fireworksBoostTickExpire = 0;
     }
+    
     /**
-     * Set when PlayerRiptideEvent called
+     * Set on {@link org.bukkit.event.player.PlayerRiptideEvent} to "MAYBE", as we don't yet know whether the riptide push is applied with or without the 1.2 vertical move from ground.
      */
     public void setTridentReleaseEvent(AlmostBoolean isReleased) {
         tridentRelease = isReleased;

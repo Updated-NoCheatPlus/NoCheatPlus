@@ -92,6 +92,10 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
         }
         
         if (ServerVersion.isAtLeast("1.21.9")) {
+        
+            BlockInit.setInstantPassable("COPPER_TORCH");
+            BlockInit.setInstantPassable("COPPER_WALL_TORCH");
+            
             for (Material mat : MaterialUtil.COPPER_CHESTS) {    
                 BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 3f, true));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);

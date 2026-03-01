@@ -14,6 +14,9 @@
  */
 package fr.neatmonster.nocheatplus.checks.net.model;
 
+/**
+ * Represents the input state of a player as sent in data packets.
+ */
 public class DataPacketInput {
     public boolean forward = false;
     public boolean backward = false;
