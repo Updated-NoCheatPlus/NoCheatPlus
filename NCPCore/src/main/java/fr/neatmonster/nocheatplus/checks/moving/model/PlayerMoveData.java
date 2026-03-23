@@ -113,6 +113,39 @@ public class PlayerMoveData extends MoveData {
      * during processing of moving checks.
      */
     public double zAllowedDistance;
+    /**
+     * Index from input brute force table that distance less than 0.03 <br>
+     * Taken into account after non match and will assume player use that input
+     */
+    public int hiddenDistanceIndex;
+    /**
+     * Is there stop motion during/after hidden move happening? <br>
+     * VOLATILE by design and should not be use elsewhere
+     */
+    public boolean possibleStopMotion;
+    /**
+     * Corrected motion for the next move to use. <br>
+     * There are 2 sources of this: hidden move and stop motion. <br>
+     * Do note that it is not always right if there more than one correct result of the sum, that make next move become unpredictable
+     */
+    public double xCorrectedDistancePre;
+    /**
+     * Corrected motion for the next move to use. <br>
+     * There are 2 sources of this: hidden move and stop motion. <br>
+     * Do note that it is not always right if there more than one correct result of the sum, that make next move become unpredictable
+     */
+    public double zCorrectedDistancePre;
+    /**
+     * Additive motion for the end of next move to use. Borrow and return effect. <br>
+     * There are 2 sources of this: hidden move and ground riptide.
+     */
+    // TODO: Use this to handle ground riptide, cleaner code
+    public double xCorrectedDistancePost;
+    /**
+     * Additive motion for the end of next move to use. Borrow and return effect. <br>
+     * There are 2 sources of this: hidden move and ground riptide.
+     */
+    public double zCorrectedDistancePost;
 
     /**
      *  The collision on the Z axis that has been set in this movement by SurvivalFly.
@@ -248,6 +281,12 @@ public class PlayerMoveData extends MoveData {
         xAllowedDistance = 0.0;
         yAllowedDistance = 0.0;
         zAllowedDistance = 0.0;
+        hiddenDistanceIndex = -1;
+        possibleStopMotion = false;
+        xCorrectedDistancePre = 0.0;
+        zCorrectedDistancePre = 0.0;
+        xCorrectedDistancePost = 0.0;
+        zCorrectedDistancePost = 0.0;
         hAllowedDistance = 0.0;
         collideX = false;
         collideY = false;

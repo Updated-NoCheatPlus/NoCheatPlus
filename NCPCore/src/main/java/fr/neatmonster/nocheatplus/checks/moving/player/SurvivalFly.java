@@ -944,6 +944,14 @@ public class SurvivalFly extends Check {
         // This essentially represents the momentum of the player.
         thisMove.xAllowedDistance = lastMove.toIsValid ? lastMove.xDistance : 0.0;
         thisMove.zAllowedDistance = lastMove.toIsValid ? lastMove.zDistance : 0.0;
+        // !lastMove.possibleStopMotion is dummy flag to flip false on failure and retry
+        if (!lastMove.possibleStopMotion && (lastMove.xCorrectedDistancePre != 0.0 || lastMove.zCorrectedDistancePre != 0.0)) {
+            thisMove.xAllowedDistance = lastMove.xCorrectedDistancePre;
+            thisMove.zAllowedDistance = lastMove.zCorrectedDistancePre;
+            // Distinguish source of CorrectedDistance that only come from hidden move not from stop motion
+            if (lastMove.hiddenDistanceIndex != -1) thisMove.possibleStopMotion = true;
+            tags.add("hidden");
+        }
         // If the player collided with something on the previous tick, start with 0 momentum now.
         doWallCollision(lastMove, thisMove);
         // (The game calls a checkFallDamage() function, which, as you can imagine, handles fall damage. But also handles liquids' flow force, thus we need to apply this 2 times.)
@@ -1290,6 +1298,10 @@ public class SurvivalFly extends Check {
             }
             xTheoreticalDistance[i] = collisionVector.getX();
             zTheoreticalDistance[i] = collisionVector.getZ();
+            if (lastMove.xCorrectedDistancePost != 0 || lastMove.zCorrectedDistancePost != 0) {
+                xTheoreticalDistance[i] += lastMove.xCorrectedDistancePost;
+                zTheoreticalDistance[i] += lastMove.zCorrectedDistancePost;
+            }
         }
         // Check for block push.
         // TODO: Unoptimized insertion point... Waste of resources to just override everything at the end. See note at the start of the method.
@@ -1317,6 +1329,9 @@ public class SurvivalFly extends Check {
         */
         boolean strict = cc.survivalFlyStrictHorizontal;
         for (i = 0; i < 9; i++) {
+            if (!collideX[i] && !collideZ[i] && MathUtil.dist(xTheoreticalDistance[i], zTheoreticalDistance[i]) < (pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? 0.03 : 0.0002)) {
+                thisMove.hiddenDistanceIndex = i;
+            }
             if (strict) {
                 if (MathUtil.almostEqual(thisMove.xDistance, xTheoreticalDistance[i], Magic.PREDICTION_EPSILON) 
                     && MathUtil.almostEqual(thisMove.zDistance, zTheoreticalDistance[i], Magic.PREDICTION_EPSILON)) {
@@ -1344,6 +1359,11 @@ public class SurvivalFly extends Check {
                     // Keep looping
                     forceViolation = true;
                 }
+                if (thisMove.possibleStopMotion) {
+                    double[] result = MiniCalculator.motionFromHiddenStopMotion(sinYaw, cosYaw, theorInputs[i], data, pData, from, to, onGround, player.isFlying(), yDistanceBeforeCollide);
+                    thisMove.xCorrectedDistancePre = result[0];
+                    thisMove.zCorrectedDistancePre = result[1];
+                }
                 if (!forceViolation) {
                     // Found a candidate to set in this move; these collisions are valid.
                     // Also set the supporting block.
@@ -1356,6 +1376,40 @@ public class SurvivalFly extends Check {
                     thisMove.negligibleHorizontalCollision = thisMove.collidesHorizontally && CollisionUtil.isHorizontalCollisionNegligible(new Vector(xTheoreticalDistance[i], thisMove.yDistance, zTheoreticalDistance[i]), to, theorInputs[i].getStrafe(), theorInputs[i].getForward());
                     break;
                 }
+            }
+        }
+        if (!found) {
+            if (thisMove.hiddenDistanceIndex != -1) {
+                final double result[] = MiniCalculator.hiddenDistanceHorizontal(sinYaw, cosYaw, movementSpeed, theorInputs[thisMove.hiddenDistanceIndex], xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex], data, pData, from, pData.isInCrouchingPose(), attributeAccess.getHandle().getPlayerSneakingFactor(player), BridgeMisc.isSlowedDownByUsingAnItem(player), onGround, xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex]);
+                if (thisMove.xDistance == 0 && thisMove.zDistance == 0) {
+                    thisMove.zCorrectedDistancePost = xTheoreticalDistance[thisMove.hiddenDistanceIndex];
+                    thisMove.zCorrectedDistancePost = zTheoreticalDistance[thisMove.hiddenDistanceIndex];
+                    xTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
+                    zTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
+                    tags.add("hdistzero");                  
+                } else {
+                    xTheoreticalDistance[thisMove.hiddenDistanceIndex] += result[0];
+                    zTheoreticalDistance[thisMove.hiddenDistanceIndex] += result[1];
+                }
+                if (strict) {
+                    if (MathUtil.almostEqual(thisMove.xDistance, xTheoreticalDistance[thisMove.hiddenDistanceIndex], Magic.PREDICTION_EPSILON) 
+                            && MathUtil.almostEqual(thisMove.zDistance, zTheoreticalDistance[thisMove.hiddenDistanceIndex], Magic.PREDICTION_EPSILON)) {
+                        i = thisMove.hiddenDistanceIndex;
+                        thisMove.xCorrectedDistancePre = result[0];
+                        thisMove.zCorrectedDistancePre = result[1];
+                        found = true;
+                    }
+                }
+                else {
+                    double theoreticalHDistance = MathUtil.dist(xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex]);
+                    if (MathUtil.almostEqual(theoreticalHDistance, thisMove.hDistance, Magic.PREDICTION_EPSILON)) {
+                        i = thisMove.hiddenDistanceIndex;
+                        found = true;
+                    }
+                }
+            } else if (lastMove.hiddenDistanceIndex != -1 && (lastMove.xCorrectedDistancePre != 0 || lastMove.zCorrectedDistancePre != 0)) {
+                // Hidden move was found and sum match lastMove but the component of the sum didn't right as there another direction that also make the sum correct!
+                isPredictable = false;
             }
         }
         //////////////////////////////////////////////////////////////
@@ -1595,18 +1649,34 @@ public class SurvivalFly extends Check {
             }
             // Water applies friction before calling the fluidFalling function.
             thisMove.yAllowedDistance *= data.lastFrictionVertical;
-            // Fluidfalling(...). For water only, this is done after applying friction.
-            Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
-            thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
+            if (BridgeMisc.hasGravity(player)) {
+                // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
+                // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed without the space bar pressed.
+                if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+                    thisMove.yAllowedDistance -= Magic.LEGACY_LIQUID_GRAVITY;
+                } else {
+                    // Fluidfalling(...). For water only, this is done after applying friction.
+                    Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
+                    thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
+                }
+            }
             tags.add("v_water");
         }
         else if (lastMove.from.inLava) {
             // Lava friction is quite odd. Depending on specified thresholds, it can be 0.5 or 0.8
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
-                // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
-                Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
-                thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
+                if (BridgeMisc.hasGravity(player)) {
+                    // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
+                    // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed without the space bar pressed.
+                    if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+                        thisMove.yAllowedDistance -= Magic.LEGACY_LIQUID_GRAVITY;
+                    } else {
+                        // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
+                        Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
+                        thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
+                    }
+                }
             }
             else {
                 // Otherwise, 0.5
@@ -1693,11 +1763,6 @@ public class SurvivalFly extends Check {
                 else {
                     data.jumpDelay = 0;
                 }
-                if (BridgeMisc.hasGravity(player) && pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
-                    // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
-                    // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed without the space bar pressed.
-                    thisMove.yAllowedDistance -= Magic.LEGACY_LIQUID_GRAVITY;
-                }
                 //*--------Player.java, travel(). Apply swimming speed-------*
                 // 1.13 swimming speed depends on the looking direction vector of the player.
                 // Small note: the game here does NOT explicitly ensure that the player is also in water. Thus, this should be checked outside the from.isInLiquid() condition
@@ -1736,10 +1801,6 @@ public class SurvivalFly extends Check {
                     data.jumpDelay = Magic.MAX_JUMP_DELAY;
                     thisMove.hasImpulse = AlmostBoolean.YES;
                     // (Can't set thisMove.isJump yet.)
-                }
-                if (BridgeMisc.hasGravity(player) && pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
-                    yTheoreticalDistance[0] -= Magic.LEGACY_LIQUID_GRAVITY;
-                    yTheoreticalDistance[1] -= Magic.LEGACY_LIQUID_GRAVITY;
                 }
                 if (Bridge1_13.isSwimming(player) && !player.isInsideVehicle()) {
                     Vector lookVector = TrigUtil.getLookingDirection(to, player);
@@ -1931,10 +1992,10 @@ public class SurvivalFly extends Check {
             }
         }
         /*
-         * 1: See {@link MoveData#isPossibleStoppingMotion()}
          *  Because this move is not sent by the client and cannot be predicted through normal means, we have to brute force it.
          */
-        if (hDistanceAboveLimit > 0.0 && lastMove.isPossibleStoppingMotion(pData.getClientVersion())) {
+        if (hDistanceAboveLimit > 0.0 && lastMove.possibleStopMotion) {
+            lastMove.possibleStopMotion = false;
             tags.add("stop_motion");
             double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
             hAllowedDistance = res[0];
