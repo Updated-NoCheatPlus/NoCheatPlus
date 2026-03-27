@@ -90,7 +90,7 @@ public class LostGround {
         // TODO: Is this still relevant? (Likely not)
         if (hDistance <= Magic.Minecraft_minMoveSqDistance && from.isOnGround(Magic.Minecraft_minMoveSqDistance)
             && (MaterialUtil.LANTERNS.contains(from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() + 2.0), from.getBlockZ())) || data.joinOrRespawn)) {
-            return applyLostGround(player, from, true, thisMove, data, "0.03", tags, from);
+            return applyLostGround(player, from, true, thisMove, data, "0.03", tags);
         }
         if (!MathUtil.inRange(0.0001, hDistance, 1.5)) { 
             // Lost ground only happens with enough horizontal motion and not too much either.
@@ -105,7 +105,7 @@ public class LostGround {
             if (from.isOnGround(1.0) && BlockProperties.isOnGroundShuffled(to.getWorld(), to.getBlockCache(), from.getX(), from_Y, from.getZ(), to.getX(), to.getY(), to.getZ(), horizontalMargin, to.getyOnGround(), 0.0)) {
                 thisMove.couldStepUp = true;
                 Improbable.feed(player, 0.5f, System.currentTimeMillis());
-                return applyLostGround(player, from, false, thisMove, data, "couldstep", tags, from);
+                return applyLostGround(player, from, false, thisMove, data, "couldstep", tags);
             }
         }
 
@@ -153,7 +153,7 @@ public class LostGround {
         final int tick = TickTask.getTick();
         if (from.isOnGroundOpportune(cc.yOnGround, 0L, blockChangeTracker, data.blockChangeRef, tick)) {
             // NOTE: Not sure with setBackSafe here (could set back a hundred blocks on parkour).
-            return applyLostGround(player, from, false, data.playerMoves.getCurrentMove(), data, "past", tags, from);
+            return applyLostGround(player, from, false, data.playerMoves.getCurrentMove(), data, "past", tags);
         }
         return false;
     }
@@ -312,12 +312,11 @@ public class LostGround {
      * @param data
      * @param tag         Added to "lostground_" as tag.
      * @param tags
-     * @param from
      * @return Always true.
      */
     private static boolean applyLostGround(final Player player, final PlayerLocation refLoc, final boolean setBackSafe,
                                            final PlayerMoveData thisMove, final MovingData data, final String tag,
-                                           final Collection<String> tags, PlayerLocation from) {
+                                           final Collection<String> tags) {
         // Set the new setBack and reset the jumpPhase.
         if (setBackSafe) {
             data.setSetBack(refLoc);
@@ -325,6 +324,6 @@ public class LostGround {
         else {
             // Keep Set back.
         }
-        return applyLostGround(player, thisMove, data, tag, tags, refLoc.getMCAccess(), from);
+        return applyLostGround(player, thisMove, data, tag, tags, refLoc.getMCAccess(), refLoc);
     }
 }
