@@ -508,31 +508,23 @@ public class BlockProperties {
 
     /**
      * NMS friction factors library for vertical motion
-     * 
+     *
      * @param entity
-     * @param location Inaccurate with split moves, should be avoided.
-     * @param yOnGround
-     * @param thisMove Should be used over location to compose the correct position (split moves) 
-     * @return the factor 
+     * @param from   Should be used over location to compose the correct position (split moves)
+     * @return the factor
      */
-    public static final double getVerticalFrictionFactor(final LivingEntity entity, final Location location, final double yOnGround, PlayerMoveData thisMove) {
-        final BlockCache blockCache = wrapBlockCache.getBlockCache();
-        blockCache.setAccess(location.getWorld());
-        if (entity instanceof Player) {
-            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
-        }
-        eLoc.setBlockCache(blockCache);
-        Location loc = new Location(location.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
-        eLoc.set(loc, entity, yOnGround);
+    public static final double getVerticalFrictionFactor(final LivingEntity entity, PlayerLocation from) {
         double friction;
-        if (eLoc.isInWater()) {
-            thisMove.submergedWaterHeight = eLoc.getSubmergedLiquidHeight(BlockFlags.F_WATER);
+        // TODO: Need to adapt for ridable entities later on.
+        final PlayerMoveData thisMove = DataManager.getPlayerData((Player) entity).getGenericInstance(MovingData.class).playerMoves.getCurrentMove();
+        if (from.isInWater()) {
+            thisMove.submergedWaterHeight = from.getSubmergedLiquidHeight(BlockFlags.F_WATER);
             friction = Magic.WATER_VERTICAL_INERTIA;
         }
-        else if (eLoc.isInLava()) {
-            double liquidHeight = eLoc.getSubmergedLiquidHeight(BlockFlags.F_LAVA);
+        else if (from.isInLava()) {
+            double liquidHeight = from.getSubmergedLiquidHeight(BlockFlags.F_LAVA);
             thisMove.submergedLavaHeight = liquidHeight;
-            if (liquidHeight <= (eLoc.getEyeHeight() < 0.4D ? 0.0D : 0.4D)) {
+            if (liquidHeight <= (from.getEyeHeight() < 0.4D ? 0.0D : 0.4D)) {
                 friction = Magic.WATER_VERTICAL_INERTIA;
             }
             else friction = Magic.LAVA_VERTICAL_INERTIA;
@@ -540,8 +532,6 @@ public class BlockProperties {
         else {
             friction = Magic.FRICTION_MEDIUM_AIR;
         }
-        blockCache.cleanup();
-        eLoc.cleanup();
         return friction;
     }
     
@@ -549,24 +539,10 @@ public class BlockProperties {
      * NMS block friction library for horizontal speed
      *
      * @param entity
-     * @param rawLoc Non-corrected location (split moves, looking direction (...) See MovingListener.java, split move mechanic), should be avoided.
-     * @param yOnGround
-     * @param thisMove Movement to compose the corrected location's coordinate with.
+     * @param from   Movement to compose the corrected location's coordinate with.
      * @return the factor
      */
-    public static final float getHorizontalFrictionFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, PlayerMoveData thisMove) {
-        // Set-up caching
-        final BlockCache blockCache = wrapBlockCache.getBlockCache();
-        if (entity instanceof Player) {
-            // Flying players are ignored by the game.
-            if (((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) return 1.0f;
-            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
-        }
-        blockCache.setAccess(rawLoc.getWorld());
-        eLoc.setBlockCache(blockCache);
-        // Compose and set the split-move-corrected location.
-        final Location correctedLoc = new Location(rawLoc.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
-        eLoc.set(correctedLoc, entity, yOnGround);
+    public static final float getHorizontalFrictionFactor(final LivingEntity entity, PlayerLocation from) {
         ////////////////////////////////////////////////////////////////
         // Determine which position should be used to grab the block. // 
         ////////////////////////////////////////////////////////////////
@@ -576,10 +552,10 @@ public class BlockProperties {
         final Material blockBelow;
         // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
         if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-            BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
-            blockBelow = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
+            BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(from.getBlockCache(), from.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
+            blockBelow = from.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
         }
-        else blockBelow = eLoc.getBlockType(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
+        else blockBelow = from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() - yBelow), from.getBlockZ());
         //////////////////////////////////////////////////////////////
         // Finally, determine the friction for the grabbed block.   //
         //////////////////////////////////////////////////////////////
@@ -594,8 +570,6 @@ public class BlockProperties {
         else if (isSlime(blockBelow)) {
             friction = 0.8f;
         }
-        blockCache.cleanup();
-        eLoc.cleanup();
         return friction;
     }
 
@@ -603,38 +577,28 @@ public class BlockProperties {
      * NMS stuck-in-block vertical speed factor library.
      *
      * @param entity
-     * @param location  Inaccurate with split moves, should be avoided.
-     * @param yOnGround
-     * @param thisMove  Should be used over location to compose the correct position (split moves)
+     * @param from   Should be used over location to compose the correct position (split moves)
      * @return the factor
      */
-    public static final double getStuckInBlockVerticalFactor(final LivingEntity entity, final Location location, final double yOnGround, PlayerMoveData thisMove) {
-        final BlockCache blockCache = wrapBlockCache.getBlockCache();
+    public static final double getStuckInBlockVerticalFactor(final LivingEntity entity, PlayerLocation from) {
         if (entity instanceof Player) {
             // Flying player are ignored by the game.
             if (((Player) entity).isFlying()) return 1.0f;
-            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
-        blockCache.setAccess(location.getWorld());
-        eLoc.setBlockCache(blockCache);
-        Location loc = new Location(location.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
-        eLoc.set(loc, entity, yOnGround);
         double stuckInFactor = 1.0;
-        if (eLoc.isInBerryBush()) {
+        if (from.isInBerryBush()) {
             stuckInFactor = 0.75;
         }
-        else if (eLoc.isInPowderSnow()) {
+        else if (from.isInPowderSnow()) {
             stuckInFactor = 1.5;
         }
-        else if (eLoc.isInWeb()) {
+        else if (from.isInWeb()) {
             // Introduced roughly in 1.20.5
             if (BridgePotionEffect.WEAVING != null && entity.hasPotionEffect(PotionEffectType.WEAVING)) {
                 stuckInFactor = 0.25;
             }
             else stuckInFactor = 0.05;
         }
-        blockCache.cleanup();
-        eLoc.cleanup();
         return stuckInFactor;
     }
     
@@ -642,37 +606,27 @@ public class BlockProperties {
      * NMS stuck-in-block factor library for horizontal speed.
      *
      * @param entity
-     * @param rawLoc
-     * @param yOnGround
-     * @param thisMove
+     * @param from
      */
-    public static final double getStuckInBlockHorizontalFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, final PlayerMoveData thisMove) {
-        final BlockCache blockCache = wrapBlockCache.getBlockCache();
+    public static final double getStuckInBlockHorizontalFactor(final LivingEntity entity, final PlayerLocation from) {
         if (entity instanceof Player) {
             // Flying player are ignored by the game.
             if (((Player) entity).isFlying()) return 1.0f;
-            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
-        blockCache.setAccess(rawLoc.getWorld());
-        Location loc = new Location(rawLoc.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
-        eLoc.setBlockCache(blockCache);
-        eLoc.set(loc, entity, yOnGround);
         double stuckInFactor = 1.0D;
-        if (eLoc.isInWeb()) {
+        if (from.isInWeb()) {
             if (BridgePotionEffect.WEAVING != null && entity.hasPotionEffect(PotionEffectType.WEAVING)) {
                 // Introduced roughly in 1.20.5
                 stuckInFactor = 0.5D;
             }
             else stuckInFactor = 0.25D;
         }
-        else if (eLoc.isInBerryBush()) {
+        else if (from.isInBerryBush()) {
             stuckInFactor = 0.8D;
         }
-        else if (eLoc.isInPowderSnow()) {
+        else if (from.isInPowderSnow()) {
             stuckInFactor = 0.9D;
         }
-        blockCache.cleanup();
-        eLoc.cleanup();
         return stuckInFactor;
     }
 
@@ -681,25 +635,16 @@ public class BlockProperties {
      * This is retrieved according to how vanilla does it (Entity.java, getBlockSpeedFactor()).
      *
      * @param entity
-     * @param rawLoc Non-corrected location (split moves, looking direction (...) See MovingListener.java, split move mechanic), should be avoided.
-     * @param yOnGround
-     * @param thisMove Movement to compose the corrected location's coordinate with.
+     * @param from   Movement to compose the corrected location's coordinate with.
      */
-    public static final float getBlockSpeedFactor(final LivingEntity entity, final Location rawLoc, final double yOnGround, PlayerMoveData thisMove) {
-        final BlockCache blockCache = wrapBlockCache.getBlockCache();
+    public static final float getBlockSpeedFactor(final LivingEntity entity, PlayerLocation from) {
         if (entity instanceof Player) {
             // Flying player are ignored by the game.
             if (((Player) entity).isFlying() || Bridge1_9.isGliding(entity)) return 1.0f;
-
-            blockCache.setPlayerData(DataManager.getPlayerData((Player)entity));
         }
         final IPlayerData pData = DataManager.getPlayerData((Player) entity);
-        blockCache.setAccess(rawLoc.getWorld());
-        eLoc.setBlockCache(blockCache);
-        final Location correctedLoc = new Location(rawLoc.getWorld(), thisMove.from.getX(), thisMove.from.getY(), thisMove.from.getZ());
-        eLoc.set(correctedLoc, entity, yOnGround);
         float speedFactor = 1.0f;
-        final Material blockBelow = eLoc.getBlockType();
+        final Material blockBelow = from.getBlockType();
         // NOTE: Technically, vanilla's order is inverted: honey block is checked first, then soul sand.
         // Might be a problem with when standing on half-and-half.
         if (blockBelow == Material.SOUL_SAND) {
@@ -718,10 +663,10 @@ public class BlockProperties {
             final Material blockBelow2;
             // On 1.20, the block that is closest to the player position is considered, not the one on which the player is at the center.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
-                BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(blockCache, eLoc.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
-                blockBelow2 = eLoc.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
+                BlockCoord supportingBlock = SupportingBlockUtils.getOnPos(from.getBlockCache(), from.getLocation(), pData.getSupportingBlockData(), (float)yBelow);
+                blockBelow2 = from.getBlockType(supportingBlock.getX(), supportingBlock.getY(), supportingBlock.getZ());
             }
-            else blockBelow2 = eLoc.getBlockType(eLoc.getBlockX(), Location.locToBlock(eLoc.getY() - yBelow), eLoc.getBlockZ());
+            else blockBelow2 = from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() - yBelow), from.getBlockZ());
             if (blockBelow2 == Material.SOUL_SAND) {
                 speedFactor = BridgeEnchant.hasSoulSpeed((Player) entity) ? 1.0f : 0.4f;
             } 
@@ -729,8 +674,6 @@ public class BlockProperties {
                 speedFactor = 0.4f;
             }
         }
-        blockCache.cleanup();
-        eLoc.cleanup();
         return speedFactor;
     }
 

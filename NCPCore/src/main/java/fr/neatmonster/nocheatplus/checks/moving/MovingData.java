@@ -390,7 +390,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         // Reset to setBack.
         resetPlayerPositions(setBack);
         adjustLiftOffEnvelope(setBack);
-        adjustMediumProperties(loc, cc, player, playerMoves.getCurrentMove());
+        adjustMediumProperties(player, setBack);
         // Only setSetBack if no set back location is there.
         if (setBack == null) {
             setSetBack(setBack);
@@ -415,16 +415,16 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
 
     /**
      * Adjust medium properties according to the medium.
-     * @param loc
-     * @param cc
+     *
      * @param player
+     * @param from
      */
-    public void adjustMediumProperties(final Location loc, final MovingConfig cc, final Player player, final PlayerMoveData thisMove) {
-        nextFrictionHorizontal = BlockProperties.getHorizontalFrictionFactor(player, loc, cc.yOnGround, thisMove);
-        nextStuckInBlockHorizontal = BlockProperties.getStuckInBlockHorizontalFactor(player, loc, cc.yOnGround, thisMove);
-        nextBlockSpeedMultiplier = MathUtil.lerp(attributeAccess.getHandle().getMovementEfficiency(player), BlockProperties.getBlockSpeedFactor(player, loc, cc.yOnGround, thisMove), 1.0f);
-        nextFrictionVertical = BlockProperties.getVerticalFrictionFactor(player, loc, cc.yOnGround, thisMove);
-        nextStuckInBlockVertical = BlockProperties.getStuckInBlockVerticalFactor(player, loc, cc.yOnGround, thisMove);
+    public void adjustMediumProperties(final Player player, final PlayerLocation from) {
+        nextFrictionHorizontal = BlockProperties.getHorizontalFrictionFactor(player, from);
+        nextStuckInBlockHorizontal = BlockProperties.getStuckInBlockHorizontalFactor(player, from);
+        nextBlockSpeedMultiplier = MathUtil.lerp(attributeAccess.getHandle().getMovementEfficiency(player), BlockProperties.getBlockSpeedFactor(player, from), 1.0f);
+        nextFrictionVertical = BlockProperties.getVerticalFrictionFactor(player, from);
+        nextStuckInBlockVertical = BlockProperties.getStuckInBlockVerticalFactor(player, from);
     }
     
     /**

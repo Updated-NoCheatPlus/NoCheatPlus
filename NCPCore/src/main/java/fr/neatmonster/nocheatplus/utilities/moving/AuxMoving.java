@@ -93,7 +93,7 @@ public class AuxMoving implements IRegisterAsGenericInstance {
     /**
      * Determine "some jump amplifier": 1 is jump boost, 2 is jump boost II. <br>
      * NOTE: This is not the original amplifier value (use mcAccess for that).
-     * @param mcPlayer
+     * @param player
      * @return
      */
     public synchronized final double getJumpAmplifier(final Player player) {
@@ -104,7 +104,7 @@ public class AuxMoving implements IRegisterAsGenericInstance {
      * Convenience method to do data.resetPositions, data.adjustLiftOffEnvelope and
      * data.adjustMediumProperties, wrapping given loc with a PlayerLocation
      * instance.
-     * 
+     *
      * @param player
      * @param loc
      * @param data
@@ -115,7 +115,7 @@ public class AuxMoving implements IRegisterAsGenericInstance {
         moveInfo.set(player, loc, null, cc.yOnGround);
         data.resetPlayerPositions(moveInfo.from);
         data.adjustLiftOffEnvelope(moveInfo.from);
-        data.adjustMediumProperties(loc, cc, player, data.playerMoves.getCurrentMove());
+        data.adjustMediumProperties(player, moveInfo.from);
         returnPlayerMoveInfo(moveInfo);
     }
 

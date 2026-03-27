@@ -153,7 +153,7 @@ public class SurvivalFly extends Check {
         }
 
         // Adjust block properties (friction, block speed etc...)
-        data.adjustMediumProperties(player.getLocation(), cc, player, thisMove);
+        data.adjustMediumProperties(player, from);
         
         // Ground somehow appeared out of thin air (block place).
         // This move is registered as "coming from ground" despite the player not having moved onto ground with the previous move, which was fully in air.
@@ -1387,7 +1387,8 @@ public class SurvivalFly extends Check {
                     xTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
                     zTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
                     tags.add("hdistzero");                  
-                } else {
+                } 
+                else {
                     xTheoreticalDistance[thisMove.hiddenDistanceIndex] += result[0];
                     zTheoreticalDistance[thisMove.hiddenDistanceIndex] += result[1];
                 }

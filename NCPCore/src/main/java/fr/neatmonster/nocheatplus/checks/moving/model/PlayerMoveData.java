@@ -17,7 +17,6 @@ package fr.neatmonster.nocheatplus.checks.moving.model;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
@@ -40,10 +39,10 @@ public class PlayerMoveData extends MoveData {
     /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. NOTE: this is NOT the toggle glide moment, but the entire gliding phase. */
     public boolean isGliding;
     
-    /** Represents how far the player is submerged in lava. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
+    /** Represents how far the player is submerged in lava. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, fr.neatmonster.nocheatplus.utilities.location.PlayerLocation)} */
     public double submergedLavaHeight;
     
-    /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, Location, double, PlayerMoveData)} */
+    /** Represents how far the player is submerged in water. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, fr.neatmonster.nocheatplus.utilities.location.PlayerLocation)} */
     public double submergedWaterHeight;
     
     /** A flag to indicate that the player is currenrtly lunging forward due to left clicking with a Spear in hand with Lunge enchantement. Set in CombatListener. */

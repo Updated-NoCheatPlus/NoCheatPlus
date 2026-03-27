@@ -949,8 +949,6 @@ public class VehicleChecks extends CheckListener {
      * 
      * @param player
      * @param vehicle
-     * @param from
-     * @param to
      * @param fake true if the event was not fired by an external source (just gets noted).
      */
     private void outputDebugVehicleMove(final Player player, final Entity vehicle, final VehicleMoveData thisMove, final boolean fake) {
