@@ -335,23 +335,25 @@ public class RichEntityLocation extends RichBoundsLocation {
         if (inLava != null) {
             return inLava;
         }
-        // 1.13 and below clients use this no-sense method to check if the player is in lava
+        // 1.13 and below use this extra contraction for lava collision.
         // 1.8 client, Entity.java -> handleLavaMovement() -> isMaterialInBB in World.java
         if (GenericVersion.isLowerThan(entity, "1.14")) {
             // Force-override the inLava result from RichBoundsLocation.
             inLava = false;
-            double[] aaBB = getBoundingBox();
-            int iMinX = MathUtil.floor(aaBB[0] + 0.1);
-            int iMaxX = MathUtil.floor(aaBB[3] - 0.1 + 1.0);
-            int iMinY = MathUtil.floor(aaBB[1] + 0.4);
-            int iMaxY = MathUtil.floor(aaBB[4] - 0.4 + 1.0);
-            int iMinZ = MathUtil.floor(aaBB[2] + 0.1);
-            int iMaxZ = MathUtil.floor(aaBB[5] - 0.1 + 1.0);
+            double extraContraction = 0.4;
+            final int iMinX = MathUtil.floor(minX + 0.001);
+            final int iMaxX = MathUtil.ceil(maxX - 0.001);
+            final int iMinY = MathUtil.floor(minY + 0.001 + extraContraction); 
+            final int iMaxY = MathUtil.ceil(maxY - 0.001 - extraContraction);
+            final int iMinZ = MathUtil.floor(minZ + 0.001);
+            final int iMaxZ = MathUtil.ceil(maxZ - 0.001);
+            // NMS collision method
             for (int x = iMinX; x < iMaxX; x++) {
                 for (int y = iMinY; y < iMaxY; y++) {
                     for (int z = iMinZ; z < iMaxZ; z++) {
-                        final IBlockCacheNode node = blockCache.getOrCreateBlockCacheNode(x, y, z, false);
-                        if ((BlockFlags.getBlockFlags(node.getType()) & BlockFlags.F_LAVA) != 0) {
+                        double liquidHeight = BlockProperties.getLiquidHeightAt(blockCache, x, y, z, BlockFlags.F_LAVA, true);
+                        if (iMaxY >= y + 1 - liquidHeight && liquidHeight != 0.0) {
+                            // Collided.
                             inLava = true;
                             return inLava;
                         }
@@ -396,8 +398,7 @@ public class RichEntityLocation extends RichBoundsLocation {
                 for (int y = iMinY; y < iMaxY; y++) {
                     for (int z = iMinZ; z < iMaxZ; z++) {
                         double liquidHeight = BlockProperties.getLiquidHeightAt(blockCache, x, y, z, BlockFlags.F_WATER, true);
-                        double liquidHeightToWorld = y + liquidHeight;
-                        if (liquidHeightToWorld >= minY + 0.001 + extraContraction && liquidHeight != 0.0) {
+                        if (iMaxY >= y + 1 - liquidHeight && liquidHeight != 0.0) {
                             // Collided.
                             inWater = true;
                             return inWater;

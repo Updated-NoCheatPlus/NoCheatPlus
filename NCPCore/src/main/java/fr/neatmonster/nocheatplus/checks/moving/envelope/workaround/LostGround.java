@@ -21,6 +21,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
@@ -125,13 +126,13 @@ public class LostGround {
             // Usually, this corresponds to a missed "fromOnGround" position with this move (with last missing a ground collision too, but with the "to" position).
             // (In other words= lastMove: AIR -> TO LOST GROUND[see below](AIR)   -   thisMove: FROM LOST GROUND(AIR) -> AIR
             if (interpolateGround(player, from.getBlockCache(), from.getWorld(), from.getMCAccess(), "_from", tags, data,
-                                 from.getX(), from.getY(), from.getZ(), lastMove, from.getBoxMarginHorizontal(), from.getyOnGround(), from)) {
+                                 from.getX(), from.getY(), from.getZ(), lastMove, from.getBoxMarginHorizontal(), from.getyOnGround())) {
                 thisMove.fromLostGround = true;
                 return true;
             }
             // Try interpolating the ground collision from this-from to this-to.
             if (!to.isOnGround() && interpolateGround(player, to.getBlockCache(), to.getWorld(), to.getMCAccess(), tags, "_to", data,
-                                  to.getX(), to.getY(), to.getZ(), from.getX(), from.getY(), from.getZ(), thisMove.hDistance, to.getBoxMarginHorizontal(), to.getyOnGround(), from)) {
+                                  to.getX(), to.getY(), to.getZ(), from.getX(), from.getY(), from.getZ(), thisMove.hDistance, to.getBoxMarginHorizontal(), to.getyOnGround())) {
                 thisMove.toLostGround = true;
                 return true;
             }
@@ -178,7 +179,6 @@ public class LostGround {
      * @param lastHDistance
      * @param boxMarginHorizontal AABB horizontal width at some resolution
      * @param yOnGround
-     * @param form
      * @return
      * @See <a href="https://gyazo.com/5613ce5ab7bbb88b760c6b6e67fe35f4">
      * This screenshot for a visual representation of what's happening. </a>
@@ -187,7 +187,7 @@ public class LostGround {
     private static boolean interpolateGround(final Player player, final BlockCache blockCache, final World world,
                                              final MCAccess mcAccess, final Collection<String> tags, final String tag, final MovingData data, final double thisX, final double thisY,
                                              final double thisZ, double lastX, final double lastY,
-                                             double lastZ, final double lastHDistance, final double boxMarginHorizontal, final double yOnGround, PlayerLocation from) {
+                                             double lastZ, final double lastHDistance, final double boxMarginHorizontal, final double yOnGround) {
         // First: calculate vector towards last from.
         lastX -= thisX;
         lastZ -= thisZ;
@@ -210,7 +210,9 @@ public class LostGround {
         // (We don't add another xz-margin here, as the move should cover ground.)
         if (BlockProperties.isOnGroundShuffled(world, blockCache, thisX, thisY, thisZ, lastX, thisY, lastZ, boxMarginHorizontal, yOnGround, 0.0)) {
             // NOTE: data.fromY for set back is not correct, but currently it is more safe (needs instead: maintain a "distance to ground").
-            return applyLostGround(player, new Location(world, lastX, lastY, lastZ), true, data.playerMoves.getCurrentMove(), data, "interpolate" + tag, tags, mcAccess, from);
+            PlayerLocation pLoc = new PlayerLocation(NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(MCAccess.class), blockCache);
+            pLoc.set(new Location(world, lastX, lastY, lastZ), player);
+            return applyLostGround(player, pLoc, true, data.playerMoves.getCurrentMove(), data, "interpolate" + tag, tags);
         } 
         return false;
     }
@@ -231,14 +233,13 @@ public class LostGround {
      * @param lastMove            Last move's coordinates...
      * @param boxMarginHorizontal Center to edge, at some resolution.
      * @param yOnGround
-     * @param from
      * @return
      */
     private static boolean interpolateGround(final Player player, final BlockCache blockCache, final World world, final MCAccess mcAccess, final String tag,
                                              final Collection<String> tags, final MovingData data, final double thisX,
                                              final double thisY, final double thisZ, final PlayerMoveData lastMove, final double boxMarginHorizontal,
-                                             final double yOnGround, PlayerLocation from) {
-        return interpolateGround(player, blockCache, world, mcAccess, tags, tag, data, thisX, thisY, thisZ, lastMove.from.getX(), lastMove.from.getY(), lastMove.from.getZ(), lastMove.hDistance, boxMarginHorizontal, yOnGround, from);
+                                             final double yOnGround) {
+        return interpolateGround(player, blockCache, world, mcAccess, tags, tag, data, thisX, thisY, thisZ, lastMove.from.getX(), lastMove.from.getY(), lastMove.from.getZ(), lastMove.hDistance, boxMarginHorizontal, yOnGround);
     }
 
 
@@ -272,33 +273,6 @@ public class LostGround {
             player.sendMessage("[Moving] Ground collision interpolated for: " + tag.toUpperCase(Locale.ROOT) + " position.");
         }
         return true;
-    }
-
-
-    /**
-     * Apply lost-ground workaround.
-     *
-     * @param player
-     * @param refLoc      (Bukkit Location)
-     * @param setBackSafe If to use the given location as set back location.
-     * @param thisMove
-     * @param data
-     * @param tag         Added to "lostground_" as tag.
-     * @param tags
-     * @param mcAccess
-     * @param from
-     * @return Always true.
-     */
-    private static boolean applyLostGround(final Player player, final Location refLoc, final boolean setBackSafe,
-                                           final PlayerMoveData thisMove, final MovingData data, final String tag,
-                                           final Collection<String> tags, final MCAccess mcAccess, PlayerLocation from) {
-        if (setBackSafe) {
-            data.setSetBack(refLoc);
-        }
-        else {
-            // Keep Set back.
-        }
-        return applyLostGround(player, thisMove, data, tag, tags, mcAccess, from);
     }
 
 
