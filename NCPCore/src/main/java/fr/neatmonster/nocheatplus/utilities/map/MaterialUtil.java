@@ -144,7 +144,8 @@ public class MaterialUtil {
                         StringUtil.join(set, ", ", builder);
                         builder.append('\n');
                     }
-                } catch (IllegalArgumentException | IllegalAccessException e) {}
+                } 
+                catch (IllegalArgumentException | IllegalAccessException e) {}
             }
         }
         StaticLog.log(level, builder.toString());
@@ -158,75 +159,48 @@ public class MaterialUtil {
 
     public static final Set<Material> ALL_BUTTONS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_button", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> ALL_DOORS = Collections.unmodifiableSet(
-            BridgeMaterial.getByPrefixAndSuffix(
-                    null, Arrays.asList("_door"), AlmostBoolean.YES,
-                    "trap", "legacy")
-            );
+    public static final Set<Material> ALL_DOORS = Collections.unmodifiableSet(BridgeMaterial.getByPrefixAndSuffix(null, Arrays.asList("_door"), AlmostBoolean.YES, "trap", "legacy"));
 
-    public static final Set<Material> COPPER_BLOCKS = Collections.unmodifiableSet(addBlocks(
-            BridgeMaterial.getBySuffix("_copper", AlmostBoolean.YES), "copper_block", "waxed_copper_block"));
+    public static final Set<Material> COPPER_BLOCKS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_copper", AlmostBoolean.YES), "copper_block", "waxed_copper_block"));
 
-    public static final Set<Material> ALL_REFINED_COPPER_BLOCKS = Collections.unmodifiableSet(
-            BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("copper"), "ore", "raw"));
+    public static final Set<Material> ALL_REFINED_COPPER_BLOCKS = Collections.unmodifiableSet(BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("copper"), "ore", "raw"));
 
-    public static final Set<Material> COPPER_BULBS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_bulb", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_BULBS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_bulb", AlmostBoolean.YES));
 
-    public static final Set<Material> COPPER_GRATES = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_grate", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_GRATES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_grate", AlmostBoolean.YES));
             
-    public static final Set<Material> COPPER_BARS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_bars", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_BARS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_bars", AlmostBoolean.YES));
     
-    public static final Set<Material> COPPER_CHESTS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_chest", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_CHESTS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_chest", AlmostBoolean.YES));
     
-    public static final Set<Material> COPPER_CHAINS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_chain", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_CHAINS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_chain", AlmostBoolean.YES));
     
-    public static final Set<Material> COPPER_LANTERNS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_lantern", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_LANTERNS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_lantern", AlmostBoolean.YES));
     
-    public static final Set<Material> COPPER_LIGHTNING_RODS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("lightning_rod", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_LIGHTNING_RODS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("lightning_rod", AlmostBoolean.YES));
             
-    public static final Set<Material> COPPER_GOLEM_STATUES = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("copper_golem_statue", AlmostBoolean.YES));
+    public static final Set<Material> COPPER_GOLEM_STATUES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("copper_golem_statue", AlmostBoolean.YES));
 
-    public static final Set<Material> ALL_TUFF = Collections.unmodifiableSet(
-            BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("tuff")));
+    public static final Set<Material> ALL_TUFF = Collections.unmodifiableSet(BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("tuff")));
 
-    public static final Set<Material> ALL_CANDLES = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("candle", AlmostBoolean.YES));
+    public static final Set<Material> ALL_CANDLES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("candle", AlmostBoolean.YES));
 
-    public static final Set<Material> LANTERNS = Collections.unmodifiableSet(
-            BridgeMaterial.getAllBlocks("lantern", "soul_lantern"));
+    public static final Set<Material> LANTERNS = Collections.unmodifiableSet(BridgeMaterial.getAllBlocks("lantern", "soul_lantern"));
 
-    public static final Set<Material> ALL_CANDLE_CAKE = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("candle_cake", AlmostBoolean.YES));
+    public static final Set<Material> ALL_CANDLE_CAKE = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("candle_cake", AlmostBoolean.YES));
 
-    public static final Set<Material> ALL_WALLS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("_wall", AlmostBoolean.YES, "legacy"));
+    public static final Set<Material> ALL_WALLS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_wall", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> ALL_STAIRS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("_stairs", AlmostBoolean.YES, "legacy"));
+    public static final Set<Material> ALL_STAIRS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_stairs", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> ALL_SWORDS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("_sword", AlmostBoolean.YES, "legacy"));
+    public static final Set<Material> ALL_SWORDS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_sword", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> ALL_TRAP_DOORS = Collections.unmodifiableSet(
-            BridgeMaterial.getByPrefixAndSuffix(
-                    null, Arrays.asList("trapdoor", "trap_door"), AlmostBoolean.YES,
-                    "legacy")
-            );
+    public static final Set<Material> ALL_TRAP_DOORS = Collections.unmodifiableSet(BridgeMaterial.getByPrefixAndSuffix(null, Arrays.asList("trapdoor", "trap_door"), AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> ALL_PRESSURE_PLATES = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("_pressure_plate", AlmostBoolean.YES, "legacy"));
+    public static final Set<Material> ALL_PRESSURE_PLATES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_pressure_plate", AlmostBoolean.YES, "legacy"));
 
-    /** Includes Lightning rods besides end rods!! To be used only if you deal with shapes, because while they share the same shape, the block-breaking properties differ */
-    public static final Set<Material> RODS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("_rod", AlmostBoolean.YES, "legacy"));
+    /** Includes Lightning rods besides end rods!! To be used only if you deal with shapes, because while they share the same shape, the block-breaking properties differs */
+    public static final Set<Material> RODS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_rod", AlmostBoolean.YES, "legacy"));
 
     public static final Set<Material> AMETHYST = Collections.unmodifiableSet(addBlocks(
             BridgeMaterial.getByPrefixAndSuffix(
@@ -243,9 +217,7 @@ public class MaterialUtil {
                     "legacy", "_wall"
                     ), "standing_banner"));
 
-    public static final Set<Material> BEDS = Collections.unmodifiableSet(addBlocks(
-            BridgeMaterial.getBySuffix("_bed", AlmostBoolean.YES, 
-                    "legacy"), "bed_block"));
+    public static final Set<Material> BEDS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_bed", AlmostBoolean.YES, "legacy"), "bed_block"));
 
     public static final Set<Material> BOATS;
     public static final Set<Material> ALL_SEEDS;
@@ -268,29 +240,21 @@ public class MaterialUtil {
 
     private static final List<EntityType> BOATS_TYPE = collectTypesBySuffix("BOAT");
     
-    public static final Set<Material> CARPETS = Collections.unmodifiableSet(addBlocks(
-            BridgeMaterial.getBySuffix("_carpet", AlmostBoolean.YES, "legacy"), 
-            "carpet"));
+    public static final Set<Material> CARPETS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_carpet", AlmostBoolean.YES, "legacy"), "carpet"));
 
-    public static final Set<Material> CAULDRON = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("cauldron", AlmostBoolean.YES, "legacy"));
+    public static final Set<Material> CAULDRON = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("cauldron", AlmostBoolean.YES, "legacy"));
 
-    public static final Set<Material> CONCRETE_BLOCKS = Collections.unmodifiableSet(addBlocks(
-            BridgeMaterial.getBySuffix("_concrete", AlmostBoolean.YES, "legacy"),
-            "concrete"));
+    public static final Set<Material> CONCRETE_BLOCKS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_concrete", AlmostBoolean.YES, "legacy"), "concrete"));
 
     public static final Set<Material> CONCRETE_POWDER_BLOCKS = Collections.unmodifiableSet(addBlocks(
             BridgeMaterial.getBySuffix("_concrete_powder", AlmostBoolean.YES, "legacy"),
             "concrete_powder"));
 
     /** Dead or alive. */
-    public static final Set<Material> CORAL_BLOCKS = Collections.unmodifiableSet(
-            BridgeMaterial.getBySuffix("coral_block", AlmostBoolean.YES, "legacy")
-            );
+    public static final Set<Material> CORAL_BLOCKS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("coral_block", AlmostBoolean.YES, "legacy"));
 
     /**
-     * Dead coral parts, that have been passable alive, but which are like stone
-     * when dead.
+     * Dead coral parts.
      */
     public static final Set<Material> DEAD_CORAL_PARTS = Collections.unmodifiableSet(
             BridgeMaterial.getByPrefixAndSuffix(
@@ -395,11 +359,7 @@ public class MaterialUtil {
                     Arrays.asList("_log"), AlmostBoolean.YES)
             );
 
-    public static final Set<Material> STRIPPED_WOOD_BLOCKS = Collections.unmodifiableSet(
-            BridgeMaterial.getByPrefixAndSuffix(
-                    Arrays.asList("stripped_"), 
-                    Arrays.asList("_wood"), AlmostBoolean.YES)
-            );
+    public static final Set<Material> STRIPPED_WOOD_BLOCKS = Collections.unmodifiableSet(BridgeMaterial.getByPrefixAndSuffix(Arrays.asList("stripped_"), Arrays.asList("_wood"), AlmostBoolean.YES));
 
     /** All ordinary terracotta (hard clay) blocks. */
     public static final Set<Material> TERRACOTTA_BLOCKS = Collections.unmodifiableSet(addBlocks(
@@ -450,11 +410,9 @@ public class MaterialUtil {
                     ), "wall_banner"));
 
     /** All water blocks. */
-    public static final Set<Material> WATER = Collections.unmodifiableSet(
-            BridgeMaterial.getAllBlocks("water", "stationary_water"));
+    public static final Set<Material> WATER = Collections.unmodifiableSet(BridgeMaterial.getAllBlocks("water", "stationary_water"));
             
-     public static final Set<Material> WATER_PLANTS = Collections.unmodifiableSet(
-            BridgeMaterial.getAllBlocks("TALL_SEAGRASS", "KELP_PLANT", "SEAGRASS", "KELP"));
+    public static final Set<Material> WATER_PLANTS = Collections.unmodifiableSet(BridgeMaterial.getAllBlocks("TALL_SEAGRASS", "KELP_PLANT", "SEAGRASS", "KELP"));
 
     /** Wood types (1.13 rather). */
     public static final Set<Material> WOOD_BLOCKS = Collections.unmodifiableSet(addBlocks(
@@ -586,7 +544,8 @@ public class MaterialUtil {
                     "twisting_vines", "twisting_vines_plant",
                     "mangrove_propagule", "pink_petals", "torchflower", "torchflower_crop",
                     "pitcher_plant", "open_eyeblossom", "closed_eyeblossom", "pale_hanging_moss", 
-                    "leaf_litter", "cactus_flower", "short_dry_grass", "tall_dry_grass", "wildflowers"
+                    "leaf_litter", "cactus_flower", "short_dry_grass", "tall_dry_grass", "wildflowers",
+                    "golden_dandelion"
                     ),
             new HashSet<Material>(Arrays.asList(BridgeMaterial.TALL_GRASS, 
                     BridgeMaterial.WHEAT_CROPS, BridgeMaterial.CARROTS, 
@@ -594,20 +553,7 @@ public class MaterialUtil {
                     Material.PUMPKIN_STEM, Material.MELON_STEM,
                     BridgeMaterial.SUGAR_CANE, BridgeMaterial.BEETROOTS))
             ));
-
-    @SuppressWarnings("unchecked")
-	public static final Set<Material> FARMABLE = Collections.unmodifiableSet(join(new HashSet<Material>(Arrays.asList(BridgeMaterial.TALL_GRASS, 
-                    BridgeMaterial.WHEAT_CROPS, BridgeMaterial.CARROTS, 
-                    BridgeMaterial.POTATOES, BridgeMaterial.GRASS,
-                    Material.PUMPKIN_STEM, Material.MELON_STEM,
-                    BridgeMaterial.SUGAR_CANE, BridgeMaterial.BEETROOTS)),
-                WATER_PLANTS,
-                    BridgeMaterial.getAllBlocks("peony", "sunflower", "lilac", "rose_bush", "sweet_berry_bush", 
-                                                "cocoa", "double_plant", "fern", "large_fern", "attached_melon_stem", 
-                                                "attached_pumpkin_stem", "bamboo", "bamboo_sapling", "wildflowers", "pink_petals", "mangrove_propagule")
-
-
-));
+    
 
     /**
      * Sets of fully solid blocks (in terms of: can walk on, can't pass through,
@@ -643,10 +589,12 @@ public class MaterialUtil {
             ));
 
     /**
-     * Collections of blocks that are fully passable.
+     * Collections of blocks that are fully passable, COLLISION-WISE.
+     * Meaning that: one can pass through such a block, but visually, they can be interacted with.
+     * Blocks inserted in this list will get their F_GROUND and F_SOLID flag removed, if present.
      */
     @SuppressWarnings("unchecked")
-    public static final Set<Material> FULLY_PASSABLE_BLOCKS = Collections.unmodifiableSet(join(
+    public static final Set<Material> NO_COLLISION_BOX = Collections.unmodifiableSet(join(
             ALL_BUTTONS,
             ALL_PRESSURE_PLATES,
             BANNERS,
@@ -660,13 +608,6 @@ public class MaterialUtil {
                     BridgeMaterial.END_PORTAL,
                     BridgeMaterial.NETHER_PORTAL))
             
-            ));
-    /**
-     * Collections of blocks that are allowed all types of movement.
-     */
-    @SuppressWarnings("unchecked")
-    public static final Set<Material> LIQUID_BLOCKS = Collections.unmodifiableSet(join(
-            DEAD_CORAL_PARTS, WATER_PLANTS
             ));
 
 
@@ -763,7 +704,7 @@ public class MaterialUtil {
      * @return
      */
     public static boolean isFarmable(final Material mat) {
-        return isSeedable(mat) || FARMABLE.contains(mat);
+        return isSeedable(mat) || INSTANT_PLANTS.contains(mat);
     }
     
     /**

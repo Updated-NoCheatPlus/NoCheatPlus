@@ -19,8 +19,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import fr.neatmonster.nocheatplus.compat.blocks.BlockPropertiesSetup;
-import fr.neatmonster.nocheatplus.compat.blocks.IPatchBlockPropertiesSetup;
-import fr.neatmonster.nocheatplus.compat.blocks.init.vanilla.special.MultiClientProtocolBlockShapePatch;
 import fr.neatmonster.nocheatplus.config.WorldConfigProvider;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 
@@ -30,7 +28,7 @@ public class VanillaBlocksFactory {
         // Vanilla blocks (abort with first failure, low to high MC version).
         final List<BlockPropertiesSetup> setups = new LinkedList<BlockPropertiesSetup>();
         final List<String> success = new LinkedList<String>();
-        try{
+        try {
             setups.add(new BlocksMC1_5());
             setups.add(new BlocksMC1_6_1());
             setups.add(new BlocksMC1_7_2());
@@ -47,39 +45,21 @@ public class VanillaBlocksFactory {
             setups.add(new BlocksMC1_19());
             setups.add(new BlocksMC1_20());
             setups.add(new BlocksMC1_21());
+            setups.add(new BlocksMC26());
         }
-        catch(Throwable t){}
-        for (final BlockPropertiesSetup setup : setups){
-            try{
+        catch (Throwable t) {}
+        for (final BlockPropertiesSetup setup : setups) {
+            try {
                 // Assume the blocks setup to message success.
                 setup.setupBlockProperties(worldConfigProvider);
                 success.add(setup.getClass().getSimpleName());
                 // TODO: Do logging from here ?
             }
-            catch(Throwable t){
+            catch (Throwable t) {
                 StaticLog.logSevere(setup.getClass().getSimpleName() + ".setupBlockProperties could not execute properly: " + t.getClass().getSimpleName() + " - " + t.getMessage());
                 StaticLog.logSevere(t);
                 // Abort further processing.
                 break;
-            }
-        }
-        // Patches for special circumstances.
-        for (IPatchBlockPropertiesSetup patch : new IPatchBlockPropertiesSetup[]{
-                new MultiClientProtocolBlockShapePatch(),
-        }) {
-            try {
-                if (patch.isAvailable()) {
-                    patch.setupBlockProperties(worldConfigProvider);
-                    String description = patch.getNeutralDescription();
-                    if (description == null || description.isEmpty()) {
-                        description = patch.getClass().getSimpleName();
-                    }
-                    StaticLog.logInfo("Update block-info: " + description);
-                }
-            }
-            catch (Throwable t) {
-                StaticLog.logSevere(patch.getClass().getSimpleName() + " could not be processed: " + t.getClass().getSimpleName() + " - " + t.getMessage());
-                StaticLog.logSevere(t);
             }
         }
         return success;

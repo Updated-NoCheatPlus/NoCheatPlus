@@ -99,8 +99,10 @@ public class Magic {
     public static final double CraftBukkit_minMoveDist = 0.0625; // Math.sqrt(CraftBukkit_minMoveSqDist);
     /** Minimum looking direction change for bukkit to fire PlayerMoveEvents. PlayerConnection.java */
     public static final float CraftBukkit_minLookChange = 10f;
-    /** The minimum squared distance for clients to send flying packets to the server (EntityPlayerSP/LocalPlayer.java, sendPosition()): movements smaller than this are not sent. (Thanks Mojang!) */
-    public static final double Minecraft_minMoveSqDistance = 0.03;
+    /** The minimum squared distance for clients to send flying packets to the server ({@code EntityPlayerSP}/{@code LocalPlayer.java}, {@code sendPosition()}): movements smaller than this are not sent. (Thanks Mojang!) */
+    public static final double Minecraft_minMoveSqDistance_legacy = 0.03;
+    /** Mirror of {@link #Minecraft_minMoveSqDistance_legacy} but for 1.18.2 and above */ 
+    public static final double Minecraft_minMoveSqDist_modern = 0.0002;
     
 
     

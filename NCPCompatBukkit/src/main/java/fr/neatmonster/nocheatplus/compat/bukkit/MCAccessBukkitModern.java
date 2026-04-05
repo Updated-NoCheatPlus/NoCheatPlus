@@ -149,7 +149,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
 
     @Override
     public String getMCVersion() {
-        return "1.13-1.21";
+        return "1.13-26";
     }
 
     @Override
@@ -223,7 +223,8 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             "azalea", "flowering_azalea",
             "sculk_sensor", "frogspawn",
             "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor", "bubble_column",
-            "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump","cactus_flower", "short_dry_grass", "tall_dry_grass")) {
+            "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump","cactus_flower", 
+            "short_dry_grass", "tall_dry_grass", "golden_dandelion")) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
         

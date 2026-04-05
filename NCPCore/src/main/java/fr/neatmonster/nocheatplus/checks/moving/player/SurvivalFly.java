@@ -945,11 +945,15 @@ public class SurvivalFly extends Check {
         thisMove.xAllowedDistance = lastMove.toIsValid ? lastMove.xDistance : 0.0;
         thisMove.zAllowedDistance = lastMove.toIsValid ? lastMove.zDistance : 0.0;
         // !lastMove.possibleStopMotion is dummy flag to flip false on failure and retry
+        // Check if there had been a hidden move on the prebious tick(s) due to 0.03 threshold.
+        // If so, the initial speed is initialized by the corrected distance. xDistance/zDistance would report a wrong speed value.
         if (!lastMove.possibleStopMotion && (lastMove.xCorrectedDistancePre != 0.0 || lastMove.zCorrectedDistancePre != 0.0)) {
             thisMove.xAllowedDistance = lastMove.xCorrectedDistancePre;
             thisMove.zAllowedDistance = lastMove.zCorrectedDistancePre;
             // Distinguish source of CorrectedDistance that only come from hidden move not from stop motion
-            if (lastMove.hiddenDistanceIndex != -1) thisMove.possibleStopMotion = true;
+            if (lastMove.hiddenDistanceIndex != -1) {
+                thisMove.possibleStopMotion = true;
+            }
             tags.add("hidden");
         }
         // If the player collided with something on the previous tick, start with 0 momentum now.
@@ -1019,8 +1023,7 @@ public class SurvivalFly extends Check {
         // Block speed
         thisMove.xAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
         thisMove.zAllowedDistance *= (double) data.nextBlockSpeedMultiplier;
-        // Friction next.
-        // ???-Next stage after ground riptide(the move isn't split here)
+        // Friction next, with special case for riptide at the start of the movement tick (when the riptide move is "unified" and not split into two updates; friction of the next move is used here)
         boolean newFriction = false;
         if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
             final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
@@ -1174,7 +1177,6 @@ public class SurvivalFly extends Check {
             // NOTE: Passing the unchecked y-distance is fine in this case. Vertical collision is checked with vdistrel (just separately).
             // TODO: Perhaps after this use collisionVector to store onGround? Also can not restore minecraft ground state with step and jump movement(like stairs)!
             Vector collisionVector = from.collide(new Vector(thisMove.xAllowedDistance, yDistanceBeforeCollide, thisMove.zAllowedDistance), onGround, from.getBoundingBox());
-            // Set flags.
             // Set the supporting block data.
             if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
                 // This is called with setOnGroundWithMovement at the same time of setting the ground flag but before setting the horizontal collision flags.
@@ -1329,7 +1331,8 @@ public class SurvivalFly extends Check {
         */
         boolean strict = cc.survivalFlyStrictHorizontal;
         for (i = 0; i < 9; i++) {
-            if (!collideX[i] && !collideZ[i] && MathUtil.dist(xTheoreticalDistance[i], zTheoreticalDistance[i]) < (pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? 0.03 : 0.0002)) {
+            if (!collideX[i] && !collideZ[i] 
+                && MathUtil.dist(xTheoreticalDistance[i], zTheoreticalDistance[i]) < (pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? 0.03 : 0.0002)) {
                 thisMove.hiddenDistanceIndex = i;
             }
             if (strict) {
@@ -1360,7 +1363,7 @@ public class SurvivalFly extends Check {
                     forceViolation = true;
                 }
                 if (thisMove.possibleStopMotion) {
-                    double[] result = MiniCalculator.motionFromHiddenStopMotion(sinYaw, cosYaw, theorInputs[i], data, pData, from, to, onGround, player.isFlying(), yDistanceBeforeCollide);
+                    double[] result = HiddenMotionReconstructor.simulateStoppingMotion(sinYaw, cosYaw, theorInputs[i], data, pData, from, to, onGround, player.isFlying(), yDistanceBeforeCollide);
                     thisMove.xCorrectedDistancePre = result[0];
                     thisMove.zCorrectedDistancePre = result[1];
                 }
@@ -1380,9 +1383,9 @@ public class SurvivalFly extends Check {
         }
         if (!found) {
             if (thisMove.hiddenDistanceIndex != -1) {
-                final double result[] = MiniCalculator.hiddenDistanceHorizontal(sinYaw, cosYaw, movementSpeed, theorInputs[thisMove.hiddenDistanceIndex], xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex], data, pData, from, pData.isInCrouchingPose(), attributeAccess.getHandle().getPlayerSneakingFactor(player), BridgeMisc.isSlowedDownByUsingAnItem(player), onGround, xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex]);
+                final double result[] = HiddenMotionReconstructor.findBestHiddenTickExplanation(sinYaw, cosYaw, movementSpeed, theorInputs[thisMove.hiddenDistanceIndex], xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex], data, pData, from, pData.isInCrouchingPose(), attributeAccess.getHandle().getPlayerSneakingFactor(player), BridgeMisc.isSlowedDownByUsingAnItem(player), onGround, xTheoreticalDistance[thisMove.hiddenDistanceIndex], zTheoreticalDistance[thisMove.hiddenDistanceIndex]);
                 if (thisMove.xDistance == 0 && thisMove.zDistance == 0) {
-                    thisMove.zCorrectedDistancePost = xTheoreticalDistance[thisMove.hiddenDistanceIndex];
+                    thisMove.xCorrectedDistancePost = xTheoreticalDistance[thisMove.hiddenDistanceIndex];
                     thisMove.zCorrectedDistancePost = zTheoreticalDistance[thisMove.hiddenDistanceIndex];
                     xTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
                     zTheoreticalDistance[thisMove.hiddenDistanceIndex] = 0.0;
@@ -1394,7 +1397,7 @@ public class SurvivalFly extends Check {
                 }
                 if (strict) {
                     if (MathUtil.almostEqual(thisMove.xDistance, xTheoreticalDistance[thisMove.hiddenDistanceIndex], Magic.PREDICTION_EPSILON) 
-                            && MathUtil.almostEqual(thisMove.zDistance, zTheoreticalDistance[thisMove.hiddenDistanceIndex], Magic.PREDICTION_EPSILON)) {
+                        && MathUtil.almostEqual(thisMove.zDistance, zTheoreticalDistance[thisMove.hiddenDistanceIndex], Magic.PREDICTION_EPSILON)) {
                         i = thisMove.hiddenDistanceIndex;
                         thisMove.xCorrectedDistancePre = result[0];
                         thisMove.zCorrectedDistancePre = result[1];
@@ -1408,7 +1411,8 @@ public class SurvivalFly extends Check {
                         found = true;
                     }
                 }
-            } else if (lastMove.hiddenDistanceIndex != -1 && (lastMove.xCorrectedDistancePre != 0 || lastMove.zCorrectedDistancePre != 0)) {
+            } 
+            else if (lastMove.hiddenDistanceIndex != -1 && (lastMove.xCorrectedDistancePre != 0 || lastMove.zCorrectedDistancePre != 0)) {
                 // Hidden move was found and sum match lastMove but the component of the sum didn't right as there another direction that also make the sum correct!
                 isPredictable = false;
             }
@@ -1652,11 +1656,12 @@ public class SurvivalFly extends Check {
             thisMove.yAllowedDistance *= data.lastFrictionVertical;
             if (BridgeMisc.hasGravity(player)) {
                 // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
-                // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed without the space bar pressed.
+                // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed when not pressing the space bar pressed.
                 if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
                     thisMove.yAllowedDistance -= Magic.LEGACY_LIQUID_GRAVITY;
-                } else {
-                    // Fluidfalling(...). For water only, this is done after applying friction.
+                } 
+                else {
+                    // In 1.13 the gravity effect in liquids was removed and this function got added.
                     Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
                     thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
                 }
@@ -1668,11 +1673,10 @@ public class SurvivalFly extends Check {
             if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
                 thisMove.yAllowedDistance *= data.lastFrictionVertical;
                 if (BridgeMisc.hasGravity(player)) {
-                    // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
-                    // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed without the space bar pressed.
                     if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
                         thisMove.yAllowedDistance -= Magic.LEGACY_LIQUID_GRAVITY;
-                    } else {
+                    } 
+                    else {
                         // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
                         Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, thisMove.yAllowedDistance <= 0.0, new Vector(0.0, thisMove.yAllowedDistance, 0.0), cData.wasSprinting);
                         thisMove.yAllowedDistance = fluidFallingAdjustMovement.getY();
@@ -1848,8 +1852,7 @@ public class SurvivalFly extends Check {
                 else thisMove.yAllowedDistance += riptideVelocity.getY();
             }
         }
-        // ???-Next stage after ground riptide(integrated, no gnd_riptide_pre)
-        // In this case, the release of the trident happened at the start of the movement tick
+        //  Special case for riptide at the start of the movement tick (when the riptide move is "unified" and not split into two updates; friction of the next move is used here)
         if (lastMove.tridentRelease.decide() && lastMove.toIsValid) {
             final PlayerMoveData secondLastMove = data.playerMoves.getSecondPastMove();
             if (lastMove.from.onGround || (secondLastMove.toIsValid && secondLastMove.yDistance <= 0.0 && (secondLastMove.from.onGround || secondLastMove.fromLostGround))) {

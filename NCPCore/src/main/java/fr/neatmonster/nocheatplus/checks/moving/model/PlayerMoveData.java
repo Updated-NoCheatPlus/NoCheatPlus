@@ -21,6 +21,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
+import fr.neatmonster.nocheatplus.checks.moving.player.HiddenMotionReconstructor;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.SimpleEntry;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 
@@ -112,37 +113,60 @@ public class PlayerMoveData extends MoveData {
      * during processing of moving checks.
      */
     public double zAllowedDistance;
+    
     /**
-     * Index from input brute force table that distance less than 0.03 <br>
-     * Taken into account after non match and will assume player use that input
+     * Identifies which entry in the reconstructor's candidate result array was used
+     * as the corrected distance for this move, or {@code -1} if no hidden-tick
+     * reconstruction was performed.
+     *
+     * <p>Used as a signal on the following tick: if {@code hiddenDistanceIndex != -1},
+     * the corrected distance came from the WASD brute-force path
+     * ({@link HiddenMotionReconstructor#findBestHiddenTickExplanation}), which
+     * means the player may have been coasting to a stop during the suppressed frames.
+     * The next move therefore sets {@code possibleStopMotion = true} so that, if the
+     * estimate still fails, the failure handler can retry with
+     * {@link HiddenMotionReconstructor#simulateStoppingMotion}.</p>
      */
     public int hiddenDistanceIndex;
+    
     /**
      * Is there stop motion during/after hidden move happening? <br>
      * VOLATILE by design and should not be use elsewhere
      */
     public boolean possibleStopMotion;
+    
     /**
-     * Corrected motion for the next move to use. <br>
-     * There are 2 sources of this: hidden move and stop motion. <br>
-     * Do note that it is not always right if there more than one correct result of the sum, that make next move become unpredictable
+     * Stores the corrected X displacement computed by
+     * {@link HiddenMotionReconstructor#findBestHiddenTickExplanation} for the
+     * <em>previous</em> move.
+     *
+     * <p>On the <em>next</em> tick, {@code estimateNextSpeed} reads this value as the
+     * opening momentum instead of {@code lastMove.xDistance}, so that the suppressed
+     * ticks' accumulated displacement is folded into the prediction
+     * correctly. If the move subsequently fails the distance check and
+     * {@code possibleCoastToStop} is set, this field is ignored on the retry pass
+     * so that {@link HiddenMotionReconstructor#simulateStoppingMotion}
+     * can model the re-acceleration from a true zero-velocity state instead.</p>
+     *
+     * <p>Reset to {@code 0.0} whenever it is consumed or when the move is deemed to
+     * not require correction.</p>
      */
     public double xCorrectedDistancePre;
+    
     /**
-     * Corrected motion for the next move to use. <br>
-     * There are 2 sources of this: hidden move and stop motion. <br>
-     * Do note that it is not always right if there more than one correct result of the sum, that make next move become unpredictable
+     * Mirror of {@link #xCorrectedDistancePre} for the Z axis.
      */
     public double zCorrectedDistancePre;
+    
     /**
      * Additive motion for the end of next move to use. Borrow and return effect. <br>
      * There are 2 sources of this: hidden move and ground riptide.
      */
     // TODO: Use this to handle ground riptide, cleaner code
     public double xCorrectedDistancePost;
+    
     /**
-     * Additive motion for the end of next move to use. Borrow and return effect. <br>
-     * There are 2 sources of this: hidden move and ground riptide.
+     * Mirror of {@link #xCorrectedDistancePost} for the Z axis.
      */
     public double zCorrectedDistancePost;
 

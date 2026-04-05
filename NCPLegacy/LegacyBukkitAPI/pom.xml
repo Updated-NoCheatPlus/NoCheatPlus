@@ -24,7 +24,7 @@
 
     <dependencies>
         <dependency>
-            <!-- Do not bump -->
+            <!-- Do not bump Spigot's version here (!) -->
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.20.6-R0.1-SNAPSHOT</version>

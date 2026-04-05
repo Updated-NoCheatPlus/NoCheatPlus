@@ -52,6 +52,7 @@ public class MoveTrace <MD extends MoveData> {
      *            to throw an Exception.
      * @param size
      *            Number of past moves to store extra to the current move.
+     *            Higher the number, higher the memory usage.
      */
     public MoveTrace(final Callable<MD> factory, final int size) {
         try {
@@ -92,7 +93,7 @@ public class MoveTrace <MD extends MoveData> {
     }
 
     /**
-     * Get the second stored past move (second latest past move, the current
+     * Get the second stored past move (second-latest past move, the current
      * move is not considered).
      * 
      * @return
@@ -100,16 +101,7 @@ public class MoveTrace <MD extends MoveData> {
     public MD getSecondPastMove() {
         return pastMoves.get(1);
     }
-
-    /**
-     * Get the third stored past move (third latest past move, the current
-     * move is not considered).
-     * 
-     * @return
-     */
-    public MD getThirdPastMove() {
-        return pastMoves.get(2);
-    }
+    
 
     /**
      * Get past move by index (0 is the latest past move, the current move is

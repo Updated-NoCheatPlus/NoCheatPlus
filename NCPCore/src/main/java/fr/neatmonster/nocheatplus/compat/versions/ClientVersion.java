@@ -102,10 +102,15 @@ public enum ClientVersion {
      */
     V_1_21_9(773),
     V_1_21_11(774),
+    
+    /**
+     * New version naming (year + release)
+     */
+    V_26_1(775),
 
 
     LOWER_THAN_KNOWN_VERSIONS(V_1_7_2.protocolID - 1, false),
-    HIGHER_THAN_KNOWN_VERSIONS(V_1_21_11.protocolID + 1, false),
+    HIGHER_THAN_KNOWN_VERSIONS(V_26_1.protocolID + 1, false),
     UNKNOWN(-1, false);
 
     private final int protocolID;
@@ -120,7 +125,8 @@ public enum ClientVersion {
         this.protocolID = protocolVersion;
         if (!knownVersion) {
             this.name = name();
-        } else {
+        } 
+        else {
             this.name = name().substring(2).replace("_", ".");
         }
     }
@@ -138,13 +144,16 @@ public enum ClientVersion {
     public static ClientVersion getById(int protocolVersion) {
         if (protocolVersion < LOWEST_KNOWN_PROTOCOL_VERSION) {
             return LOWER_THAN_KNOWN_VERSIONS;
-        } else if (protocolVersion > HIGHEST_KNOWN_PROTOCOL_VERSION) {
+        } 
+        else if (protocolVersion > HIGHEST_KNOWN_PROTOCOL_VERSION) {
             return HIGHER_THAN_KNOWN_VERSIONS;
-        } else {
+        } 
+        else {
             for (ClientVersion version : VALUES) {
                 if (version.protocolID > protocolVersion) {
                     break;
-                } else if (version.protocolID == protocolVersion) {
+                } 
+                else if (version.protocolID == protocolVersion) {
                     return version;
                 }
             }

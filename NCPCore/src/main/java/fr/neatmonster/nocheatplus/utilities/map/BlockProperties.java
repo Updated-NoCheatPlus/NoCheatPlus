@@ -2011,7 +2011,7 @@ public class BlockProperties {
         }
 
         // Fully passable blocks.
-        for (Material mat : MaterialUtil.FULLY_PASSABLE_BLOCKS) {
+        for (Material mat : MaterialUtil.NO_COLLISION_BOX) {
             BlockFlags.addFlags(mat, BlockFlags.F_IGN_PASSABLE);
             BlockFlags.removeFlags(mat, BlockFlags.F_SOLID | BlockFlags.F_GROUND);
         }
@@ -3451,55 +3451,6 @@ public class BlockProperties {
             return 0.0;
         }
         else if ((flags & BlockFlags.F_GROUND_HEIGHT) != 0) {
-            // Subsequent min height flags.
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_1) != 0) {
-//                // 1/16
-//                return 0.0625;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT8_1) != 0) {
-//                // 1/8
-//                return 0.125;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT4_1) != 0) {
-//                // 1/4
-//                return 0.25;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_5) != 0) {
-//                // 5/16
-//                return 0.3125;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_7) != 0) {
-//                // 7/16
-//                return 0.4375;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_9) != 0) {
-//                // 9/16
-//                return 0.5625;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT8_5) != 0) {
-//                // 10/16
-//                return 0.625;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_11) != 0) {
-//                // 11/16
-//                return 0.6875;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_13) != 0) {
-//                // 13/16
-//                return 0.8125;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_14) != 0) {
-//                // 14/16
-//                return 0.875;
-//            }
-//            if ((flags & BlockFlags.F_MIN_HEIGHT16_15) != 0) {
-//                // 15/16
-//                return 0.9375;
-//            }
-//            // Default height is used.
-//            if (id == BridgeMaterial.FARMLAND) {
-//                return bounds[4];
-//            }
             // Assume open gates/trapdoors/things to only allow standing on to, if at all.
             if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (node.getData(access, x, y, z) & 0x04) != 0) {
                 return bounds[4];
@@ -4140,57 +4091,11 @@ public class BlockProperties {
             } 
             else bMaxY = LIQUID_HEIGHT_LOWERED;
         }
-        //else if ((flags & BlockFlags.F_HEIGHT8_1) != 0) {
-        //    bMinY = 0.0;
-        //    bMaxY = 0.125;
-        //}
         else {
             // Auto-fill.
             bMinY = blockBounds[1]; // minY
             bMaxY = blockBounds[4]; // maxY
         }
-        
-        ////////////////////////////
-        // Special cases...       //
-        ////////////////////////////
-        // Fake the blockBounds of thin glass
-        // (Bugged blocks bounds around 1.8. Mojang...)
-        //if ((flags & BlockFlags.F_FAKEBOUNDS) != 0) {
-            // Length / Margin of the blockBounds along the X axis
-        //    final double aaBBLengthZ = bMaxZ - bMinZ;
-            // Length / Margin of the blockBounds along the Z axis
-        //    final double aaBBLengthX = bMaxX - bMinX;
-        //    if (aaBBLengthZ == 0.125 && aaBBLengthX != 1.0) {
-        //        if (bMinX == 0.0) {
-        //            bMaxX = 0.5;
-        //        }
-        //        if (bMaxX == 1.0) {
-        //            bMinX = 0.5;
-        //        }
-        //    } 
-        //    else if (aaBBLengthX == 0.125 && aaBBLengthZ != 1.0) {
-        //        if (bMinZ == 0.0) {
-        //            bMaxZ = 0.5;
-        //        }
-        //        if (bMaxZ == 1.0) {
-        //            bMinZ = 0.5;
-        //        }
-        //    } 
-        //    else if (aaBBLengthX == aaBBLengthZ && aaBBLengthX != 1.0) {
-        //        if (bMaxX == 0.5625) {
-        //            bMaxX = 0.5;
-        //        }
-        //        else if (bMaxZ == 0.5625) {
-        //            bMaxZ = 0.5;
-        //        }
-        //        else if (bMinX == 0.4375) {
-        //            bMinX = 0.5;
-        //        }
-        //        else if (bMinZ == 0.4375) {
-        //            bMinZ = 0.5;
-        //        }
-        //    }
-        //}
         
         //////////////////////////////////
         // Check for collision          //
@@ -4509,7 +4414,6 @@ public class BlockProperties {
         final double[] blockAABB = node.getBounds(access, x, y, z);
         if (blockAABB == null) {
             // Ground flag has been collected, but the block's bounds are null.
-            // Keep looping until we find a collision
             return AlmostBoolean.MAYBE;
         }
         
@@ -4570,12 +4474,6 @@ public class BlockProperties {
         }
         boolean variable = (flags & BlockFlags.F_VARIABLE) != 0;
         variable |= (aboveFlags & BlockFlags.F_VARIABLE) != 0;
-        // The commented out part below looks wrong.
-        //        // TODO: Keep an eye on this one for exploits.
-        //        if (y != iMaxY && !variable) {
-        //            // Ground found and the block above is passable, no need to check above.
-        //            return AlmostBoolean.YES;
-        //        }
         
         // In case the block above has the GROUND flag, check if it is the same id/material of the collided block (walls)
         if (!variable && id == aboveMat) {
@@ -4790,7 +4688,6 @@ public class BlockProperties {
         }
 
         // TODO: Actual ray-collision checking?
-
         // Check for workarounds.
         // TODO: check f_itchy once exists.
         if (BlockProperties.isPassableWorkaround(access, blockX, blockY, blockZ, oX, oY, oZ, node, dX, dY, dZ,

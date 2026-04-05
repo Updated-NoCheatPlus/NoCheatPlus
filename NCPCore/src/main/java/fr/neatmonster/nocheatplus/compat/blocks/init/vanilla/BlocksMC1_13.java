@@ -195,7 +195,7 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
         
         // Sea Pickle.
         BlockProperties.setBlockProps("SEA_PICKLE", BlockProperties.instantType);
-        BlockFlags.addFlags("SEA_PICKLE", BlockFlags.F_GROUND | BlockFlags.F_GROUND_HEIGHT);
+        BlockFlags.addFlags("SEA_PICKLE", BlockFlags.F_GROUND);
 
         // Turtle egg.
         BlockProperties.setBlockProps("TURTLE_EGG", new BlockProps(BlockProperties.noTool, 0.5f));

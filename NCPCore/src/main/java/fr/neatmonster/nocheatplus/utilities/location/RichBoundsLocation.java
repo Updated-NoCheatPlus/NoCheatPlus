@@ -71,7 +71,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
     /** Bounding box. */
     double minX, maxX, minY, maxY, minZ, maxZ;
 
-    /** Horizontal margin for the bounding box (center x/z towards edge). */
+    /** Horizontal margin for the bounding box (center x/z towards edge of the box). */
     double boxMarginHorizontal;
 
     /** Vertical margin for the bounding box (center y towards top). */
@@ -804,7 +804,8 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         if (touchedPowderSnow == null) {
             if (blockFlags != null && (blockFlags & BlockFlags.F_POWDER_SNOW) == 0) {
                 touchedPowderSnow = false;
-            } else touchedPowderSnow = isInsideIgnoreBounds(BlockFlags.F_POWDER_SNOW);
+            } 
+            else touchedPowderSnow = isInsideIgnoreBounds(BlockFlags.F_POWDER_SNOW);
         }
         return touchedPowderSnow;
     }

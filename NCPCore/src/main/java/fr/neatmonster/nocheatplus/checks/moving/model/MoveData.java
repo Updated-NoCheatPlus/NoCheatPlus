@@ -244,27 +244,6 @@ public class MoveData {
         from.extraPropertiesValid = false;
         to.extraPropertiesValid = false;
     }
-    
-    /**
-     * Heuristic check to test if the player is likely to come to a full stop with the next move(s). <br>
-     * When the client is coming to a full stop, lots of micro moves will be sent to the server (which are handled by the split move mechanism),
-     * but the actual stop of 0.0 distance won't be sent, causing a false positive with the next move, because NCP would simply see a (very) small move from the last position to the new position, which is incorrect, because the player had been standing still in between. <br>
-     * @return True, if the player has hDistance < 0.0071 and vertical distance smaller than the negligible speed threshold (legacy). 
-     *         In this case, toIsValid is set to false, so that further checks will not consider this move any longer.
-     */
-    public boolean isPossibleStoppingMotion(final ClientVersion pVersion) {
-        if (pVersion.isAtLeast(ClientVersion.V_1_9)) {
-            // TODO: Find maximum possible value that can be before one more friction with input None, None
-            if (toIsValid 
-                && hDistance < (pVersion.isAtLeast(ClientVersion.V_1_21_5) ? 0.006 : 0.0071) 
-                && Math.abs(yDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
-                // Tell NCP that this move is no longer valid, so that checks will not consider this move any longer when initializing the momentum.
-                toIsValid = false;
-                return true;
-            }
-        }
-        return false;
-    }
 
     public void addExtraProperties(final StringBuilder builder, final String prefix) {
         if (from.extraPropertiesValid && from.onGroundOrResetCond) {

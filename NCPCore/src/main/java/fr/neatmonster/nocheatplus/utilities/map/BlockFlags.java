@@ -75,6 +75,7 @@ public class BlockFlags {
 
     /** Compatibility flag: regard this block as passable always.<br>
      * NOTE: Extremely cautious when assign with F_GROUND. They can conflict each others causing random bugs
+     * NOTE: With the differentiation of visual/interaction boxes from collision boxes, this flag needs to be replaced or removed to avoid ambiguity.
      * */
     public static final long F_IGN_PASSABLE                 = f_flag();
 
@@ -86,7 +87,6 @@ public class BlockFlags {
 
     /** 
      * Override bounding box: 1.5 blocks high, like fences.<br>
-     *  NOTE: This might have relevance for passable later.
      */
     public static final long F_HEIGHT150                    = f_flag();
 
@@ -107,7 +107,7 @@ public class BlockFlags {
 
     /** 
      * The block can change shape. This is most likely not 100% accurate...<br>
-     * Tell the NCP that you can jump in the block!<br>
+     * Tell NCP that you can jump in the block!<br>
      * More likely to indicate block change shape when stacking up
      */
     public static final long F_VARIABLE                     = f_flag();
@@ -120,12 +120,18 @@ public class BlockFlags {
      * the height of the block can also be stood on. See
      * {@link BlockProperties#getGroundMinHeight(BlockCache, int, int, int, IBlockCacheNode, long)}
      * for minimum height.<br>
-     * In addition this flag directly triggers a passable workaround for
+     * In addition, this flag directly triggers a passable workaround for
      * otherwise colliding blocks
      * ({@link BlockProperties#isPassableWorkaround(BlockCache, int, int, int, double, double, double, IBlockCacheNode, double, double, double, double)}).<br>
-     * On early days, this designed for block compatibility from versions to versions. Some where here and there, it conflicted each others, create bugs that hard to find out.<br>
-     * Mordern design shouldn't use this flag, instead try to define between versions. Use this as LAST RESORT.
+     * 
+     * NOTE: This flag was essentially a quick and dirty way of maintaining compatibility with blocks that have an uncertain or undefined shape across different Minecraft versions.
+     * Now that we define our own shape for blocks via modeling, this flag should NEVER be used. 
+     * Misusing this flag can cause a lot of subtle and hard to find bugs.
+     * Use only as a last resort and TEMPORARY solution. Remove as soon as possible.<br>
+     * 
+     * TODO: Deprecate this shit.
      */
+     @Deprecated
     public static final long F_GROUND_HEIGHT                = f_flag();
 
     /** 
@@ -186,85 +192,6 @@ public class BlockFlags {
      * in order of SNEW.
      */
     public static final long F_ATTACHED_LOW2_SNEW           = f_flag();
-
-//    /** One eighth block height (0.125). */
-//    public static final long F_HEIGHT8_1                    = f_flag();
-//    //Should be handle with NoFall, no need to put a flag to indicate so, what if blocks not half or zero fall damgage?
-//    /**
-//     * Fall distance is divided by 2, if a move goes through this medium (currently only supports liquid).
-//     */
-//    public static final long F_FALLDIST_HALF                = f_flag();
-//
-//    /**
-//     * Fall distance is set to zero, if a move goes through this medium (currently only supports liquid).
-//     */
-//    public static final long F_FALLDIST_ZERO                = f_flag();
-//    
-//    /**
-//     * Minimum height 15/16 (0.9375 = 1 - 0.0625). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_15              = f_flag();
-//
-//    /**
-//     * Minimum height 14/16 (8750). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_14              = f_flag();
-//    
-//    /**
-//     * Minimum height 13/16 (8125). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_13              = f_flag();
-//
-//    /**
-//     * Minimum height 11/16 (0.6875). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_11              = f_flag();
-//
-//    /**
-//     * Minimum height 5/8 (0.625). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT8_5                = f_flag();
-//
-//    /**
-//     * Minimum height 9/16 (0.5625). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_9               = f_flag();
-//
-//    /**
-//     * Minimum height 7/16 (0.4375). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_7               = f_flag();
-//    
-//    /**
-//     * Minimum height 5/16 (0.3125). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_5               = f_flag();
-//
-//    /**
-//     * Minimum height 1/4 (0.25). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT4_1                = f_flag();
-//
-//    /**
-//     * Minimum height 1/8 (0.125). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT8_1                = f_flag();
-//    
-//    /**
-//     * Minimum height 1/16 (0.0625). <br>
-//     * Only applies with F_GROUND_HEIGHT set.
-//     */
-//    public static final long F_MIN_HEIGHT16_1               = f_flag();
 
     /** Indicator flag. */
     public static final long F_CARPET                       = f_flag();

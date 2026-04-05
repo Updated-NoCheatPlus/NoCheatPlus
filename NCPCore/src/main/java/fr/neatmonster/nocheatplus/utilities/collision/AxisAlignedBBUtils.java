@@ -390,26 +390,6 @@ public class AxisAlignedBBUtils {
     }
     
     /**
-     * Checks whether two axis-aligned bounding boxes intersect.
-     * An epsilon value is used here.
-     *
-     * @param multiAABB The first array, which can contain multiple LOCATION AABBs. The length must be a multiple of 6.
-     * @param singleAABB The second AABB. This does not accept double arrays containing multiple AABBs. If a multi AABB is inputted, only the first six doubles in the array (1st AABB) will be considered for intersection checking.
-     * @return True if the two AABBs intersect, false otherwise.
-     */
-    public static boolean isIntersected(double[] multiAABB, double[] singleAABB) {
-        for (int i = 0; i < getNumberOfAABBs(multiAABB); i++) {
-            int index = i * 6;
-            if (singleAABB[3] - CollisionUtil.COLLISION_EPSILON > multiAABB[index] && singleAABB[0] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 3] // x
-                && singleAABB[4] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 1] && singleAABB[1] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 4] // y
-                && singleAABB[5] - CollisionUtil.COLLISION_EPSILON > multiAABB[index + 2] && singleAABB[2] + CollisionUtil.COLLISION_EPSILON < multiAABB[index + 5]) { // z
-                return true;
-            }
-        }
-        return false; 
-    }
-    
-    /**
      * Checks if a simple axis-aligned bounding box collides with any part of a block's bounding box.
      *
      * @param blockAABB A double array representing the bounding box of a block. This can be a complex shape, 
@@ -490,35 +470,6 @@ public class AxisAlignedBBUtils {
         if (bounds == null) return false;
         for (int i = 0; i < 3; i++) {
             if (bounds[i] != 0.0 || bounds[i + 3] != 1.0) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    /**
-     * Checks if the given AABB is degenerate, meaning at least one of its corner (min/max/XZ) is 0.0.<br>
-     * Does not support multi-bounding box arrays. If a multi AABB is passed, only the primary box will be checked.
-     * 
-     * @param AABB The AABB to check
-     * @return True, if at least one coordinate returns 0.0, false otherwise.
-     */
-    public static boolean isDegenerate(final double[] AABB) {
-        Validate.validateAABB(AABB);
-        return AABB[0] == 0.0 || AABB[2] == 0.0 || AABB[3] == 0.0 || AABB[5] == 0.0;
-    }
-    
-    /**
-     * Checks if the given array bounds is all 0.
-     * 
-     * @param bounds
-     * @return
-     */
-    public static boolean isZero(final double[] bounds) {
-        Validate.validateAABB(bounds);
-        // Check if all elements are 0
-        for (double bound : bounds) {
-            if (bound != 0.0) {
                 return false;
             }
         }

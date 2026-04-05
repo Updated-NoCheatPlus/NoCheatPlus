@@ -89,7 +89,7 @@ public class LostGround {
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
         // Very specific case with players jumping with head obstructed by lanterns or after respawning
         // TODO: Is this still relevant? (Likely not)
-        if (hDistance <= Magic.Minecraft_minMoveSqDistance && from.isOnGround(Magic.Minecraft_minMoveSqDistance)
+        if (hDistance <= Magic.Minecraft_minMoveSqDistance_legacy && from.isOnGround(Magic.Minecraft_minMoveSqDistance_legacy)
             && (MaterialUtil.LANTERNS.contains(from.getBlockType(from.getBlockX(), Location.locToBlock(from.getY() + 2.0), from.getBlockZ())) || data.joinOrRespawn)) {
             return applyLostGround(player, from, true, thisMove, data, "0.03", tags);
         }
