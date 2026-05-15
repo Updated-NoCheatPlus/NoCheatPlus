@@ -67,6 +67,7 @@ public class BukkitAttributeAccess implements IAttributeAccess {
      * @param id
      * @return
      */
+    @SuppressWarnings({"deprecation", "removal"})
     private AttributeModifier getModifier(final AttributeInstance attrInst, final UUID id) {
         for (final AttributeModifier mod : attrInst.getModifiers()) {
             if (id.equals(mod.getUniqueId())) {

@@ -103,6 +103,34 @@ public class TeleportQueue {
     }
 
     /**
+     * Compact diagnostic snapshot for NET_MOVING false-positive analysis.
+     */
+    public String getDebugState(final long now) {
+        final StringBuilder builder = new StringBuilder(300);
+        lock.lock();
+        builder.append("expectOutgoing=").append(expectOutgoing == null ? "none" : expectOutgoing.toString());
+        builder.append(",expectIncomingSize=").append(expectIncoming.size());
+        if (!expectIncoming.isEmpty()) {
+            builder.append(",incomingFirst=").append(formatCountable(expectIncoming.getFirst(), now));
+            builder.append(",incomingLast=").append(formatCountable(expectIncoming.getLast(), now));
+        }
+        builder.append(",lastAck=").append(lastAck == null ? "none" : formatCountable(lastAck, now));
+        builder.append(",ackRef=lastOutgoing:").append(lastAckReference.lastOutgoingId)
+                .append("/maxConfirmed:").append(lastAckReference.maxConfirmedId);
+        builder.append(",maxAge=").append(maxAge);
+        lock.unlock();
+        return builder.toString();
+    }
+
+    private String formatCountable(final CountableLocation ref, final long now) {
+        final StringBuilder builder = new StringBuilder(160);
+        builder.append(ref.toString());
+        builder.append(",age=");
+        builder.append(now >= ref.time ? now - ref.time : -(ref.time - now));
+        return builder.toString();
+    }
+
+    /**
      * Call for Bukkit events (expect this packet to be sent).<br>
      * TODO: The method name is misleading, as this also should be called with
      * expected outgoing packet.
@@ -243,6 +271,23 @@ public class TeleportQueue {
         }
         lock.unlock();
         return ackState;
+    }
+
+    /**
+     * Accept a movement packet that matches the teleport location from a Bukkit
+     * event before ProtocolLib has observed the matching outgoing position.
+     */
+    public boolean consumeExpectedOutgoingPosition(final DataPacketFlying packetData) {
+        if (packetData == null || !packetData.hasPos) {
+            return false;
+        }
+        lock.lock();
+        final boolean match = expectOutgoing != null && expectOutgoing.isSamePos(packetData);
+        if (match) {
+            expectOutgoing = null;
+        }
+        lock.unlock();
+        return match;
     }
 
     /**

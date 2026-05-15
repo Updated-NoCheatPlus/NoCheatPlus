@@ -20,10 +20,14 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.moving.location.tracking.LocationTrace.ITraceEntry;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
+import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.CollisionUtil;
 import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
 
@@ -93,7 +97,8 @@ public class Direction extends Check {
             data.directionVL += distance;
             // Execute whatever actions are associated with this check and the violation level and find out if we should
             // cancel the event.
-            cancel = executeActions(player, data.directionVL, distance, cc.directionActions).willCancel();
+            cancel = executeDirectionViolation(player, loc, damaged, damagedIsFake, dLoc, "classic",
+                    off, distance, data, cc, false);
 
             if (cancel) {
                 // Deal an attack penalty time.
@@ -223,7 +228,8 @@ public class Direction extends Check {
 
             // Execute whatever actions are associated with this check and the violation level and find out if we should
             // cancel the event.
-            cancel = executeActions(player, data.directionVL, off, cc.directionActions).willCancel();
+            cancel = executeDirectionViolation(player, loc, damaged, false, damaged.getLocation(), "trace_loop",
+                    context.minResult, off, data, cc, forceViolation);
 
             if (cancel) {
                 // Deal an attack penalty time.
@@ -235,5 +241,61 @@ public class Direction extends Check {
             data.directionVL *= 0.8D;
         }
         return cancel;
+    }
+
+    private boolean executeDirectionViolation(final Player player, final Location loc, final Entity damaged,
+                                              final boolean damagedIsFake, final Location damagedLoc,
+                                              final String branch, final double off, final double addedVL,
+                                              final FightData data, final FightConfig cc,
+                                              final boolean forceViolation) {
+        final ViolationData vd = new ViolationData(this, player, data.directionVL, addedVL, cc.directionActions);
+        if (vd.needsParameters()) {
+            vd.setParameter(ParameterName.TAGS, "branch_" + branch
+                    + "+target_" + damaged.getType()
+                    + (damagedIsFake ? "+fake_target" : "")
+                    + (cc.directionStrict ? "+strict" : "+classic_precision")
+                    + (forceViolation ? "+forced" : ""));
+        }
+        if (CheckUtils.shouldLogDebugToConsole()) {
+            logDirectionDetail(player, loc, damaged, damagedIsFake, damagedLoc, branch, off, addedVL, data.directionVL, cc, forceViolation);
+        }
+        return executeActions(vd).willCancel();
+    }
+
+    private void logDirectionDetail(final Player player, final Location loc, final Entity damaged,
+                                    final boolean damagedIsFake, final Location damagedLoc,
+                                    final String branch, final double off, final double addedVL,
+                                    final double totalVL, final FightConfig cc,
+                                    final boolean forceViolation) {
+        try {
+            player.getServer().getLogger().info(new StringBuilder(360)
+                    .append("[NCP][FightDirection][detail] player=").append(player.getName())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" branch=").append(branch)
+                    .append(" target=").append(damaged.getType())
+                    .append(" targetUuid=").append(damagedIsFake ? "fake" : damaged.getUniqueId())
+                    .append(" fake=").append(damagedIsFake)
+                    .append(" strict=").append(cc.directionStrict)
+                    .append(" force=").append(forceViolation)
+                    .append(" off=").append(StringUtil.fdec3.format(off))
+                    .append(" addVL=").append(StringUtil.fdec3.format(addedVL))
+                    .append(" totalVL=").append(StringUtil.fdec3.format(totalVL))
+                    .append(" playerLoc=").append(formatLocation(loc))
+                    .append(" targetLoc=").append(formatLocation(damagedLoc))
+                    .toString());
+        }
+        catch (Throwable ignored) {}
+    }
+
+    private String formatLocation(final Location location) {
+        if (location == null) {
+            return "null";
+        }
+        return (location.getWorld() == null ? "null" : location.getWorld().getName())
+                + "@" + StringUtil.fdec3.format(location.getX())
+                + "," + StringUtil.fdec3.format(location.getY())
+                + "," + StringUtil.fdec3.format(location.getZ())
+                + "/" + StringUtil.fdec3.format(location.getYaw())
+                + "," + StringUtil.fdec3.format(location.getPitch());
     }
 }

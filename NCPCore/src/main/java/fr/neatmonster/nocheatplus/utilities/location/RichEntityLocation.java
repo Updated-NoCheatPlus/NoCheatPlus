@@ -279,6 +279,21 @@ public class RichEntityLocation extends RichBoundsLocation {
         return super.isOnBlueIce();
     }
     
+    /** 
+     * @return Always false for 1.12 and below.
+     */
+    public boolean isInWaterLogged() {
+        if (inWaterLogged != null) {
+            return inWaterLogged;
+        }
+        if (GenericVersion.isLowerThan(entity, "1.13")) {
+            // Waterlogged blocks don't exist for older clients.
+            inWaterLogged = false;
+            return inWaterLogged;
+        }
+        return super.isInWaterLogged();
+    }
+    
     /**
      * @return Always false for 1.12 and below.
      */
@@ -553,7 +568,7 @@ public class RichEntityLocation extends RichBoundsLocation {
      * 
      * @return True, if the moved bounding box is free from obstructions, otherwise false.
      */
-    public boolean isUnobstructed(double yDistance) {
+    public boolean isUnobstructed() {
         final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
         final MovingData data = pData.getGenericInstance(MovingData.class);
         final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
@@ -561,7 +576,7 @@ public class RichEntityLocation extends RichBoundsLocation {
         // Un-comment this once x/y/zAllowedDistances is shared with vehicles too in MoveData, and we have a prediction for vehicles.
         // final VehicleMoveData vehicleMove = data.vehicleMoves.getCurrentMove();
         // final VehicleMoveData lastVehicleMove = data.vehicleMoves.getFirstPastMove();
-        return isUnobstructed(thisMove.xAllowedDistance, yDistance+0.6-lastMove.to.getY()+lastMove.from.getY(), thisMove.zAllowedDistance, isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
+        return isUnobstructed(thisMove.xAllowedDistance, thisMove.yAllowedDistance+0.6-lastMove.to.getY()+lastMove.from.getY(), thisMove.zAllowedDistance, isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
     }
     
     /**

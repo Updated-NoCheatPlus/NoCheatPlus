@@ -429,15 +429,15 @@ public class NoFall extends Check {
                             if (player.getNoDamageTicks() > 0) {
                                 return;
                             }
-                            player.setLastDamageCause(event);
+                            BridgeHealth.setLastDamageCause(player, event);
                             mcAccess.getHandle().dealFallDamage(player, BridgeHealth.getRawDamage(event));
                             TickTask.removeTickListener(this);
                         }
                     };
                     TickTask.addTickListener(damagePlayer);
-                } 
+                }
                 else {
-                    player.setLastDamageCause(event);
+                    BridgeHealth.setLastDamageCause(player, event);
                     mcAccess.getHandle().dealFallDamage(player, BridgeHealth.getRawDamage(event));
                 }
             }

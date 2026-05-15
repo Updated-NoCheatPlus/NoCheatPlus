@@ -105,8 +105,10 @@ public class MovingConfig extends ACheckConfig {
     // Set back policy.
     public final boolean sfSetBackPolicyFallDamage;
     public final ActionList survivalFlyActions;
+    public final boolean sfElytraEnforce;
 
     public final boolean sfHoverCheck; // TODO: Sub check ?
+    public final boolean sfHoverElytraEnforce;
     public final int sfHoverTicks;
     public final int sfHoverLoginTicks;
     public final boolean sfHoverFallDamage;
@@ -221,8 +223,10 @@ public class MovingConfig extends ACheckConfig {
         survivalFlyVLFreezeCount = config.getInt(ConfPaths.MOVING_SURVIVALFLY_LENIENCY_FREEZECOUNT);
         survivalFlyVLFreezeInAir = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_LENIENCY_FREEZEINAIR);
         survivalFlyActions = config.getOptimizedActionList(ConfPaths.MOVING_SURVIVALFLY_ACTIONS, Permissions.MOVING_SURVIVALFLY);
+        sfElytraEnforce = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_ELYTRA_ENFORCE);
 
         sfHoverCheck = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_HOVER_CHECK);
+        sfHoverElytraEnforce = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_HOVER_ELYTRA_ENFORCE);
         sfHoverTicks = config.getInt(ConfPaths.MOVING_SURVIVALFLY_HOVER_TICKS);
         sfHoverLoginTicks = Math.max(0, config.getInt(ConfPaths.MOVING_SURVIVALFLY_HOVER_LOGINTICKS));
         sfHoverFallDamage = config.getBoolean(ConfPaths.MOVING_SURVIVALFLY_HOVER_FALLDAMAGE);

@@ -21,11 +21,13 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Snow;
 
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
+import fr.neatmonster.nocheatplus.utilities.map.BlockCache.IBlockCacheNode;
 
 public class BukkitSnow implements BukkitShapeModel {
     
-    private static final double[][] SNOW_LAYERS = {
-            null,
+    private static final int MAX_COLLISION_LAYER = 7;
+    private static final double[][] SNOW_COLLISION_LAYERS = {
+            {0.0, 0.0, 0.0, 1.0, 0.0, 1.0},
             {0.0, 0.0, 0.0, 1.0, 0.125, 1.0},
             {0.0, 0.0, 0.0, 1.0, 0.250, 1.0},
             {0.0, 0.0, 0.0, 1.0, 0.375, 1.0},
@@ -38,14 +40,8 @@ public class BukkitSnow implements BukkitShapeModel {
 
     @Override
     public double[] getShape(BlockCache blockCache, World world, int x, int y, int z) {
-        // TODO: Backward Handling
-        final Block block = world.getBlockAt(x, y, z);
-        final BlockState state = block.getState();
-        final BlockData blockData = state.getBlockData();
-        if (blockData instanceof Snow) {
-            return SNOW_LAYERS[((Snow)blockData).getLayers() - 1];
-        }
-        return new double[] {0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+        // Snow model: collision height is one layer lower than visual height; one-layer snow has no collision.
+        return SNOW_COLLISION_LAYERS[getCollisionLayer(blockCache, world, x, y, z)];
     }
 
     @Override
@@ -60,12 +56,33 @@ public class BukkitSnow implements BukkitShapeModel {
 
     @Override
     public int getFakeData(BlockCache blockCache, World world, int x, int y, int z) {
-        final Block block = world.getBlockAt(x, y, z);
-        final BlockState state = block.getState();
-        final BlockData blockData = state.getBlockData();
-        if (blockData instanceof Snow) {
-            return ((Snow)blockData).getLayers() - 1;
+        return getCollisionLayer(blockCache, world, x, y, z);
+    }
+
+    private int getCollisionLayer(final BlockCache blockCache, final World world, final int x, final int y, final int z) {
+        if (world != null) {
+            try {
+                final Block block = world.getBlockAt(x, y, z);
+                final BlockState state = block.getState();
+                final BlockData blockData = state.getBlockData();
+                if (blockData instanceof Snow) {
+                    return clampCollisionLayer(((Snow) blockData).getLayers() - 1);
+                }
+            }
+            catch (Throwable ignored) {
+                // Folia/async fallback: use already cached legacy data if it exists, otherwise use no collision.
+            }
+        }
+        if (blockCache != null) {
+            final IBlockCacheNode node = blockCache.getBlockCacheNode(x, y, z);
+            if (node != null && node.isDataFetched()) {
+                return clampCollisionLayer(node.getData());
+            }
         }
         return 0;
+    }
+
+    private int clampCollisionLayer(final int layer) {
+        return Math.max(0, Math.min(MAX_COLLISION_LAYER, layer));
     }
 }

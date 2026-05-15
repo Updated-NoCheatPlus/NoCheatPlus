@@ -41,7 +41,7 @@ import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
  * @author asofold
  *
  */
-@SuppressWarnings("deprecation")
+@SuppressWarnings({"deprecation", "removal"})
 public class BridgeHealth {
 
     // TODO: Move to (smaller?) IGenericInstanceHandle instances.
@@ -326,7 +326,7 @@ public class BridgeHealth {
         }
     }
 
-    public static EntityDamageEvent getEntityDamageEvent(final Entity entity, 
+    public static EntityDamageEvent getEntityDamageEvent(final Entity entity,
             final DamageCause damageCause, final double damage) {
         try{
             return new EntityDamageEvent(entity, damageCause, damage);
@@ -341,6 +341,10 @@ public class BridgeHealth {
             }
             return null;
         }
+    }
+
+    public static void setLastDamageCause(final Entity entity, final EntityDamageEvent event) {
+        entity.setLastDamageCause(event);
     }
 
     /**

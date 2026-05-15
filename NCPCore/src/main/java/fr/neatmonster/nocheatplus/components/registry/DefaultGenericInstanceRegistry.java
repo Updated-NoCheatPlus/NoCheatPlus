@@ -242,31 +242,36 @@ public class DefaultGenericInstanceRegistry implements GenericInstanceRegistry, 
     @SuppressWarnings("unchecked")
     private <T> Registration<T> createEmptyRegistration(Class<T> registeredFor) {
         lock.lock();
-        Registration<T> registration = (Registration<T>) registrations.get(registeredFor); // Re-check.
-        if (registration == null) {
-            try {
+        try {
+            Registration<T> registration = (Registration<T>) registrations.get(registeredFor); // Re-check.
+            if (registration == null) {
                 // TODO: Consider individual locks / configuration for it.
                 registration = new Registration<T>(registeredFor, null, this, this, lock);
                 this.registrations.put(registeredFor, registration);
             }
-            catch (Throwable t) {
-                lock.unlock();
-                throw new IllegalArgumentException(t); // Might document.
-            }
+            return registration;
         }
-        lock.unlock();
-        return registration;
+        catch (Throwable t) {
+            throw new IllegalArgumentException(t); // Might document.
+        }
+        finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public <T> void unregisterGenericInstanceRegistryListener(Class<T> registeredFor, IGenericInstanceRegistryListener<T> listener) {
         lock.lock();
-        // (Include getRegistration, as no object creation is involved.)
-        Registration<T> registration = getRegistration(registeredFor, false);
-        if (registration != null) {
-            registration.unregisterListener(listener);
+        try {
+            // (Include getRegistration, as no object creation is involved.)
+            Registration<T> registration = getRegistration(registeredFor, false);
+            if (registration != null) {
+                registration.unregisterListener(listener);
+            }
         }
-        lock.lock();
+        finally {
+            lock.unlock();
+        }
     }
 
     @SuppressWarnings("unchecked")

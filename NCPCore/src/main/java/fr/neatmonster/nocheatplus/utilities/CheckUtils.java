@@ -28,6 +28,8 @@ import fr.neatmonster.nocheatplus.checks.fight.FightData;
 import fr.neatmonster.nocheatplus.checks.inventory.InventoryData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.components.concurrent.IPrimaryThreadContextTester;
+import fr.neatmonster.nocheatplus.config.ConfigManager;
+import fr.neatmonster.nocheatplus.config.ConfPaths;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.logging.Streams;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
@@ -76,6 +78,11 @@ public class CheckUtils {
             improperAsynchronousAPIAccess(checkType);
             return false;
         }
+    }
+
+    public static boolean shouldLogDebugToConsole() {
+        // This gates the extra diagnostic console spam added for compatibility tuning, not the normal NCP backend loggers.
+        return ConfigManager.getConfigFile().getBoolean(ConfPaths.LOGGING_DEBUG_TO_CONSOLE, false);
     }
 
     /**

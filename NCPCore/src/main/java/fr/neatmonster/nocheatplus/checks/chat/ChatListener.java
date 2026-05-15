@@ -31,6 +31,7 @@ import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
+import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.command.CommandUtil;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
@@ -162,6 +163,16 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
         }
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerTeleportCommandMonitor(final PlayerCommandPreprocessEvent event) {
+        final String command = getTeleportLikeCommand(event.getMessage());
+        if (command != null) {
+            final Player player = event.getPlayer();
+            DataManager.getPlayerData(player).getGenericInstance(NetData.class)
+                    .recordTeleportCommand(command, player.getLocation(), System.currentTimeMillis());
+        }
+    }
+
     /** We listen to PlayerCommandPreprocess events because commands can be used for spamming too. */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerCommandPreprocess(final PlayerCommandPreprocessEvent event) {
@@ -224,6 +235,45 @@ public class ChatListener extends CheckListener implements INotifyReload, JoinLe
                 }
             }
         }
+    }
+
+    private String getTeleportLikeCommand(final String message) {
+        if (message == null) {
+            return null;
+        }
+        final String lcMessage = StringUtil.leftTrim(message).toLowerCase();
+        if (lcMessage.length() < 2 || lcMessage.charAt(0) != '/') {
+            return null;
+        }
+        final String[] split = lcMessage.split(" ", 2);
+        String command = split[0].substring(1);
+        final int namespaceIndex = command.indexOf(':');
+        if (namespaceIndex >= 0 && namespaceIndex + 1 < command.length()) {
+            command = command.substring(namespaceIndex + 1);
+        }
+        return isTeleportLikeCommand(command) ? command : null;
+    }
+
+    private boolean isTeleportLikeCommand(final String command) {
+        return command.equals("rtp")
+            || command.equals("randomtp")
+            || command.equals("randomteleport")
+            || command.equals("wild")
+            || command.equals("wilderness")
+            || command.equals("spawn")
+            || command.equals("hub")
+            || command.equals("lobby")
+            || command.equals("home")
+            || command.equals("homes")
+            || command.equals("warp")
+            || command.equals("warps")
+            || command.equals("back")
+            || command.equals("tpa")
+            || command.equals("tpaccept")
+            || command.equals("tpahere")
+            || command.equals("tp")
+            || command.equals("teleport")
+            || command.equals("tphere");
     }
 
     private boolean checkUntrackedLocation(final Player player, final String message, 

@@ -25,6 +25,7 @@ import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
 
 import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.checks.Check;
@@ -35,6 +36,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.LostGroundVehicle;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.VehicleWorkarounds;
 import fr.neatmonster.nocheatplus.checks.moving.location.setback.SetBackEntry;
+import fr.neatmonster.nocheatplus.checks.moving.model.LocationData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveInfo;
@@ -42,6 +44,7 @@ import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
@@ -159,6 +162,9 @@ public class VehicleEnvelope extends Check {
 
         if (violation) {
             data.vehicleEnvelopeVL += 1.0; // Add up one for now.
+            if (CheckUtils.shouldLogDebugToConsole()) {
+                logConsoleDetails(player, vehicle, thisMove, isFake, data, cc, moveInfo);
+            }
             final ViolationData vd = new ViolationData(this, player, data.vehicleEnvelopeVL, 1, cc.vehicleEnvelopeActions);
             vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
             if (executeActions(vd).willCancel()) {
@@ -170,6 +176,91 @@ public class VehicleEnvelope extends Check {
             // Do not set a set back here.
         }
         return null;
+    }
+
+    private void logConsoleDetails(final Player player, final Entity vehicle,
+                                   final VehicleMoveData thisMove, final boolean isFake,
+                                   final MovingData data, final MovingConfig cc,
+                                   final VehicleMoveInfo moveInfo) {
+        final StringBuilder builder = new StringBuilder(800);
+        builder.append("[NCP][VehicleEnvelope][detail]")
+                .append(" player=").append(player.getName())
+                .append(" uuid=").append(player.getUniqueId())
+                .append(" vehicle=").append(vehicle.getType())
+                .append(" vehicleId=").append(vehicle.getUniqueId())
+                .append(" fake=").append(isFake)
+                .append(" addVL=1")
+                .append(" totalVL=").append(StringUtil.fdec3.format(data.vehicleEnvelopeVL))
+                .append(" tags=").append(StringUtil.join(tags, "+"))
+                .append(" move=h:").append(StringUtil.fdec6.format(thisMove.hDistance))
+                .append(",x:").append(StringUtil.fdec6.format(thisMove.xDistance))
+                .append(",y:").append(StringUtil.fdec6.format(thisMove.yDistance))
+                .append(",z:").append(StringUtil.fdec6.format(thisMove.zDistance))
+                .append(",distSq:").append(StringUtil.fdec6.format(thisMove.distanceSquared))
+                .append(" from=").append(formatLocation(thisMove.from))
+                .append(" to=").append(formatLocation(thisMove.to))
+                .append(" fromEnv=").append(formatEnvironment(thisMove.from))
+                .append(" toEnv=").append(formatEnvironment(thisMove.to))
+                .append(" details=simplified:").append(checkDetails.simplifiedType)
+                .append(",inAir:").append(checkDetails.inAir)
+                .append(",fromSafe:").append(checkDetails.fromIsSafeMedium)
+                .append(",toSafe:").append(checkDetails.toIsSafeMedium)
+                .append(",canClimb:").append(checkDetails.canClimb)
+                .append(",canRails:").append(checkDetails.canRails)
+                .append(",canJump:").append(checkDetails.canJump)
+                .append(",canStep:").append(checkDetails.canStepUpBlock)
+                .append(",maxAscend:").append(StringUtil.fdec6.format(checkDetails.maxAscend))
+                .append(",gravityTarget:").append(StringUtil.fdec6.format(checkDetails.gravityTargetSpeed))
+                .append(",checkAscend:").append(checkDetails.checkAscendMuch)
+                .append(",checkDescend:").append(checkDetails.checkDescendMuch)
+                .append(" playerState=vehicle:").append(player.isInsideVehicle())
+                .append(",sneak:").append(player.isSneaking())
+                .append(",sprint:").append(player.isSprinting())
+                .append(",fly:").append(player.isFlying())
+                .append(",allowFlight:").append(player.getAllowFlight())
+                .append(" velocity=player:").append(formatVector(player.getVelocity()))
+                .append(",vehicle:").append(formatVector(vehicle.getVelocity()))
+                .append(" vehicleState=valid:").append(vehicle.isValid())
+                .append(",dead:").append(vehicle.isDead())
+                .append(",onGround:").append(vehicle.isOnGround())
+                .append(" moveInfo=fromFlags:").append(moveInfo.from.getBlockFlags())
+                .append(",toFlags:").append(moveInfo.to.getBlockFlags())
+                .append(" config=vehicleEnvelopeVL:").append(StringUtil.fdec3.format(data.vehicleEnvelopeVL))
+                .append(",boatIceTicks:").append(data.boatIceVelocityTicks)
+                .append(",actions:").append(cc.vehicleEnvelopeActions);
+        // Diagnostic logging: mirror vehicle details to console so boat false positives can be matched to exact terrain.
+        player.getServer().getLogger().info(builder.toString());
+    }
+
+    private String formatLocation(final LocationData location) {
+        return location.getWorldName()
+                + "@" + StringUtil.fdec3.format(location.getX())
+                + "," + StringUtil.fdec3.format(location.getY())
+                + "," + StringUtil.fdec3.format(location.getZ());
+    }
+
+    private String formatEnvironment(final LocationData location) {
+        return "{ground:" + location.onGround
+                + ",reset:" + location.resetCond
+                + ",water:" + location.inWater
+                + ",lava:" + location.inLava
+                + ",liquid:" + location.inLiquid
+                + ",climb:" + location.onClimbable
+                + ",web:" + location.inWeb
+                + ",ice:" + location.onIce
+                + ",blueIce:" + location.onBlueIce
+                + ",slime:" + location.onSlimeBlock
+                + ",honey:" + location.onHoneyBlock
+                + ",bubble:" + location.inBubbleStream
+                + ",soulSand:" + location.onSoulSand
+                + ",valid:" + location.extraPropertiesValid
+                + "}";
+    }
+
+    private String formatVector(final Vector vector) {
+        return StringUtil.fdec6.format(vector.getX())
+                + "," + StringUtil.fdec6.format(vector.getY())
+                + "," + StringUtil.fdec6.format(vector.getZ());
     }
 
 
@@ -258,7 +349,8 @@ public class VehicleEnvelope extends Check {
 
         if ((thisMove.from.onGround && !thisMove.from.inWater) 
             || thisMove.to.onGround && !thisMove.to.inWater) {
-            return multiplier * 0.4;
+            // False-positive tuning: boats crossing shore/ground blocks on Folia can exceed the old 0.4 cap.
+            return multiplier * 0.75;
         }
 
         if (thisMove.from.inWater || thisMove.to.inWater) {
@@ -662,7 +754,8 @@ public class VehicleEnvelope extends Check {
         if (data.sfJumpPhase > (checkDetails.canJump ? MagicVehicle.maxJumpPhaseAscend : 1)
             && thisMove.yDistance > Math.max(minDescend, -checkDetails.gravityTargetSpeed)) {
             
-            boolean noViolation = collidesWithHoneyBlock(from) 
+            boolean noViolation = collidesWithHoneyBlock(from)
+                    || isBoatDownhillMove(thisMove)
                     || (vehicle instanceof LivingEntity && !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier((LivingEntity)vehicle)))
                     || !vehicle.hasGravity();
             // TODO: What is this? Vehicle slide on honey block?
@@ -691,6 +784,15 @@ public class VehicleEnvelope extends Check {
             }
         }
         return violation;
+    }
+
+    private boolean isBoatDownhillMove(final VehicleMoveData thisMove) {
+        return MaterialUtil.isBoat(checkDetails.simplifiedType)
+                && thisMove.yDistance <= 0.0
+                && thisMove.yDistance >= -0.8
+                && thisMove.hDistance <= 0.8
+                && !thisMove.from.inWater
+                && !thisMove.to.inWater;
     }
 
 

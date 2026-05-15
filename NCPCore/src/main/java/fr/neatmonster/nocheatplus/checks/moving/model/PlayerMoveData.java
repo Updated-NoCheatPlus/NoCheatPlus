@@ -76,7 +76,7 @@ public class PlayerMoveData extends MoveData {
      * riptide action itself.
      * 
      */
-    public AlmostBoolean tridentRelease;
+    public AlmostBoolean tridentRelease = AlmostBoolean.NO;
     
     /**
      * The distance covered by a move from the setback point to the to.getY() point.
@@ -271,7 +271,7 @@ public class PlayerMoveData extends MoveData {
      *
      * <p>For clients supporting impulse event-sending, this will only return YES or NO, as input data is always available.</p>
      */
-    public AlmostBoolean hasImpulse;
+    public AlmostBoolean hasImpulse = AlmostBoolean.NO;
     
     /**
      * Indicates the strafing direction (LEFT, RIGHT, or NONE).
@@ -279,7 +279,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public PlayerKeyboardInput.StrafeDirection strafeImpulse;
+    public PlayerKeyboardInput.StrafeDirection strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
     
     /**
      * Indicates the forward movement direction (FORWARD, BACKWARD, or NONE).
@@ -287,7 +287,7 @@ public class PlayerMoveData extends MoveData {
      * <p>This value is set even if horizontal movement could not be accurately predicted, so it may be unreliable, unless the client sends impulse events, in which case it is dependable.
      * Check {@link PlayerMoveData#hasImpulse} for its reliability prior to version 1.21.2 </p>
      */
-    public PlayerKeyboardInput.ForwardDirection forwardImpulse;
+    public PlayerKeyboardInput.ForwardDirection forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
     
     /**
      * Judge if this horizontal collision ({@link PlayerMoveData#collideX} or {@link PlayerMoveData#collideZ}) is to be considered as minor.

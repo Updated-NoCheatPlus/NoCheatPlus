@@ -1309,6 +1309,10 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
     private void onJoinLow(final Player player) {
         final String playerName = player.getName();
         final IPlayerData data = DataManager.getPlayerData(player);
+        data.setBedrockPlayer(isBedrockPlayer(player, data));
+        if (data.isBedrockPlayer()) {
+            logManager.info(Streams.STATUS, "Detected Bedrock player: " + playerName);
+        }
         if (data.hasPermission(Permissions.NOTIFY, player)) { // Updates the cache.
             // Login notifications...
             //            // Update available.
@@ -1334,6 +1338,32 @@ public class NoCheatPlus extends JavaPlugin implements NoCheatPlusAPI {
                 logManager.severe(Streams.INIT, t);
             }
         }
+    }
+
+    private boolean isBedrockPlayer(final Player player, final IPlayerData data) {
+        if (data.hasPermission(Permissions.COMPAT_BEDROCK, player)) {
+            return true;
+        }
+        try {
+            final Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+            final Object api = apiClass.getMethod("getInstance").invoke(null);
+            return Boolean.TRUE.equals(apiClass.getMethod("isFloodgatePlayer", java.util.UUID.class).invoke(api, player.getUniqueId()));
+        }
+        catch (Throwable ignored) {}
+        try {
+            final Class<?> apiClass = Class.forName("org.geysermc.geyser.api.GeyserApi");
+            final Object api = apiClass.getMethod("api").invoke(null);
+            if (api != null) {
+                try {
+                    return Boolean.TRUE.equals(apiClass.getMethod("isBedrockPlayer", java.util.UUID.class).invoke(api, player.getUniqueId()));
+                }
+                catch (NoSuchMethodException ignored) {
+                    return apiClass.getMethod("connectionByUuid", java.util.UUID.class).invoke(api, player.getUniqueId()) != null;
+                }
+            }
+        }
+        catch (Throwable ignored) {}
+        return player.getName().startsWith(".");
     }
 
     private void onLeave(final Player player) {

@@ -16,6 +16,7 @@ package fr.neatmonster.nocheatplus.compat.bukkit;
 
 import java.util.Map;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
@@ -23,6 +24,7 @@ import org.bukkit.block.data.Waterlogged;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.bukkit.model.BukkitShapeModel;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
@@ -61,6 +63,37 @@ public class BlockCacheBukkitModern extends BlockCacheBukkit {
         }
         return super.fetchData(x, y, z);
     }
+
+    @Override
+    public long fetchExtendedData(final int x, final int y, final int z) {
+        if (world == null) {
+            return 0L;
+        }
+        // Folia support: only query live Bukkit block data from the owning region thread.
+        if (SchedulerHelper.isOwnedByCurrentRegion(world, x, z)) {
+            return fetchWaterloggedFlags(x, y, z);
+        }
+        try {
+            if (SchedulerHelper.isOwnedByCurrentRegion(new Location(world, x, y, z))) {
+                return fetchWaterloggedFlags(x, y, z);
+            }
+        } catch (Throwable ignored) {
+            // Keep the cache fallback conservative if the scheduler API is unavailable.
+        }
+        return 0L;
+    }
+
+    private long fetchWaterloggedFlags(final int x, final int y, final int z) {
+        final IPlayerData pData = getPlayerData();
+        if (pData != null && pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
+            return 0L;
+        }
+        final BlockData data = world.getBlockAt(x, y, z).getBlockData();
+        if (data instanceof Waterlogged && ((Waterlogged) data).isWaterlogged()) {
+            return BlockFlags.F_WATER | BlockFlags.F_LIQUID | BlockFlags.F_WATERLOGGED;
+        }
+        return 0L;
+    }
     
     @Override
     public double[] fetchBounds(int x, int y, int z) {
@@ -96,9 +129,15 @@ public class BlockCacheBukkitModern extends BlockCacheBukkit {
     
     @Override
     public boolean standsOnEntity(final Entity entity, final double minX, final double minY, final double minZ, final double maxX, final double maxY, final double maxZ) {
+        if (!SchedulerHelper.isOwnedByCurrentRegion(entity)) {
+            return false;
+        }
         try {
             // TODO: Probably check vehicle ids too before doing this ?
             for (final Entity vehicle : entity.getNearbyEntities(0.1, 2.0, 0.1)) {
+                if (!SchedulerHelper.isOwnedByCurrentRegion(vehicle)) {
+                    continue;
+                }
                 final EntityType type = vehicle.getType();
                 if (!MaterialUtil.isBoat(type) && type != EntityType.SHULKER) { //  && !(vehicle instanceof Minecart)) 
                     continue;
@@ -113,18 +152,5 @@ public class BlockCacheBukkitModern extends BlockCacheBukkit {
             // Ignore exceptions (Context: DisguiseCraft).
         }
         return false;
-    }
-
-    @Override
-    public long fetchExtendedData(int x, int y, int z) {
-        BlockData bd = world.getBlockAt(x, y, z).getBlockData();
-        if (bd instanceof Waterlogged && ((Waterlogged)bd).isWaterlogged()) {
-            final IPlayerData pData = getPlayerData();
-            if (pData != null) {
-                if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) return 0;
-            }
-            return BlockFlags.F_WATER | BlockFlags.F_LIQUID | BlockFlags.F_WATERLOGGED;
-        }
-        return 0;
     }
 }

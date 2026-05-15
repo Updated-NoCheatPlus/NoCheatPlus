@@ -117,6 +117,7 @@ public class OutgoingPosition extends BaseAdapter {
         }
 
         final CountableLocation packetData = data.teleportQueue.onOutgoingTeleport(x, y, z, yaw, pitch, teleportId);
+        data.recordOutgoingPosition(x, y, z, yaw, pitch, teleportId, packetData != null, time);
         if (packetData == null) {
             // Add counter for untracked (by Bukkit API) outgoing teleport.
             // TODO: There may be other cases which are indicated by Bukkit API events.

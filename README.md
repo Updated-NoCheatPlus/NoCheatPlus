@@ -34,6 +34,7 @@ Links
 ###### Support and Documentation
 * [Issues/Tickets](https://github.com/Updated-NoCheatPlus/NoCheatPlus/issues)
 * [Wiki](https://github.com/Updated-NoCheatPlus/Docs)
+* [Compatibility debugging guide](docs/compat-debugging.md)
 * [Configuration](https://github.com/Updated-NoCheatPlus/Docs#configuration)
 * [Permissions](https://github.com/Updated-NoCheatPlus/Docs/blob/master/Settings/Permissions.md)
 * [Commands](https://github.com/Updated-NoCheatPlus/Docs/blob/master/Settings/Commands.md)

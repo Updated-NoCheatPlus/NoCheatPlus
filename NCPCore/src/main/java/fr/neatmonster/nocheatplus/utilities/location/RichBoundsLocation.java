@@ -25,7 +25,7 @@ import org.bukkit.block.data.type.BubbleColumn;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.Vector;
 
-import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeReference;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker.BlockChangeEntry;
@@ -113,6 +113,9 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
 
     /** Is the player in water?. */
     Boolean inWater = null;
+
+    /** Is the player in water logged block?. */
+    Boolean inWaterLogged = null;
 
     /** Is the player in web?. */
     Boolean inWeb = null;
@@ -615,74 +618,47 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      * <hr>
      * The server applies bubble column motion on calling the tryCheckInsideBlocks() method in Entity.java
      *
+     * @param vector The current motion Vector of the entity.
+     * @return The modified motion Vector with adjusted vertical motion due to bubble column effects.
      */
-    public void tryApplyBubbleColumnMotion(PlayerMoveData thisMove, double[]yTheoreticalDistance) {
+    public Vector tryApplyBubbleColumnMotion(Vector vector) {
         if (!isInBubbleStream()) {
             // Client-version checking is already contained in isInBubbleStream.
-            return;
+            return vector;
         }
-        final boolean direct = yTheoreticalDistance == null;
-        final int iMinX = MathUtil.floor(minX + 0.001);
-        final int iMaxX = MathUtil.ceil(maxX - 0.001);
-        final int iMinY = MathUtil.floor(minY + 0.001);
-        final int iMaxY = MathUtil.ceil(maxY - 0.001);
-        final int iMinZ = MathUtil.floor(minZ + 0.001);
-        final int iMaxZ = MathUtil.ceil(maxZ - 0.001);
-        for (int x = iMinX; x < iMaxX; x++) {
-            for (int y = iMinY; y < iMaxY; y++) {
-                for (int z = iMinZ; z < iMaxZ; z++) {
-                    // Determine whether the block above the column is effectively "air".
-                    final IBlockCacheNode nodeAbove = blockCache.getOrCreateBlockCacheNode(x, y + 1, z, false);
-                    final boolean airAbove = BlockProperties.isAir(nodeAbove.getType());
-                    // TODO: Cache the data?
-                    final BlockData data = world.getBlockAt(x, y, z).getBlockData();
-                    if (data instanceof BubbleColumn) {
-                        final boolean isDrag = ((BubbleColumn) data).isDrag();
-                        if (direct) {
-                            if (airAbove) {
-                                // Above the column
-                                if (isDrag) {
-                                    thisMove.yAllowedDistance = Math.max(-0.9D, thisMove.yAllowedDistance - 0.03D);
-                                }
-                                else {
-                                    thisMove.yAllowedDistance = Math.min(1.8D, thisMove.yAllowedDistance + 0.1D);
-                                }
-                            }
-                            else {
-                                // Fully inside
-                                if (isDrag) {
-                                    thisMove.yAllowedDistance = Math.max(-0.3D, thisMove.yAllowedDistance - 0.03D);
-                                }
-                                else {
-                                    thisMove.yAllowedDistance = Math.min(0.7D, thisMove.yAllowedDistance + 0.06D);
-                                }
-                            }
-                        } else {
-                            for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                                if (airAbove) {
-                                    // Above the column
-                                    if (isDrag) {
-                                        yTheoreticalDistance[i] = Math.max(-0.9D, yTheoreticalDistance[i] - 0.03D);
-                                    }
-                                    else {
-                                        yTheoreticalDistance[i] = Math.min(1.8D, yTheoreticalDistance[i] + 0.1D);
-                                    }
-                                }
-                                else {
-                                    // Fully inside
-                                    if (isDrag) {
-                                        yTheoreticalDistance[i] = Math.max(-0.3D, yTheoreticalDistance[i] - 0.03D);
-                                    }
-                                    else {
-                                        yTheoreticalDistance[i] = Math.min(0.7D, yTheoreticalDistance[i] + 0.06D);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        if (!SchedulerHelper.isOwnedByCurrentRegion(world, this.blockX, this.blockZ, 1)) {
+            return vector;
+        }
+        // Determine whether the block above the column is effectively "air".
+        IBlockCacheNode nodeAbove = blockCache.getBlockCacheNode(this.blockX, this.blockY + 1, this.blockZ);
+        boolean airAbove = (nodeAbove == null) ? BlockProperties.isAir(world.getBlockAt(this.blockX, this.blockY + 1, this.blockZ).getType())
+                                               : BlockProperties.isAir(nodeAbove.getType());
+        boolean isDrag = false;
+        BlockData data = world.getBlockAt(this.blockX, this.blockY, this.blockZ).getBlockData();
+        if (data instanceof BubbleColumn) {
+            isDrag = ((BubbleColumn) data).isDrag();
+        }
+
+        double yMotion;
+        if (airAbove) {
+            // Above the column
+            if (isDrag) {
+                yMotion = Math.max(-0.9D, vector.getY() - 0.03D);
+            }
+            else {
+                yMotion = Math.min(1.8D, vector.getY() + 0.1D);
             }
         }
+        else {
+            // Fully inside
+            if (isDrag) {
+                yMotion = Math.max(-0.3D, vector.getY() - 0.03D);
+            }
+            else {
+                yMotion = Math.min(0.7D, vector.getY() + 0.06D);
+            }
+        }
+        return new Vector(vector.getX(), yMotion, vector.getZ());
     }
 
     /**
@@ -693,9 +669,13 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      */
     public boolean isInWater() {
         if (inWater == null) {
-            inWater = false;
-            if (blockFlags != null && (blockFlags & BlockFlags.F_WATER) == 0) {
+            if (!isInWaterLogged() && blockFlags != null && (blockFlags & BlockFlags.F_WATER) == 0) {
+                inWater = false;
                 return false;
+            }
+            inWater = isInWaterLogged();
+            if (inWater) {
+                return true;
             }
             final int iMinX = MathUtil.floor(minX + 0.001);
             final int iMaxX = MathUtil.ceil(maxX - 0.001);
@@ -720,12 +700,22 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         }
         return inWater;
     }
+    
+    /**
+     * @return true, if is in a water logged block. Applies to 1.13+ clients
+     */
+    public boolean isInWaterLogged() {
+        if (inWaterLogged == null) {
+            inWaterLogged = BlockProperties.isWaterlogged(world, blockCache, minX, minY, minZ, maxX, maxY, maxZ);
+        }
+        return inWaterLogged;
+    }
 
     /**
      * @return true, if is in liquid
      */
     public boolean isInLiquid() {
-        if (blockFlags != null && (blockFlags & BlockFlags.F_LIQUID) == 0) {
+        if (!isInWaterLogged() && blockFlags != null && (blockFlags & BlockFlags.F_LIQUID) == 0) {
             return false;
         }
         return isInWater() || isInLava();
@@ -963,7 +953,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
             if (blockFlags != null && (blockFlags & BlockFlags.F_BUBBLE_COLUMN) == 0) {
                 inBubbleStream = false;
             }
-            else inBubbleStream = isInsideIgnoreBounds(BlockFlags.F_BUBBLE_COLUMN);
+            else inBubbleStream = isInside(BlockFlags.F_BUBBLE_COLUMN);
         }
         return inBubbleStream;
      
@@ -1517,6 +1507,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         this.nodeBelow = other.nodeBelow;
         this.onGround = other.isOnGround();
         this.inWater = other.isInWater();
+        this.inWaterLogged = other.isInWaterLogged();
         this.inLava = other.isInLava();
         this.inWeb = other.isInWeb();
         this.inBerryBush = other.isInBerryBush();
@@ -1570,7 +1561,8 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
         pitch = location.getPitch();
 
         // Set bounding box.
-        final double dxz = fullWidth / 2D; // Don't round thing up, otherwise from#collide will fail randomly
+        // final double dxz = Math.round(fullWidth * 500.0) / 1000.0; // this.width / 2; // 0.3;
+        final double dxz = Math.round(fullWidth * 500.0) / 1000.0; // fullWidth / 2f; <---- This -for some reasons- yields thisMove.headObstructed = true when moving against walls!
         minX = x - dxz;
         minY = y;
         minZ = z - dxz;
@@ -1590,7 +1582,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
 
         // Reset cached values.
         node = nodeBelow = null;
-        inLava = inWater = inWeb = onIce = onBlueIce = inSoulSand = onHoneyBlock 
+        inLava = inWater = inWaterLogged = inWeb = onIce = onBlueIce = inSoulSand = onHoneyBlock 
         = onSlimeBlock = inBerryBush = inPowderSnow = touchedPowderSnow = onGround = onClimbable = onBouncyBlock = passable 
         = passableBox = inBubbleStream = null;
         onGroundMinY = Double.MAX_VALUE;

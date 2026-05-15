@@ -364,8 +364,20 @@ public class MovingUtil {
         return 1.0 + amplifier;
     }
 
+    private static boolean canCollectFullCheckContext(final RichBoundsLocation from, final RichBoundsLocation to) {
+        if (!SchedulerHelper.isFoliaServer()) {
+            return true;
+        }
+        return SchedulerHelper.isOwnedByCurrentRegion(from.getWorld(), from.getBlockX(), from.getBlockZ(), 1)
+            && SchedulerHelper.isOwnedByCurrentRegion(to.getWorld(), to.getBlockX(), to.getBlockZ(), 1);
+    }
+
 
     public static void prepareFullCheck(final RichBoundsLocation from, final RichBoundsLocation to, final MoveData thisMove, final double yOnGround) {
+        if (!canCollectFullCheckContext(from, to)) {
+            thisMove.set(from, to);
+            return;
+        }
         // Collect block flags.
         from.collectBlockFlags(yOnGround);
         if (from.isSamePos(to)) {

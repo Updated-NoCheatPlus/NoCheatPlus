@@ -58,6 +58,7 @@ public class Permissions {
 
     // Notifications (in-game).
     public static final RegisteredPermission  NOTIFY                       = add(NOCHEATPLUS + ".notify");
+    public static final RegisteredPermission  COMPAT_BEDROCK              = add(NOCHEATPLUS + ".compat.bedrock");
 
     // Command permissions.
     public static final RegisteredPermission  COMMAND                      = add(NOCHEATPLUS + ".command");

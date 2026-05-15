@@ -197,8 +197,8 @@ public class HiddenMotionReconstructor {
         }
         // *----------tryCheckInsideBlocks()----------*
         // Bubble columns are checked in the tryCheckInsideBlocks method, so it comes after updateEntityAfterFallOn()...
-        //Vector bubbleVector = from.tryApplyBubbleColumnMotion(new Vector(0.0, baseY, 0.0));
-        //baseY = bubbleVector.getY();
+        Vector bubbleVector = from.tryApplyBubbleColumnMotion(new Vector(0.0, baseY, 0.0));
+        baseY = bubbleVector.getY();
         // Honey block sliding mechanic...
         if (from.isSlidingDown()) {
             // Speed is static in this case
@@ -275,7 +275,7 @@ public class HiddenMotionReconstructor {
         // This condition is the same for both lava and water, and is always done at the end of the travel() function.
         if (lastMove.from.inLiquid && lastMove.collidesHorizontally 
             // TODO: Somewhat work. Incorrect horizontal move. Require this function call at the time BOTH horizontal and vertical calculating at the same time. Which is not possible with current infrastructure
-            && from.isUnobstructed(0.0)) {
+            && from.isUnobstructed()) {
             baseY = 0.3;
         }
         

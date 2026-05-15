@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.Plugin;
@@ -31,6 +32,7 @@ import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
 /**
  * Utility class to provide compatibility with Paper's regionized, multi-threaded server implementation (a.k.a.: Folia), using reflection.
  * If the server is not running Folia, use Bukkit's scheduler.
+ * Keep Folia-specific calls here so the rest of NCP can stay source-compatible with regular Bukkit/Paper APIs.
  */
 public class SchedulerHelper {
 
@@ -39,12 +41,118 @@ public class SchedulerHelper {
     private static final Class<?> GlobalRegionScheduler = ReflectionUtil.getClass("io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler");
     private static final Class<?> EntityScheduler = ReflectionUtil.getClass("io.papermc.paper.threadedregions.scheduler.EntityScheduler");
     private static final boolean isFoliaServer = RegionizedServer && GlobalRegionScheduler != null && EntityScheduler != null; // && AsyncScheduler != null
+    private static final Method Bukkit_isOwnedByCurrentRegionLocation = ReflectionUtil.getMethod(Bukkit.class, "isOwnedByCurrentRegion", Location.class);
+    private static final Method Bukkit_isOwnedByCurrentRegionLocationRadius = ReflectionUtil.getMethod(Bukkit.class, "isOwnedByCurrentRegion", Location.class, int.class);
+    private static final Method Bukkit_isOwnedByCurrentRegionWorldChunk = ReflectionUtil.getMethod(Bukkit.class, "isOwnedByCurrentRegion", World.class, int.class, int.class);
+    private static final Method Bukkit_isOwnedByCurrentRegionWorldChunkRadius = ReflectionUtil.getMethod(Bukkit.class, "isOwnedByCurrentRegion", World.class, int.class, int.class, int.class);
+    private static final Method Bukkit_isOwnedByCurrentRegionEntity = ReflectionUtil.getMethod(Bukkit.class, "isOwnedByCurrentRegion", Entity.class);
     
     /**
      * @return Whether the server is running Folia
      */
     public static boolean isFoliaServer() {
         return isFoliaServer;
+    }
+
+    /**
+     * Check whether the current Folia region owns a Bukkit location before
+     * touching world/block state. Non-Folia servers keep the old behavior.
+     *
+     * @param location The block/world location to check.
+     * @return True if the location is safe to access on the current thread.
+     */
+    public static boolean isOwnedByCurrentRegion(final Location location) {
+        return isOwnedByCurrentRegion(location, 0);
+    }
+
+    /**
+     * Check whether the current Folia region owns a location and a square chunk
+     * radius around it. Use this before code that scans neighboring blocks.
+     *
+     * @param location The block/world location to check.
+     * @param squareRadiusChunks Radius in chunks, not squared distance.
+     * @return True if the area is safe to access on the current thread.
+     */
+    public static boolean isOwnedByCurrentRegion(final Location location, final int squareRadiusChunks) {
+        if (!isFoliaServer) {
+            return true;
+        }
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        if (squareRadiusChunks > 0 && Bukkit_isOwnedByCurrentRegionLocationRadius != null) {
+            return invokeOwnershipCheck(Bukkit_isOwnedByCurrentRegionLocationRadius, location, squareRadiusChunks);
+        }
+        if (squareRadiusChunks == 0 && Bukkit_isOwnedByCurrentRegionLocation != null) {
+            return invokeOwnershipCheck(Bukkit_isOwnedByCurrentRegionLocation, location);
+        }
+        return isOwnedByCurrentRegion(location.getWorld(), location.getBlockX(), location.getBlockZ(), squareRadiusChunks);
+    }
+
+    /**
+     * Check whether the current Folia region owns the chunk containing a block.
+     *
+     * @param world The world to check.
+     * @param blockX The block x coordinate.
+     * @param blockZ The block z coordinate.
+     * @return True if the block is safe to access on the current thread.
+     */
+    public static boolean isOwnedByCurrentRegion(final World world, final int blockX, final int blockZ) {
+        return isOwnedByCurrentRegion(world, blockX, blockZ, 0);
+    }
+
+    /**
+     * Check whether the current Folia region owns the chunk containing a block,
+     * plus an optional square chunk radius.
+     *
+     * @param world The world to check.
+     * @param blockX The block x coordinate.
+     * @param blockZ The block z coordinate.
+     * @param squareRadiusChunks Radius in chunks, not squared distance.
+     * @return True if the block area is safe to access on the current thread.
+     */
+    public static boolean isOwnedByCurrentRegion(final World world, final int blockX, final int blockZ, final int squareRadiusChunks) {
+        if (!isFoliaServer) {
+            return true;
+        }
+        if (world == null) {
+            return false;
+        }
+        final int chunkX = blockX >> 4;
+        final int chunkZ = blockZ >> 4;
+        if (squareRadiusChunks > 0 && Bukkit_isOwnedByCurrentRegionWorldChunkRadius != null) {
+            return invokeOwnershipCheck(Bukkit_isOwnedByCurrentRegionWorldChunkRadius, world, chunkX, chunkZ, squareRadiusChunks);
+        }
+        if (Bukkit_isOwnedByCurrentRegionWorldChunk != null) {
+            return invokeOwnershipCheck(Bukkit_isOwnedByCurrentRegionWorldChunk, world, chunkX, chunkZ);
+        }
+        return false;
+    }
+
+    /**
+     * Check whether the current Folia region owns an entity before reading
+     * entity state or nearby entities.
+     *
+     * @param entity The entity to check.
+     * @return True if the entity is safe to access on the current thread.
+     */
+    public static boolean isOwnedByCurrentRegion(final Entity entity) {
+        if (!isFoliaServer) {
+            return true;
+        }
+        if (entity == null || Bukkit_isOwnedByCurrentRegionEntity == null) {
+            return false;
+        }
+        return invokeOwnershipCheck(Bukkit_isOwnedByCurrentRegionEntity, entity);
+    }
+
+    private static boolean invokeOwnershipCheck(final Method method, final Object... arguments) {
+        try {
+            return Boolean.TRUE.equals(method.invoke(null, arguments));
+        }
+        catch (Throwable t) {
+            return false;
+        }
     }
     
     /**
@@ -58,6 +166,7 @@ public class SchedulerHelper {
         if (!isFoliaServer) {
             return Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> run.accept(null)).getTaskId();
         }
+        // Folia async scheduler signatures have moved across builds; these callers already do async-safe work.
         //try {
         //    Method getSchedulerMethod = ReflectionUtil.getMethodNoArgs(Server.class, "getAsyncScheduler", AsyncScheduler);
         //    Object asyncScheduler = getSchedulerMethod.invoke(Bukkit.getServer());
@@ -71,8 +180,7 @@ public class SchedulerHelper {
         //catch (Exception e) {
             // Second attempt, should be happening during onDisable calling from BukkitLogNodeDispatcher
             Thread thread = Executors.defaultThreadFactory().newThread(() -> run.accept(null));
-            if (thread == null) return null;
-            thread.run();
+            thread.start();
             return thread;
         //}
     }

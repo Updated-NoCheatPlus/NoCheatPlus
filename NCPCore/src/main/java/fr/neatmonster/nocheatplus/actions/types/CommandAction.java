@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.actions.types;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import fr.neatmonster.nocheatplus.actions.AbstractActionList;
@@ -63,8 +64,8 @@ public class CommandAction<D extends ParameterHolder, L extends AbstractActionLi
     @Override
     public void execute(final D violationData) {
         final String command = getMessage(violationData);
-        SchedulerHelper.runSyncTask(plugin, (arg) -> {
-        	try {
+        final Runnable runCommand = () -> {
+            try {
                 Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
                 if (logDebug) {
                     debug(violationData, command);
@@ -74,7 +75,20 @@ public class CommandAction<D extends ParameterHolder, L extends AbstractActionLi
                 StaticLog.logOnce(Level.WARNING, "Failed to execute the command '" + command + "': " + e.getMessage()
                 + ", please check if everything is setup correct.", StringUtil.throwableToString(e));
             }
-        });
+        };
+        if (plugin == null) {
+            runCommand.run();
+            return;
+        }
+        if (SchedulerHelper.isFoliaServer() && violationData instanceof ViolationData) {
+            final Player player = ((ViolationData) violationData).player;
+            if (player != null) {
+                SchedulerHelper.runSyncTaskForEntity(player, plugin, (arg) -> runCommand.run(),
+                        () -> SchedulerHelper.runSyncTask(plugin, (arg) -> runCommand.run()));
+                return;
+            }
+        }
+        SchedulerHelper.runSyncTask(plugin, (arg) -> runCommand.run());
     }
 
     private void debug(final D violationData, String command) {

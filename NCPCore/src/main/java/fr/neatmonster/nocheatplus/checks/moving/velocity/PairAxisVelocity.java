@@ -164,6 +164,88 @@ public class PairAxisVelocity {
     }
 
     /**
+     * Use the next velocity entry that can cover the demanded x/z displacement.
+     * This is meant for knockback-style compensation, where the player may only
+     * consume part of a queued velocity vector during one move.
+     */
+    public List<PairEntry> useCovering(final double x, final double z, final int minActCount,
+                                       final int maxActCount, final double tolerance) {
+        final List<PairEntry> available = peekCovering(x, z, minActCount, maxActCount, tolerance);
+        if (available.isEmpty()) {
+            return available;
+        }
+        return use(available.get(0).tick);
+    }
+
+    public List<PairEntry> peekCovering(final double x, final double z, final int minActCount,
+                                        final int maxActCount, final double tolerance) {
+        final List<PairEntry> result = new LinkedList<>();
+        double totalAmountX = 0;
+        double totalAmountZ = 0;
+        int lastTick = 0;
+        boolean hasVel = false;
+        final Iterator<PairEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            final PairEntry entry = it.next();
+            if (entry.actCount < minActCount || entry.actCount > maxActCount) {
+                continue;
+            }
+            if ((entry.flags & VelocityFlags.ADDITIVE) != 0 && lastTick == entry.tick) {
+                totalAmountX += entry.x;
+                totalAmountZ += entry.z;
+                result.add(entry);
+                hasVel = true;
+            }
+            else {
+                if (hasVel && coversVector(totalAmountX, totalAmountZ, x, z, tolerance)) {
+                    return result;
+                }
+                result.clear();
+                totalAmountX = entry.x;
+                totalAmountZ = entry.z;
+                lastTick = entry.tick;
+                result.add(entry);
+                hasVel = true;
+            }
+        }
+        if (hasVel && coversVector(totalAmountX, totalAmountZ, x, z, tolerance)) {
+            return result;
+        }
+        result.clear();
+        return result;
+    }
+
+    private boolean covers(final double velocity, final double amount, final double tolerance) {
+        return Math.abs(amount) <= tolerance
+                || Math.signum(velocity) == Math.signum(amount)
+                && Math.abs(amount) <= Math.abs(velocity) + tolerance;
+    }
+
+    private boolean coversVector(final double velocityX, final double velocityZ,
+                                 final double amountX, final double amountZ,
+                                 final double tolerance) {
+        final double amountSq = amountX * amountX + amountZ * amountZ;
+        if (amountSq <= tolerance * tolerance) {
+            return true;
+        }
+        final double velocitySq = velocityX * velocityX + velocityZ * velocityZ;
+        if (velocitySq <= tolerance * tolerance) {
+            return false;
+        }
+        final double dot = velocityX * amountX + velocityZ * amountZ;
+        if (dot < -tolerance) {
+            return false;
+        }
+        final double amount = Math.sqrt(amountSq);
+        final double velocity = Math.sqrt(velocitySq);
+        if (amount > velocity + tolerance) {
+            return false;
+        }
+        final double perpendicular = Math.abs(velocityX * amountZ - velocityZ * amountX) / velocity;
+        return perpendicular <= Math.max(tolerance, 0.02);
+    }
+
+    /**
      * Without checking for invalidation, test if there is a matching entry with
      * same or less the activation count.
      * 

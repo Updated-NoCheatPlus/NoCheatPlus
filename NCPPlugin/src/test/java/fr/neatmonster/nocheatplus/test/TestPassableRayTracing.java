@@ -15,6 +15,7 @@
 package fr.neatmonster.nocheatplus.test;
 
 import org.bukkit.Material;
+import org.junit.Before;
 import org.junit.Test;
 
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
@@ -36,7 +37,8 @@ public class TestPassableRayTracing extends MockServerBase {
     // TODO: From ground and onto ground moves, onto-edge moves (block before edge, into block, etc).
     // TODO: Randomized tests (Collide with inner sphere, not collide with outer sphere).
 
-    public TestPassableRayTracing() {
+    @Before
+    public void initBlockProperties() {
         StaticLog.setUseLogManager(false);
         BlockTests.initBlockProperties();
         StaticLog.setUseLogManager(true);

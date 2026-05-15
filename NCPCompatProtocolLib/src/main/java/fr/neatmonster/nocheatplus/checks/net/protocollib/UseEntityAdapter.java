@@ -33,6 +33,7 @@ import fr.neatmonster.nocheatplus.checks.net.AttackFrequency;
 import fr.neatmonster.nocheatplus.checks.net.NetConfig;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
+import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.ReflectionUtil;
@@ -104,6 +105,10 @@ public class UseEntityAdapter extends BaseAdapter {
 
     private final LegacyReflectionSet legacySet;
 
+    private volatile boolean protocolLibEntityUseActionBroken = false;
+
+    private volatile boolean protocolLibEntityUseActionWarningLogged = false;
+
     public UseEntityAdapter(Plugin plugin) {
         super(plugin, PacketType.Play.Client.USE_ENTITY);
         this.checkType = CheckType.NET_ATTACKFREQUENCY;
@@ -169,17 +174,20 @@ public class UseEntityAdapter extends BaseAdapter {
         if (!packetInterpreted) {
             // Handle as if latest.
             try {
-                final StructureModifier<EntityUseAction> actions = packet.getEntityUseActions();
-                // TODO: Not sure about version!
-                if (isServerAtLeast1_13) {
-                    final StructureModifier<WrappedEnumEntityUseAction> enumActions = packet.getEnumEntityUseActions();
-                    if (enumActions.size() == 1 && enumActions.read(0).equals(WrappedEnumEntityUseAction.attack())) {
+                if (!protocolLibEntityUseActionBroken) {
+                    final StructureModifier<EntityUseAction> actions = packet.getEntityUseActions();
+                    if (actions.size() == 1) {
                         packetInterpreted = true;
-                        isAttack = true;
+                        isAttack = actions.read(0) == EntityUseAction.ATTACK;
                     }
-                } else if (actions.size() == 1 && actions.read(0) == EntityUseAction.ATTACK) {
-                    packetInterpreted = true;
-                    isAttack = true;
+                    // ProtocolLib compatibility: modern snapshots can throw while initializing enum wrappers.
+                    if (!packetInterpreted && isServerAtLeast1_13) {
+                        final StructureModifier<WrappedEnumEntityUseAction> enumActions = packet.getEnumEntityUseActions();
+                        if (enumActions.size() == 1 && enumActions.read(0).equals(WrappedEnumEntityUseAction.attack())) {
+                            packetInterpreted = true;
+                            isAttack = true;
+                        }
+                    }
                 }
             }
             catch (NullPointerException e) {
@@ -187,6 +195,16 @@ public class UseEntityAdapter extends BaseAdapter {
                  * TODO: Observed somewhere on 1_7_R4, probably a custom build -
                  * why doesn't the LegacyReflectionSet work here?
                  */
+            }
+            catch (LinkageError | RuntimeException e) {
+                protocolLibEntityUseActionBroken = true;
+                if (!protocolLibEntityUseActionWarningLogged) {
+                    protocolLibEntityUseActionWarningLogged = true;
+                    // Diagnostic logging: name the failing branch so attack/combat packet issues are clear in console.
+                    StaticLog.logWarning("ProtocolLib could not expose USE_ENTITY action data (branch=enumEntityUseActions, packet=" + packet.getType() + "). Skipping AttackFrequency interpretation for USE_ENTITY packets until restart.");
+                    StaticLog.logWarning("ProtocolLib USE_ENTITY action failure: " + e.getClass().getName() + ": " + e.getMessage());
+                }
+                return;
             }
         }
         if (!packetInterpreted) {

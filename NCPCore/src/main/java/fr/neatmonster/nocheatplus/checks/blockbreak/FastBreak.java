@@ -28,6 +28,8 @@ import fr.neatmonster.nocheatplus.compat.Bridge1_9;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgePotionEffect;
 import fr.neatmonster.nocheatplus.permissions.Permissions;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
+import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.entity.PotionUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
@@ -62,6 +64,11 @@ public class FastBreak extends Check {
                                          // Counting break...break.
                                          : (data.fastBreakBreakTime > now) ? 0 : now - data.fastBreakBreakTime;
 
+        /*
+         * FastBreak compatibility: keep the grace threshold configurable.
+         * The safer modern default belongs in config, while this check only
+         * compares measured block/tool timing against that configured budget.
+         */
         // Check if the time spent is lower than expected.
         if (isInstaBreak.decideOptimistically()) {
             // Ignore these for now.
@@ -80,13 +87,26 @@ public class FastBreak extends Check {
                 // Add as penalty
                 data.fastBreakPenalties.add(now, (float) missingTime);
                 // Only raise a violation, if the total penalty score exceeds the contention duration (for lag, delay).
-                if (data.fastBreakPenalties.score(cc.fastBreakBucketFactor) > cc.fastBreakGrace) {
+                final float penaltyScore = data.fastBreakPenalties.score(cc.fastBreakBucketFactor);
+                if (penaltyScore > cc.fastBreakGrace) {
                     // TODO: maybe add one absolute penalty time for big amounts to stop breaking until then
                     final double violation = (double) missingTime / 1000.0;
                     data.fastBreakVL += violation;
+                    final ItemStack stack = Bridge1_9.getItemInMainHand(player);
+                    final Material toolType = stack == null ? Material.AIR : stack.getType();
+                    final boolean isValidTool = BlockProperties.isValidTool(blockType, stack);
+                    final double haste = PotionUtil.getPotionEffectAmplifier(player, BridgePotionEffect.HASTE);
+                    // Diagnostic info: tag the timing branch so false FastBreak reports show the block/tool context.
+                    final String tags = getFastBreakTags(isInstaBreak, cc, isValidTool, haste, elapsedTime, missingTime);
                     final ViolationData vd = new ViolationData(this, player, data.fastBreakVL, violation, cc.fastBreakActions);
                     if (vd.needsParameters()) {
                         vd.setParameter(ParameterName.BLOCK_TYPE, blockType.toString());
+                        vd.setParameter(ParameterName.TAGS, tags);
+                    }
+                    if (CheckUtils.shouldLogDebugToConsole()) {
+                        logFastBreakDetail(player, blockType, toolType, isInstaBreak, isValidTool, haste,
+                                elapsedTime, expectedBreakingTime, missingTime, serverLagFactor,
+                                penaltyScore, data.fastBreakVL, violation, cc, tags);
                     }
                     cancel = executeActions(vd).willCancel();
                 }
@@ -131,5 +151,70 @@ public class FastBreak extends Check {
             //              player.sendMessage("mc speed: " + x);
             //          }
         }
+    }
+
+    private String getFastBreakTags(final AlmostBoolean isInstaBreak, final BlockBreakConfig cc,
+                                    final boolean isValidTool, final double haste,
+                                    final long elapsedTime, final long missingTime) {
+        // Diagnostic info: these tags describe why the umbrella FastBreak check added VL.
+        final StringBuilder builder = new StringBuilder(120);
+        builder.append("subcheck_fastbreak_timing")
+                .append("+branch_expected_duration")
+                .append(cc.fastBreakStrict ? "+strict_interact_break" : "+break_break")
+                .append("+insta_").append(isInstaBreak.name().toLowerCase())
+                .append(isValidTool ? "+valid_tool" : "+invalid_tool");
+        if (Double.isInfinite(haste)) {
+            builder.append("+no_haste");
+        }
+        else {
+            builder.append("+haste_").append((int) haste + 1);
+        }
+        if (elapsedTime == 0L) {
+            builder.append("+zero_elapsed");
+        }
+        if (missingTime >= 1000L) {
+            builder.append("+large_missing_time");
+        }
+        return builder.toString();
+    }
+
+    private void logFastBreakDetail(final Player player, final Material blockType, final Material toolType,
+                                    final AlmostBoolean isInstaBreak, final boolean isValidTool,
+                                    final double haste, final long elapsedTime,
+                                    final long expectedBreakingTime, final long missingTime,
+                                    final float serverLagFactor, final float penaltyScore,
+                                    final double totalVL, final double addedVL,
+                                    final BlockBreakConfig cc, final String tags) {
+        try {
+            // Diagnostic info: console-only detail for tuning FastBreak grace without changing check behavior.
+            player.getServer().getLogger().info(new StringBuilder(380)
+                    .append("[NCP][FastBreak][detail] player=").append(player.getName())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" subcheck=FASTBREAK_TIMING")
+                    .append(" summary=block_timing{missingMs=").append(missingTime)
+                    .append(",graceMs=").append(StringUtil.fdec3.format(cc.fastBreakGrace))
+                    .append(",tool=").append(isValidTool ? "valid" : "invalid")
+                    .append(",insta=").append(isInstaBreak.name().toLowerCase())
+                    .append('}')
+                    .append(" block=").append(blockType)
+                    .append(" tool=").append(toolType)
+                    .append(" validTool=").append(isValidTool)
+                    .append(" insta=").append(isInstaBreak.name())
+                    .append(" strict=").append(cc.fastBreakStrict)
+                    .append(" elapsedMs=").append(elapsedTime)
+                    .append(" expectedMs=").append(expectedBreakingTime)
+                    .append(" missingMs=").append(missingTime)
+                    .append(" lagFactor=").append(StringUtil.fdec3.format(serverLagFactor))
+                    .append(" penaltyScore=").append(StringUtil.fdec3.format(penaltyScore))
+                    .append(" graceMs=").append(StringUtil.fdec3.format(cc.fastBreakGrace))
+                    .append(" delayMs=").append(cc.fastBreakDelay)
+                    .append(" modSurvival=").append(cc.fastBreakModSurvival)
+                    .append(" haste=").append(Double.isInfinite(haste) ? "none" : Integer.toString((int) haste + 1))
+                    .append(" addVL=").append(StringUtil.fdec3.format(addedVL))
+                    .append(" totalVL=").append(StringUtil.fdec3.format(totalVL))
+                    .append(" tags=").append(tags)
+                    .toString());
+        }
+        catch (Throwable ignored) {}
     }
 }

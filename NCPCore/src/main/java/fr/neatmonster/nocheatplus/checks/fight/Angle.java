@@ -30,6 +30,7 @@ import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.permissions.Permissions;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.math.TrigUtil;
@@ -113,6 +114,7 @@ public class Angle extends Check {
 
         boolean cancel = false;
         tags.clear();
+        // Diagnostic info: keep stable subcheck tags so combat false positives show which Angle heuristic fired.
 
         // Quick check for expiration of all entries.
         final long time = System.currentTimeMillis();
@@ -221,35 +223,93 @@ public class Angle extends Check {
         if (violationMove > cc.angleMove) {
             violation = violationMove;
             data.angleVL += violation;
+            // Diagnostic info: identify which FightAngle branch crossed its threshold.
+            tags.add(0, "subcheck_angle_move");
             final ViolationData vd = new ViolationData(this, player, data.angleVL, violation, cc.angleActions);
             if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+            if (CheckUtils.shouldLogDebugToConsole()) logAngleDetail(player, loc, damagedEntity, "ANGLE_MOVE",
+                    averageMove, averageTime, averageYaw, averageSwitching, data.angleVL, violation);
             cancel = executeActions(vd).willCancel();
         }
         else if (violationTime > cc.angleTime) {
             violation = violationTime;
             data.angleVL += violation;
+            // Diagnostic info: identify which FightAngle branch crossed its threshold.
+            tags.add(0, "subcheck_angle_time");
             final ViolationData vd = new ViolationData(this, player, data.angleVL, violation, cc.angleActions);
             if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+            if (CheckUtils.shouldLogDebugToConsole()) logAngleDetail(player, loc, damagedEntity, "ANGLE_TIME",
+                    averageMove, averageTime, averageYaw, averageSwitching, data.angleVL, violation);
             cancel = executeActions(vd).willCancel();
         }
         else if (violationYaw > cc.angleYaw) {
             violation = violationYaw;
             data.angleVL += violation;
+            // Diagnostic info: identify which FightAngle branch crossed its threshold.
+            tags.add(0, "subcheck_angle_yaw");
             final ViolationData vd = new ViolationData(this, player, data.angleVL, violation, cc.angleActions);
             if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+            if (CheckUtils.shouldLogDebugToConsole()) logAngleDetail(player, loc, damagedEntity, "ANGLE_YAW",
+                    averageMove, averageTime, averageYaw, averageSwitching, data.angleVL, violation);
             cancel = executeActions(vd).willCancel();
-        } 
+        }
         else if (violationSwitchSpeed > cc.angleSwitch) {
             violation = violationSwitchSpeed;
             data.angleVL += violation;
+            // Diagnostic info: identify which FightAngle branch crossed its threshold.
+            tags.add(0, "subcheck_angle_switch");
             final ViolationData vd = new ViolationData(this, player, data.angleVL, violation, cc.angleActions);
             if (vd.needsParameters()) vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+            if (CheckUtils.shouldLogDebugToConsole()) logAngleDetail(player, loc, damagedEntity, "ANGLE_SWITCH",
+                    averageMove, averageTime, averageYaw, averageSwitching, data.angleVL, violation);
             cancel = executeActions(vd).willCancel();
-        } 
+        }
         else {
             // Reward the player by lowering their violation level.
-            data.angleVL *= 0.98D;  
+            data.angleVL *= 0.98D;
         }
         return cancel;
+    }
+
+    private void logAngleDetail(final Player player, final Location loc, final Entity damagedEntity,
+                                final String subCheck, final double averageMove,
+                                final double averageTime, final double averageYaw,
+                                final double averageSwitching, final double totalVL,
+                                final double addedVL) {
+        try {
+            // Diagnostic info: console-only combat angle context for separating aim, timing, and target switching flags.
+            player.getServer().getLogger().info(new StringBuilder(360)
+                    .append("[NCP][FightAngle][detail] player=").append(player.getName())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" subcheck=").append(subCheck)
+                    .append(" summary=").append(subCheck.toLowerCase()).append("{avgMove=")
+                    .append(StringUtil.fdec3.format(averageMove))
+                    .append(",avgTime=").append(StringUtil.fdec3.format(averageTime))
+                    .append(",avgYaw=").append(StringUtil.fdec3.format(averageYaw))
+                    .append(",switch=").append(StringUtil.fdec3.format(averageSwitching))
+                    .append('}')
+                    .append(" target=").append(damagedEntity.getType())
+                    .append(" targetUuid=").append(damagedEntity.getUniqueId())
+                    .append(" avgMove=").append(StringUtil.fdec3.format(averageMove))
+                    .append(" avgTime=").append(StringUtil.fdec3.format(averageTime))
+                    .append(" avgYaw=").append(StringUtil.fdec3.format(averageYaw))
+                    .append(" avgSwitch=").append(StringUtil.fdec3.format(averageSwitching))
+                    .append(" addVL=").append(StringUtil.fdec3.format(addedVL))
+                    .append(" totalVL=").append(StringUtil.fdec3.format(totalVL))
+                    .append(" loc=").append(formatLocation(loc))
+                    .append(" tags=").append(StringUtil.join(tags, "+"))
+                    .toString());
+        }
+        catch (Throwable ignored) {}
+    }
+
+    private String formatLocation(final Location location) {
+        return location == null ? "null"
+                : (location.getWorld() == null ? "null" : location.getWorld().getName())
+                + "@" + StringUtil.fdec3.format(location.getX())
+                + "," + StringUtil.fdec3.format(location.getY())
+                + "," + StringUtil.fdec3.format(location.getZ())
+                + "/" + StringUtil.fdec3.format(location.getYaw())
+                + "," + StringUtil.fdec3.format(location.getPitch());
     }
 }

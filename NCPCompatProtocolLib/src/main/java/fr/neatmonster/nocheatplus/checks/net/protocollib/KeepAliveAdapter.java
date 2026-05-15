@@ -44,7 +44,7 @@ public class KeepAliveAdapter extends BaseAdapter {
     private final KeepAliveFrequency frequencyCheck = new KeepAliveFrequency();
 
     public KeepAliveAdapter(Plugin plugin) {
-        super(plugin, ListenerPriority.LOW, PacketType.Play.Client.KEEP_ALIVE);
+        super(plugin, ListenerPriority.LOW, PacketType.Play.Client.KEEP_ALIVE, PacketType.Play.Server.KEEP_ALIVE);
         this.checkType = CheckType.NET_KEEPALIVEFREQUENCY;
         // Add feature tags for checks.
         if (NCPAPIProvider.getNoCheatPlusAPI().getWorldDataManager().isActiveAnywhere(CheckType.NET_KEEPALIVEFREQUENCY)) {
@@ -70,11 +70,12 @@ public class KeepAliveAdapter extends BaseAdapter {
         final IPlayerData pData = DataManager.getPlayerDataSafe(player);
         if (pData == null) return;
         final NetData data = pData.getGenericInstance(NetData.class);
+        recordKeepAlivePacketDetails(event, data, time);
         data.lastKeepAliveTime = time;
         final NetConfig cc = pData.getGenericInstance(NetConfig.class);
 
         // Run check(s).
-        // TODO: Match vs. outgoing keep alive requests.
+        // KeepAlive model: outgoing server ids are recorded in onPacketSending; matching replies are expected.
         // TODO: Better modeling of actual packet sequences (flying vs. keep alive vs. request/ping).
         // TODO: Better integration with god-mode check / trigger reset ndt.
         if (frequencyCheck.isEnabled(player, pData) 
@@ -83,8 +84,25 @@ public class KeepAliveAdapter extends BaseAdapter {
         }
     }
 
+    private void recordKeepAlivePacketDetails(final PacketEvent event, final NetData data, final long time) {
+        final KeepAlivePacketInfo info = KeepAlivePacketInfo.read(event.getPacket());
+        data.recordKeepAlivePacket(time, info.idAvailable, info.id, info.idType, info.longCount, info.intCount,
+                event.isAsync(), Thread.currentThread().getName());
+    }
+
     @Override
     public void onPacketSending(PacketEvent event) {
-        // TODO: Maybe detect if keep alive wasn't asked for + allow cancel.
+        final Player player = event.getPlayer();
+        if (player == null) {
+            return;
+        }
+        final IPlayerData pData = DataManager.getPlayerDataSafe(player);
+        if (pData == null) {
+            return;
+        }
+        final KeepAlivePacketInfo info = KeepAlivePacketInfo.read(event.getPacket());
+        pData.getGenericInstance(NetData.class).recordOutgoingKeepAlivePacket(System.currentTimeMillis(),
+                info.idAvailable, info.id, info.idType, info.longCount, info.intCount,
+                event.isAsync(), Thread.currentThread().getName());
     }
 }

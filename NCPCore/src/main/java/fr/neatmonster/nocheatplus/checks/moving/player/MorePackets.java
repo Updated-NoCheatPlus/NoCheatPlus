@@ -28,6 +28,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.net.NetStatic;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
 
@@ -88,18 +89,24 @@ public class MorePackets extends Check {
 
         // Check for a violation of the set limits.
         tags.clear();
+        // Diagnostic info: packet-rate tags are separate from SurvivalFly movement-model tags.
         final double violation = NetStatic.morePacketsCheck(data.morePacketsFreq, time, 1f, cc.morePacketsEPSMax, cc.morePacketsEPSIdeal, data.morePacketsBurstFreq, cc.morePacketsBurstPackets, cc.morePacketsBurstDirect, cc.morePacketsBurstEPM, tags);
 
         // Process violation result.
         if (violation > 0.0) {
             // Increment violation level.
             data.morePacketsVL = violation; // TODO: Accumulate somehow [e.g. always += 1, decrease with continuous moving without violation]?
+            // Diagnostic info: expose packet-rate violations as their own subcheck under MOVING_MOREPACKETS.
+            tags.add(0, "subcheck_morepackets_frequency");
 
             // Violation handling.
             final ViolationData vd = new ViolationData(this, player, data.morePacketsVL, violation, cc.morePacketsActions);
             if (debug || vd.needsParameters()) {
                 vd.setParameter(ParameterName.PACKETS, Integer.toString(new Double(violation).intValue()));
                 vd.setParameter(ParameterName.TAGS, StringUtil.join(tags, "+"));
+            }
+            if (CheckUtils.shouldLogDebugToConsole()) {
+                logConsoleDetails(violation, player, from, to, allowSetSetBack, data, cc, pData, time);
             }
             if (executeActions(vd).willCancel()) {
                 // Set to cancel the move.
@@ -122,6 +129,92 @@ public class MorePackets extends Check {
         // No set back.
         return null;
 
+    }
+
+    private void logConsoleDetails(final double violation, final Player player,
+                                   final PlayerLocation from, final PlayerLocation to,
+                                   final boolean allowSetSetBack,
+                                   final MovingData data, final MovingConfig cc,
+                                   final IPlayerData pData, final long time) {
+        try {
+            // Diagnostic info: console-only packet-rate context for distinguishing packet spam from movement model issues.
+            final StringBuilder builder = new StringBuilder(620);
+            builder.append("[NCP][MorePackets][detail] player=").append(player.getName())
+                    .append(" bedrock=").append(pData.isBedrockPlayer() || player.getName().startsWith(".")
+                            || player.getUniqueId().toString().startsWith("00000000-0000-0000-0009-"))
+                    .append(" bedrockData=").append(pData.isBedrockPlayer())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" client=").append(pData.getClientVersion())
+                    .append(" time=").append(time)
+                    .append(" subcheck=MOREPACKETS_FREQUENCY")
+                    .append(" summary=packet_rate{violation=").append(StringUtil.fdec3.format(violation))
+                    .append(",epsMax=").append(cc.morePacketsEPSMax)
+                    .append(",burst=").append(cc.morePacketsBurstPackets)
+                    .append(",setback=").append(data.hasMorePacketsSetBack())
+                    .append('}')
+                    .append(" violation=").append(StringUtil.fdec3.format(violation))
+                    .append(" totalVL=").append(StringUtil.fdec3.format(data.morePacketsVL))
+                    .append(" moveCount=").append(data.getPlayerMoveCount())
+                    .append(" allowSetBack=").append(allowSetSetBack)
+                    .append(" morePacketsSetBack=").append(data.hasMorePacketsSetBack())
+                    .append(" morePacketsSetBackAge=").append(data.getMorePacketsSetBackAge())
+                    .append(" from=").append(formatLocation(from))
+                    .append(" to=").append(formatLocation(to))
+                    .append(" move=").append(formatMove(from, to))
+                    .append(" fromEnv=").append(formatEnvironment(from))
+                    .append(" toEnv=").append(formatEnvironment(to))
+                    .append(" playerState=sprint:").append(player.isSprinting())
+                    .append(",sneak:").append(player.isSneaking())
+                    .append(",fly:").append(player.isFlying())
+                    .append(",allowFlight:").append(player.getAllowFlight())
+                    .append(",vehicle:").append(player.isInsideVehicle())
+                    .append(",velocity=").append(StringUtil.fdec3.format(player.getVelocity().getX()))
+                    .append('/').append(StringUtil.fdec3.format(player.getVelocity().getY()))
+                    .append('/').append(StringUtil.fdec3.format(player.getVelocity().getZ()))
+                    .append(" config=epsIdeal:").append(cc.morePacketsEPSIdeal)
+                    .append(",epsMax:").append(cc.morePacketsEPSMax)
+                    .append(",burstPackets:").append(cc.morePacketsBurstPackets)
+                    .append(",burstDirect:").append(cc.morePacketsBurstDirect)
+                    .append(",burstEPM:").append(cc.morePacketsBurstEPM)
+                    .append(" tags=").append(StringUtil.join(tags, "+"));
+            player.getServer().getLogger().info(builder.toString());
+        }
+        catch (Throwable t) {
+            player.getServer().getLogger().info("[NCP][MorePackets][detail] diagnostic logging failed for player="
+                    + player.getName() + " reason=" + t.getClass().getSimpleName());
+        }
+    }
+
+    private String formatMove(final PlayerLocation from, final PlayerLocation to) {
+        final double x = to.getX() - from.getX();
+        final double y = to.getY() - from.getY();
+        final double z = to.getZ() - from.getZ();
+        final double h = Math.sqrt(x * x + z * z);
+        return "x:" + StringUtil.fdec6.format(x)
+                + ",y:" + StringUtil.fdec6.format(y)
+                + ",z:" + StringUtil.fdec6.format(z)
+                + ",h:" + StringUtil.fdec6.format(h);
+    }
+
+    private String formatLocation(final PlayerLocation location) {
+        return StringUtil.fdec3.format(location.getX()) + ","
+                + StringUtil.fdec3.format(location.getY()) + ","
+                + StringUtil.fdec3.format(location.getZ());
+    }
+
+    private String formatEnvironment(final PlayerLocation location) {
+        return "{block:" + location.getBlockType()
+                + ",below:" + location.getBlockTypeBelow()
+                + ",above:" + location.getBlockTypeAbove()
+                + ",ground:" + location.isOnGround()
+                + ",reset:" + location.isResetCond()
+                + ",water:" + location.isInWater()
+                + ",lava:" + location.isInLava()
+                + ",waterlogged:" + location.isInWaterLogged()
+                + ",climb:" + location.isOnClimbable()
+                + ",web:" + location.isInWeb()
+                + ",passable:" + location.isPassable()
+                + "}";
     }
 
 }

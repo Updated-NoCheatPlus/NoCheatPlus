@@ -3760,6 +3760,66 @@ public class BlockProperties {
     }
 
     /**
+     * Check if the given bounding box collides with waterlogged blocks.
+     *
+     * <p>Folia support: waterlogged state now comes through {@link BlockCache}
+     * extended data, so callers keep the old API without directly querying
+     * Bukkit block data from a movement check.</p>
+     *
+     * @param world
+     *            the world
+     * @param access
+     *            the access
+     * @param minX
+     *            the min x
+     * @param minY
+     *            the min y
+     * @param minZ
+     *            the min z
+     * @param maxX
+     *            the max x
+     * @param maxY
+     *            the max y
+     * @param maxZ
+     *            the max z
+     * @return true, if successful
+     */
+    public static final boolean isWaterlogged(final World world, final BlockCache access,
+                                              final double minX, final double minY, final double minZ,
+                                              final double maxX, final double maxY, final double maxZ) {
+        if (!Bridge1_13.hasIsSwimming()) {
+            return false;
+        }
+        final int iMinX = Location.locToBlock(minX);
+        final int iMaxX = Location.locToBlock(maxX);
+        final int iMinY = Location.locToBlock(minY);
+        final int iMaxY = Math.min(Location.locToBlock(maxY), access.getMaxBlockY());
+        final int iMinZ = Location.locToBlock(minZ);
+        final int iMaxZ = Location.locToBlock(maxZ);
+
+        for (int x = iMinX; x <= iMaxX; x++) {
+            for (int z = iMinZ; z <= iMaxZ; z++) {
+                for (int y = iMaxY; y >= iMinY; y--) {
+                    if ((access.getExtendedData(x, y, z) & BlockFlags.F_WATERLOGGED) == 0) {
+                        continue;
+                    }
+                    // Waterlogged blocks expose the water volume inside the block cache.
+                    if (minX > 1.0 + x || maxX < 0.0 + x
+                        || minY > LIQUID_HEIGHT_LOWERED + y || maxY < 0.0 + y
+                        || minZ > 1.0 + z || maxZ < 0.0 + z) {
+                        continue;
+                    }
+                    if (minX == 1.0 + x || minY == LIQUID_HEIGHT_LOWERED + y || minZ == 1.0 + z) {
+                        continue;
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Test if the box collide with any block that matches the flags somehow.
      * Convenience method.
      *
