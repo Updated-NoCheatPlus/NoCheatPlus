@@ -23,15 +23,19 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
+import fr.neatmonster.nocheatplus.actions.ParameterName;
 import fr.neatmonster.nocheatplus.actions.ActionList;
 import fr.neatmonster.nocheatplus.checks.Check;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.checks.ViolationData;
 import fr.neatmonster.nocheatplus.checks.net.FlyingQueueHandle;
 import fr.neatmonster.nocheatplus.checks.net.FlyingQueueLookBlockChecker;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.components.config.ICheckConfig;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
+import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.CollideRayVsAABB;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.ray.ICollideRayVsAABB;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
@@ -148,6 +152,7 @@ public abstract class AbstractBlockDirectionCheck<D extends ICheckData, C extend
         final int blockZ = block.getZ();
         // The distance is squared initially.
         double distance;
+        String branch = "ray_miss";
         if (checker.checkFlyingQueue(x, y, z, loc.getYaw(), loc.getPitch(), 
                 blockX, blockY, blockZ, flyingHandle)) {
             distance = Double.MAX_VALUE;
@@ -156,7 +161,11 @@ public abstract class AbstractBlockDirectionCheck<D extends ICheckData, C extend
             distance = checker.getMinDistance();
         }
 
-        if (face != null && !isInteractable(loc, Location.locToBlock(y), block, face)) distance = 1.0;          
+        // Diagnostic branch: ray misses and unreachable block faces are different root causes.
+        if (face != null && !isInteractable(loc, Location.locToBlock(y), block, face)) {
+            distance = 1.0;
+            branch = "face_unreachable";
+        }
 
         // TODO: Consider a protected field with a tolerance value.
         if (distance != Double.MAX_VALUE) {
@@ -172,7 +181,16 @@ public abstract class AbstractBlockDirectionCheck<D extends ICheckData, C extend
 
             // Execute whatever actions are associated with this check and the violation level and find out if we should
             // cancel the event.
-            cancel = executeActions(player, vl, distance, getActions(cc)).willCancel();
+            // Diagnostic info: preserve the concrete block-direction branch behind interact/place/break direction checks.
+            final String tags = getDiagnosticTags(block, face, branch);
+            final ViolationData vd = new ViolationData(this, player, vl, distance, getActions(cc));
+            if (vd.needsParameters()) {
+                vd.setParameter(ParameterName.TAGS, tags);
+            }
+            if (CheckUtils.shouldLogDebugToConsole()) {
+                logDirectionDetail(player, loc, block, face, branch, distance, vl, tags);
+            }
+            cancel = executeActions(vd).willCancel();
         } else {
             // Player did likely nothing wrong, reduce violation counter to reward them.
             cooldown(player, data, cc);
@@ -219,6 +237,60 @@ public abstract class AbstractBlockDirectionCheck<D extends ICheckData, C extend
 
     private void outputDebugFail(Player player, ICollideRayVsAABB boulder, double distance) {
         debug(player, "Failed: collides: " + boulder.collides() + " , dist: " + distance + " , pos: " + LocUtil.simpleFormat(boulder));
+    }
+
+    private String getDiagnosticTags(final Block block, final BlockFace face, final String branch) {
+        // Diagnostic info: distinguish ray misses from unreachable-face failures in umbrella direction logs.
+        return "subcheck_block_direction"
+                + "+branch_" + branch
+                + "+check_" + type.name().toLowerCase()
+                + "+block_" + block.getType().name().toLowerCase()
+                + (face == null ? "" : "+face_" + face.name().toLowerCase());
+    }
+
+    private void logDirectionDetail(final Player player, final Location loc, final Block block,
+                                    final BlockFace face, final String branch, final double distance,
+                                    final double totalVL, final String tags) {
+        try {
+            // Diagnostic info: console-only block direction context for false positives around stairs, boats, and odd block faces.
+            player.getServer().getLogger().info(new StringBuilder(360)
+                    .append("[NCP][BlockDirection][detail] check=").append(type.name())
+                    .append(" player=").append(player.getName())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" subcheck=BLOCK_DIRECTION")
+                    .append(" summary=block_direction{branch=").append(branch)
+                    .append(",block=").append(block.getType())
+                    .append(",face=").append(face == null ? "none" : face.name().toLowerCase())
+                    .append(",distance=").append(StringUtil.fdec3.format(distance))
+                    .append('}')
+                    .append(" branch=").append(branch)
+                    .append(" block=").append(block.getType())
+                    .append(" face=").append(face == null ? "none" : face.name())
+                    .append(" distance=").append(StringUtil.fdec3.format(distance))
+                    .append(" totalVL=").append(StringUtil.fdec3.format(totalVL))
+                    .append(" playerLoc=").append(formatLocation(loc))
+                    .append(" blockLoc=").append(formatBlockLocation(block))
+                    .append(" yaw=").append(StringUtil.fdec3.format(loc.getYaw()))
+                    .append(" pitch=").append(StringUtil.fdec3.format(loc.getPitch()))
+                    .append(" tags=").append(tags)
+                    .toString());
+        }
+        catch (Throwable ignored) {}
+    }
+
+    private String formatLocation(final Location location) {
+        return location == null ? "null"
+                : (location.getWorld() == null ? "null" : location.getWorld().getName())
+                + "@" + StringUtil.fdec3.format(location.getX())
+                + "," + StringUtil.fdec3.format(location.getY())
+                + "," + StringUtil.fdec3.format(location.getZ());
+    }
+
+    private String formatBlockLocation(final Block block) {
+        return (block.getWorld() == null ? "null" : block.getWorld().getName())
+                + "@" + block.getX()
+                + "," + block.getY()
+                + "," + block.getZ();
     }
 
     /**

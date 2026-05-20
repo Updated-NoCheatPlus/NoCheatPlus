@@ -144,6 +144,16 @@ public class LocationTrace {
         }
 
         @Override
+        public synchronized TraceEntry getInstance() {
+            return super.getInstance();
+        }
+
+        @Override
+        public synchronized void returnInstance(final TraceEntry instance) {
+            super.returnInstance(instance);
+        }
+
+        @Override
         protected TraceEntry newInstance() {
             return new TraceEntry();
         }
@@ -256,7 +266,10 @@ public class LocationTrace {
             }
         }
         // Add a new entry.
-        final TraceEntry newEntry = pool.getInstance();
+        final TraceEntry newEntry = pool == null ? new TraceEntry() : pool.getInstance();
+        if (newEntry == null) {
+            return;
+        }
         newEntry.set(time, x, y, z, boxMarginHorizontal, boxMarginVertical);
         setFirst(newEntry);
         // Remove the last entry, if maxSize is exceeded.

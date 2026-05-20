@@ -29,6 +29,8 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeTracker;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
+import fr.neatmonster.nocheatplus.utilities.CheckUtils;
+import fr.neatmonster.nocheatplus.utilities.StringUtil;
 import fr.neatmonster.nocheatplus.utilities.collision.Axis;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.ICollidePassable;
 import fr.neatmonster.nocheatplus.utilities.collision.tracing.axis.PassableAxisTracing;
@@ -90,6 +92,7 @@ public class Passable extends Check {
         rayTracing.setAxisOrder(Axis.AXIS_ORDER_YXZ);
         String newTag = checkRayTracing(player, from, to, manhattan, data, cc, debug, tick, useBlockChangeTracker);
         if (newTag != null) {
+            // Diagnostic info: alternate axis orders identify which collision path caused a passable flag.
             newTag = checkRayTracingAlernateOrder(player, from, to, manhattan, debug, data, cc, tick, useBlockChangeTracker, newTag);
         }
         // Finally handle violations.
@@ -215,13 +218,18 @@ public class Passable extends Check {
         // Return the reset position.
         data.passableVL += 1d;
         final ViolationData vd = new ViolationData(this, player, data.passableVL, 1, cc.passableActions);
+        // Diagnostic info: keep raytrace branch/block context on MOVING_PASSABLE violations.
+        final String diagnosticTags = getPassableTags(tags, from, to);
         if (debug || vd.needsParameters()) {
             vd.setParameter(ParameterName.LOCATION_FROM, String.format(Locale.US, "%.2f, %.2f, %.2f", from.getX(), from.getY(), from.getZ()));
             vd.setParameter(ParameterName.LOCATION_TO, String.format(Locale.US, "%.2f, %.2f, %.2f", to.getX(), to.getY(), to.getZ()));
             vd.setParameter(ParameterName.DISTANCE, String.format(Locale.US, "%.2f", TrigUtil.distance(from, to)));
-            if (!tags.isEmpty()) {
-                vd.setParameter(ParameterName.TAGS, tags);
+            if (!diagnosticTags.isEmpty()) {
+                vd.setParameter(ParameterName.TAGS, diagnosticTags);
             }
+        }
+        if (CheckUtils.shouldLogDebugToConsole()) {
+            logPassableDetail(player, from, to, data.passableVL, diagnosticTags);
         }
         if (executeActions(vd).willCancel()) {
             // TODO: Consider another set back position for this, also keeping track of players moving around in blocks.
@@ -245,9 +253,53 @@ public class Passable extends Check {
         }
     }
 
+    private String getPassableTags(final String tags, final PlayerLocation from, final PlayerLocation to) {
+        // Diagnostic info: show which passable raytrace branch failed and which blocks were involved.
+        final String branch = tags == null || tags.isEmpty() ? "unknown" : tags.replaceAll("_+$", "");
+        return "subcheck_passable_raytrace"
+                + "+branch_" + branch.toLowerCase(Locale.ROOT)
+                + "+from_block_" + from.getBlockType().name().toLowerCase(Locale.ROOT)
+                + "+to_block_" + to.getBlockType().name().toLowerCase(Locale.ROOT);
+    }
+
+    private void logPassableDetail(final Player player, final PlayerLocation from, final PlayerLocation to,
+                                   final double totalVL, final String tags) {
+        try {
+            // Diagnostic info: console-only passable context for stuck-on-block and collision false positives.
+            player.getServer().getLogger().info(new StringBuilder(420)
+                    .append("[NCP][Passable][detail] player=").append(player.getName())
+                    .append(" uuid=").append(player.getUniqueId())
+                    .append(" subcheck=PASSABLE_RAYTRACE")
+                    .append(" summary=passable_raytrace{branch=").append(tags == null ? "unknown" : tags)
+                    .append(",from=").append(from.getBlockType())
+                    .append(",to=").append(to.getBlockType())
+                    .append(",vl=").append(StringUtil.fdec3.format(totalVL))
+                    .append('}')
+                    .append(" totalVL=").append(StringUtil.fdec3.format(totalVL))
+                    .append(" distance=").append(StringUtil.fdec3.format(TrigUtil.distance(from, to)))
+                    .append(" from=").append(formatLocation(from))
+                    .append(" to=").append(formatLocation(to))
+                    .append(" fromBlock=").append(from.getBlockType())
+                    .append(" toBlock=").append(to.getBlockType())
+                    .append(" fromPassable=").append(from.isPassable())
+                    .append(" toPassable=").append(to.isPassable())
+                    .append(" tags=").append(tags)
+                    .toString());
+        }
+        catch (Throwable ignored) {}
+    }
+
+    private String formatLocation(final PlayerLocation location) {
+        return StringUtil.fdec3.format(location.getX())
+                + "," + StringUtil.fdec3.format(location.getY())
+                + "," + StringUtil.fdec3.format(location.getZ())
+                + "/" + StringUtil.fdec3.format(location.getYaw())
+                + "," + StringUtil.fdec3.format(location.getPitch());
+    }
+
     /**
      * Debug only if colliding.
-     * 
+     *
      * @param player
      * @param rayTracing
      * @param tag

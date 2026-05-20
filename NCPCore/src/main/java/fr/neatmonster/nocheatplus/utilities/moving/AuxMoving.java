@@ -27,6 +27,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.model.VehicleMoveInfo;
 import fr.neatmonster.nocheatplus.compat.MCAccess;
+import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.components.registry.event.IGenericInstanceHandle;
 import fr.neatmonster.nocheatplus.components.registry.feature.IRegisterAsGenericInstance;
 
@@ -111,6 +112,11 @@ public class AuxMoving implements IRegisterAsGenericInstance {
      * @param cc
      */
     public synchronized void resetPositionsAndMediumProperties(final Player player, final Location loc, final MovingData data, final MovingConfig cc) {
+        if (!SchedulerHelper.isOwnedByCurrentRegion(loc, 1)) {
+            data.clearMostMovingCheckData();
+            data.setSetBack(loc);
+            return;
+        }
         final PlayerMoveInfo moveInfo = usePlayerMoveInfo();
         moveInfo.set(player, loc, null, cc.yOnGround);
         data.resetPlayerPositions(moveInfo.from);
@@ -130,6 +136,11 @@ public class AuxMoving implements IRegisterAsGenericInstance {
      * @param cc
      */
     public synchronized void resetVehiclePositions(final Entity vehicle, final Location vehicleLocation, final MovingData data, final MovingConfig cc) {
+        if (!SchedulerHelper.isOwnedByCurrentRegion(vehicle) || !SchedulerHelper.isOwnedByCurrentRegion(vehicleLocation, 1)) {
+            data.clearVehicleData();
+            data.clearVehicleMorePacketsData();
+            return;
+        }
         final VehicleMoveInfo vMoveInfo = useVehicleMoveInfo();
         vMoveInfo.set(vehicle, vehicleLocation, null, cc.yOnGround);
         data.resetVehiclePositions(vMoveInfo.from);
