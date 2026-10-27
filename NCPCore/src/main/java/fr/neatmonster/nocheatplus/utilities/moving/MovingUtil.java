@@ -34,6 +34,7 @@ import fr.neatmonster.nocheatplus.checks.moving.model.MoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.player.PlayerSetBackMethod;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
 import fr.neatmonster.nocheatplus.checks.net.model.CountableLocation;
 import fr.neatmonster.nocheatplus.compat.*;
 import fr.neatmonster.nocheatplus.components.debug.IDebugPlayer;
@@ -115,7 +116,7 @@ public class MovingUtil {
      */
     public static boolean canStillGlide(final Player player, final PlayerLocation loc, final MovingData data) {
         // Only stuck-speed blocks (webs/berry bushes/powder snow?) can stop a player who isn't propelled by a rocket.
-        return data.fireworksBoostDuration > 0 && !loc.isResetCond()
+        return ClientEntityTracker.boostingFireworks(player) > 0 && !loc.isResetCond()
                || !loc.isResetCond() && !player.isDead() && !player.isSleeping() && !InventoryUtil.isItemBroken(player.getInventory().getChestplate());
     }
 

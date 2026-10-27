@@ -17,6 +17,7 @@ package fr.neatmonster.nocheatplus.checks.moving.envelope.workaround;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
@@ -81,7 +82,7 @@ public class MagicWorkarounds {
                /*
                 * 0: Boosting against a ceiling.
                 */
-               || data.fireworksBoostDuration > 0 && from.seekCollisionAbove()
+               || ClientEntityTracker.boostingFireworks(player) > 0 && from.seekCollisionAbove()
                && data.ws.use(WRPT.W_M_SF_HEAD_OBSTRUCTION)
         ;
     }

@@ -18,6 +18,8 @@ import java.util.List;
 
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
+import fr.neatmonster.nocheatplus.checks.net.transaction.TransactionChannel;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.components.data.IData;
@@ -203,6 +205,26 @@ public class NetStatic {
                     }
                 })
                 .addToGroups(CheckType.NET, true, IData.class, ICheckData.class)
+                .context() //
+                // Reusable transaction clock. Registered before the entity tracker so join resets the clock first.
+                .registerDataPlayer(TransactionChannel.class)
+                .factory(new IFactoryOne<PlayerFactoryArgument, TransactionChannel>() {
+                    @Override
+                    public TransactionChannel getNewInstance(PlayerFactoryArgument arg) {
+                        return new TransactionChannel();
+                    }
+                })
+                .addToGroups(CheckType.NET, true, IData.class)
+                .context() //
+                // Per-player client entity state, confirmed on that clock.
+                .registerDataPlayer(ClientEntityTracker.class)
+                .factory(new IFactoryOne<PlayerFactoryArgument, ClientEntityTracker>() {
+                    @Override
+                    public ClientEntityTracker getNewInstance(PlayerFactoryArgument arg) {
+                        return new ClientEntityTracker();
+                    }
+                })
+                .addToGroups(CheckType.NET, true, IData.class)
                 .context() //
                 );
     }

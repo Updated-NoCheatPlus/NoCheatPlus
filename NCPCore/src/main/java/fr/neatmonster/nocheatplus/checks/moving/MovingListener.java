@@ -61,9 +61,7 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedConfig;
 import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.inventory.Open;
-import fr.neatmonster.nocheatplus.checks.moving.envelope.BounceHandler;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
-import fr.neatmonster.nocheatplus.checks.moving.model.BounceType;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveInfo;
 import fr.neatmonster.nocheatplus.checks.moving.player.CreativeFly;
@@ -98,6 +96,7 @@ import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.components.data.IData;
 import fr.neatmonster.nocheatplus.components.location.SimplePositionWithLook;
 import fr.neatmonster.nocheatplus.components.modifier.IAttributeAccess;
+import fr.neatmonster.nocheatplus.components.registry.activation.Activation;
 import fr.neatmonster.nocheatplus.components.registry.event.IGenericInstanceHandle;
 import fr.neatmonster.nocheatplus.components.registry.factory.IFactoryOne;
 import fr.neatmonster.nocheatplus.components.registry.feature.IHaveCheckType;
@@ -191,6 +190,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
     private final int idMoveEvent = counters.registerKey("event.player.move");
 
     private final boolean ServerIsAtLeast1_19_4 = ServerVersion.isAtLeast("1.19.4");
+    private final boolean protocolLibPresent = new Activation().pluginExist("ProtocolLib").isAvailable();
 
     @SuppressWarnings("unchecked")
     public MovingListener() {
@@ -659,10 +659,14 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             data.removeAllVelocity();
             return;
         }
-        // Process velocity.
-        final Vector velocity = event.getVelocity();
-        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
-        data.addVelocity(player, cc, velocity.getX(), velocity.getY(), velocity.getZ());
+        if (!protocolLibPresent) {
+            // Process velocity.
+            final Vector velocity = event.getVelocity();
+            final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
+            data.addVelocity(player, cc, velocity.getX(), velocity.getY(), velocity.getZ());
+        } else {
+            
+        }
     }
 
 
@@ -1357,20 +1361,11 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         // Pre-check checks (hum), either for cf or for sf.                   //
         ////////////////////////////////////////////////////////////////////////
         boolean checkNf = true;
-        BounceType verticalBounce = BounceType.NO_BOUNCE;
         final boolean useBlockChangeTracker;
         final double previousSetBackY;
         final boolean checkPassable = pData.isCheckActive(CheckType.MOVING_PASSABLE, player);
         
         // 1: Set time resolutions and various counters.
-        // 1.1: Proactive reset of elytraBoost (MC 1.11.2).
-        if (data.fireworksBoostDuration > 0) {
-            if (!lastMove.valid || data.fireworksBoostTickExpire < tick) {
-                data.fireworksBoostDuration = 0;
-            }
-            else data.fireworksBoostDuration --;
-        }
-
         // 1.3: Set riptiding time.
         if (Bridge1_13.isRiptiding(player)) data.timeRiptiding = System.currentTimeMillis();
         
@@ -1423,43 +1418,13 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             // NOTE: Block change activity has to be checked *after* the extreme move checks run. Else crash potential (!)
             useBlockChangeTracker = newTo == null && cc.trackBlockMove && blockChangeTracker.hasActivityShuffled(from.getWorld().getUID(), pFrom, pTo, 1.5625);
 
-            // 4.5: Check jumping on things like slime blocks.
+            // 4.5: Block-change vertical/horizontal push (pistons; slime-on-piston not modeled yet).
             if (newTo == null) {
-                if (thisMove.yDistance < 0.0) {
-                    // Common pre-conditions.
-                    pTo.collectBlockFlags(); // Must be called to avoid NPEs
-                    if (PhysicsEnvelope.canBounce(player, pFrom, pTo, data, cc, pData)) {
-                        // Classic static bounce.
-                        if ((pTo.getBlockFlags() & BlockFlags.F_BOUNCE25) != 0L) {
-                            verticalBounce = BounceType.STATIC;
-                            checkNf = false; 
-                        }
-                        if (verticalBounce == BounceType.NO_BOUNCE && useBlockChangeTracker) { 
-                            if (BounceHandler.checkPastStateBounceDescend(player, pFrom, pTo, thisMove, lastMove, tick, data, cc, blockChangeTracker) != BounceType.NO_BOUNCE) {
-                                // Not set verticalBounce, as this is ascending and it's already force used.
-                                checkNf = false;
-                            }
-                        }
-                    }
-                }
-                else {
-                    // Prepared bounce support.
-                    if (data.verticalBounce != null && BounceHandler.onPreparedBounceSupport(player, from, to, thisMove, lastMove, tick, data)
-                        // Past state bounce (includes prepending velocity / special calls).
-                        || useBlockChangeTracker && thisMove.yDistance <= 1.515) {
-                        verticalBounce = BounceHandler.checkPastStateBounceAscend(player, pFrom, pTo, thisMove, lastMove, tick, pData, this, data, cc, blockChangeTracker);
-                        if (verticalBounce != BounceType.NO_BOUNCE) {
-                            checkNf = false;
-                        }
-                    }
-                }
-
-                // 4.5.1: Might a bit tricky when it use to ensure no bounce check is active, not noFall checking here
                 if (useBlockChangeTracker && checkNf && !checkPastStateVerticalPush(player, pFrom, pTo, thisMove, lastMove, tick, debug, data, cc)) {
                     checkPastStateHorizontalPush(player, pFrom, pTo, thisMove, lastMove, tick, debug, data, cc);
                 }
-                
-                // 4.5.2: Skip checking NoFall for levitation and slowfall
+
+                // Skip checking NoFall for levitation and slowfall
                 if (!Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player))) {
                     checkNf = false;
                 }
@@ -1602,12 +1567,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 if (debug) debug(player, "Ignore hook-induced set-back: actions not set to cancel.");
             }
 
-            // 2: Process the bounce effect if the move is allowed.
-            if (verticalBounce != BounceType.NO_BOUNCE) {
-                BounceHandler.processBounce(player, pFrom.getY(), pTo.getY(), verticalBounce, tick, this, data, cc, pData);
-            }
-
-            // 3: Finish processing the current move, move it to past ones
+            // 2: Finish processing the current move, move it to past ones
             // TODO: More simple: UUID keys or a data flag instead?
             if (processingEvents.containsKey(playerName)) {
                 data.playerMoves.finishCurrentMove();
@@ -1627,14 +1587,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     debug(player, "The set back has been overridden from (" + newTo + ") to: " + data.getTeleported());
                 }
                 newTo = data.getTeleported();
-            }
-            if (debug) { // TODO: Remove, if not relevant (doesn't look like it was :p).
-                if (verticalBounce != BounceType.NO_BOUNCE) {
-                    debug(player, "Bounce effect not processed: " + verticalBounce);
-                }
-                if (data.verticalBounce != null) {
-                    debug(player, "Bounce effect not used: " + data.verticalBounce);  
-                }
             }
 
             // 2: Set back handling.
@@ -1719,8 +1671,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
              * access signatures including thisMove.
              */
             final SimpleEntry vel = new SimpleEntry(tick, amount, VelocityFlags.ORIGIN_BLOCK_MOVE, 1);
-            data.verticalBounce = vel;
-            data.useVerticalBounce(player);
+            data.addVerticalVelocity(vel);
             data.useVerticalVelocity(thisMove.yDistance);
             if (debug) {
                 debug(player, "checkPastStateVerticalPush: set velocity: " + vel);

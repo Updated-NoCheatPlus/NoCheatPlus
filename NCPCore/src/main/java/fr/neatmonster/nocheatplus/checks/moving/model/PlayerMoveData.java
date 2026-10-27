@@ -293,6 +293,9 @@ public class PlayerMoveData extends MoveData {
      * during processing of moving checks.
      */
     public List<SimpleEntry> verVelUsed = new LinkedList<>();
+
+    /** Effective folded velocity applied on SurvivalFly pass B (debug). */
+    public String activeVelocityDebug = null;
     
     /**
      * Indicates whether this movement has a horizontal impulse, meaning the player actively pressed a WASD key, to differentiate between player-driven movement and passive movement (e.g., from external forces like push or velocity).
@@ -387,6 +390,7 @@ public class PlayerMoveData extends MoveData {
         // Meta stuff.
         multiMoveCount = 0;
         verVelUsed.clear();
+        activeVelocityDebug = null;
         hasNoMovementDueToDuplicatePacket = false;
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;

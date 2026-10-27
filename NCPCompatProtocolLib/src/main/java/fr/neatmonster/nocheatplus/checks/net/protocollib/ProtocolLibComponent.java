@@ -24,6 +24,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.Plugin;
@@ -38,6 +39,8 @@ import com.comphenix.protocol.events.PacketAdapter;
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
+import fr.neatmonster.nocheatplus.checks.net.transaction.TransactionChannel;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.SchedulerHelper;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
@@ -106,6 +109,9 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
             return;
         }
         StaticLog.logInfo("Adding packet level hooks for ProtocolLib (MC " + ProtocolLibrary.getProtocolManager().getMinecraftVersion().getVersion() + ")...");
+        // Transaction clock first, so the end-of-tick ping is registered before entity tracking.
+        register("fr.neatmonster.nocheatplus.checks.net.protocollib.TransactionAdapter", plugin);
+        register("fr.neatmonster.nocheatplus.checks.net.protocollib.EntityActivityAdapter", plugin);
         //Special purpose.
         if (ConfigManager.isTrueForAnyConfig(ConfPaths.NET + ConfPaths.SUB_DEBUG) || ConfigManager.isTrueForAnyConfig(ConfPaths.CHECKS_DEBUG) ) {
             // (Debug logging. Only activates if debug is set for checks or checks.net, not on the fly.)
@@ -228,6 +234,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
 
         }
         registeredPacketAdapters.clear();
+        TransactionChannel.setSender(null);
     }
 
     protected static void unregister(PacketAdapter adapter) {
@@ -253,6 +260,8 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
     public void playerJoins(final Player player) {
         if (!registeredPacketAdapters.isEmpty()) {
             DataManager.getGenericInstance(player, NetData.class).onJoin(player);
+            DataManager.getGenericInstance(player, TransactionChannel.class).onJoin();
+            DataManager.getGenericInstance(player, ClientEntityTracker.class).onJoin(player);
         }
     }
 
@@ -260,6 +269,11 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
     public void playerLeaves(final Player player) {
         if (!registeredPacketAdapters.isEmpty()) {
             DataManager.getGenericInstance(player, NetData.class).onLeave(player);
+            final IPlayerData pData = DataManager.getPlayerDataSafe(player);
+            if (pData != null) {
+                pData.getGenericInstance(ClientEntityTracker.class).onLeave();
+                pData.getGenericInstance(TransactionChannel.class).onLeave();
+            }
         }
         // (On leaving the server, client data is reset in PlayerData)
     }
@@ -270,6 +284,7 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
             final Player player = event.getPlayer();
             final NetData data = DataManager.getGenericInstance(player, NetData.class);
             data.onJoin(player);
+            DataManager.getGenericInstance(player, ClientEntityTracker.class).invalidate();
             final Location loc = event.getRespawnLocation();
             data.teleportQueue.onTeleportEvent(loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
         }
@@ -289,6 +304,20 @@ public class ProtocolLibComponent implements IDisableListener, INotifyReload, Jo
             // Register expected location for comparison with outgoing packets.
             data.teleportQueue.onTeleportEvent(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
             data.clearFlyingQueue();
+            if (event.getFrom() != null && event.getFrom().getWorld() != null && to.getWorld() != null
+                    && !event.getFrom().getWorld().getName().equals(to.getWorld().getName())) {
+                pData.getGenericInstance(ClientEntityTracker.class).invalidate();
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldChange(final PlayerChangedWorldEvent event) {
+        if (!registeredPacketAdapters.isEmpty()) {
+            final IPlayerData pData = DataManager.getPlayerDataSafe(event.getPlayer());
+            if (pData != null) {
+                pData.getGenericInstance(ClientEntityTracker.class).invalidate();
+            }
         }
     }
 }

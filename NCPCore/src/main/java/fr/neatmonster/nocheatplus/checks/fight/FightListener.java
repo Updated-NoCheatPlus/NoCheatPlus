@@ -54,6 +54,7 @@ import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
 import fr.neatmonster.nocheatplus.components.NoCheatPlusAPI;
 import fr.neatmonster.nocheatplus.components.data.ICheckData;
 import fr.neatmonster.nocheatplus.components.data.IData;
+import fr.neatmonster.nocheatplus.components.registry.activation.Activation;
 import fr.neatmonster.nocheatplus.components.registry.event.IGenericInstanceHandle;
 import fr.neatmonster.nocheatplus.components.registry.factory.IFactoryOne;
 import fr.neatmonster.nocheatplus.components.registry.feature.JoinLeaveListener;
@@ -123,6 +124,8 @@ public class FightListener extends CheckListener implements JoinLeaveListener{
 
     /* Debug */
     private final int idCancelDead = counters.registerKey("cancel.dead");
+    
+    private final boolean protocolLibPresent = new Activation().pluginExist("ProtocolLib").isAvailable();
 
     // Assume it to stay the same all time.
     private final IGenericInstanceHandle<IBridgeCrossPlugin> crossPlugin = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IBridgeCrossPlugin.class);
@@ -663,19 +666,21 @@ public class FightListener extends CheckListener implements JoinLeaveListener{
                 // Plugin compatibility thing.
                 damagedData.lastNoDamageTicks = ndt;
             }
-            // Knock-back calculation (1.8: events only fire if they would count by ndt).
-            switch (event.getCause()) {
-                case ENTITY_ATTACK:
-                    if (event instanceof EntityDamageByEntityEvent) {
-                        final Entity entity = ((EntityDamageByEntityEvent) event).getDamager();
-                        if ((entity instanceof Player) && !damagedPlayer.isInsideVehicle() 
-                             && damagedPData.getGenericInstance(FightConfig.class).knockBackVelocityPvP) {
-                            // TODO: Use the velocity event that is sent anyway and replace x/z if 0 (queue max. values).
-                            applyKnockBack((Player) entity, damagedPlayer, damagedData, damagedPData);
+            if (!protocolLibPresent) {
+                // Knock-back calculation (1.8: events only fire if they would count by ndt).
+                switch (event.getCause()) {
+                    case ENTITY_ATTACK:
+                        if (event instanceof EntityDamageByEntityEvent) {
+                            final Entity entity = ((EntityDamageByEntityEvent) event).getDamager();
+                            if ((entity instanceof Player) && !damagedPlayer.isInsideVehicle() 
+                                    && damagedPData.getGenericInstance(FightConfig.class).knockBackVelocityPvP) {
+                                // TODO: Use the velocity event that is sent anyway and replace x/z if 0 (queue max. values).
+                                applyKnockBack((Player) entity, damagedPlayer, damagedData, damagedPData);
+                            }
                         }
-                    }
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
         }
     }

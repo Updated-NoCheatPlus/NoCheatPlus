@@ -30,7 +30,6 @@ import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.CheckListener;
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.combined.CombinedConfig;
-import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.net.FlyingQueueHandle;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
@@ -47,7 +46,6 @@ import fr.neatmonster.nocheatplus.players.PlayerFactoryArgument;
 import fr.neatmonster.nocheatplus.stats.Counters;
 import fr.neatmonster.nocheatplus.utilities.CheckUtils;
 import fr.neatmonster.nocheatplus.utilities.entity.InventoryUtil;
-import fr.neatmonster.nocheatplus.utilities.TickTask;
 import fr.neatmonster.nocheatplus.utilities.location.LocUtil;
 import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
@@ -349,16 +347,10 @@ public class BlockInteractListener extends CheckListener {
             && event.isCancelled() && event.useItemInHand() != Result.DENY) {
             final ItemStack stack = Bridge1_9.getUsedItem(player, event);
             if (stack != null && BridgeMisc.maybeElytraBoost(player, stack.getType())) {
-                final int power = BridgeMisc.getFireworksPower(stack);
-                final MovingData mData = pData.getGenericInstance(MovingData.class);
-                final int ticks = Math.max((1 + power) * 20, 30);
-                mData.fireworksBoostDuration = ticks;
-                mData.fireworksBoostTickNeedCheck = ticks - 1;
-                // Expiration tick: not general latency, rather a minimum margin for sudden congestion.
-                mData.fireworksBoostTickExpire = TickTask.getTick() + ticks;
-                // TODO: Invalidation mechanics: by tick/time well ?
+                // The boost itself is the rocket entity the client still has. Its lifetime is random,
+                // so a right-click timer does not match the ticks the client actually boosts.
                 if (pData.isDebugActive(CheckType.MOVING)) {
-                    debug(player, "Elytra boost (power " + power + "): " + stack);
+                    debug(player, "Elytra boost item: " + stack);
                 }
             }
         }

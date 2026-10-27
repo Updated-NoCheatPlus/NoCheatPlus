@@ -43,6 +43,9 @@ import fr.neatmonster.nocheatplus.checks.moving.velocity.PairAxisVelocity;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.PairEntry;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.SimpleAxisVelocity;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.SimpleEntry;
+import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityApplicator;
+import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityFlags;
+import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityTickCoalescer;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 import fr.neatmonster.nocheatplus.compat.blocks.changetracker.BlockChangeReference;
@@ -200,8 +203,15 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     private final SimpleAxisVelocity verVel = new SimpleAxisVelocity();
     /** Horizontal velocity modeled as an axis (always positive) */
     private final PairAxisVelocity horVel = new PairAxisVelocity();
-    /** Compatibility entry for bouncing off of slime blocks and the like. */
-    public SimpleEntry verticalBounce = null;
+    /** SurvivalFly retry pass: apply peeked velocity at the setDeltaMovement pipeline stage. */
+    public boolean survivalFlyVelocityPass = false;
+    /** Peeked velocity for the current SurvivalFly pass (consume on successful retry). */
+    public VelocityApplicator.PendingApplication survivalFlyVelocityPending = null;
+    /**
+     * Client already applied additive velocity on a prior move that passed without a velocity retry;
+     * a SET on the next tick defers until that carried displacement is consumed.
+     */
+    public boolean velocityDeferredOnClient = false;
 
     // *----------Coordinates----------*
     /** Moving trace (to-positions, use ms as time). This is initialized on "playerJoins, i.e. MONITOR, and set to null on playerLeaves." */
@@ -362,7 +372,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         sfHoverTicks = sfHoverLoginTicks = -1;
         liftOffEnvelope = defaultLiftOffEnvelope;
         vehicleConsistency = MoveConsistency.INCONSISTENT;
-        verticalBounce = null;
         blockChangeRef.valid = false;
         // Set to 1.0 to prevent any unintentional / by 0. These are mainly used within multiplication or division operations anyway.
         lastFrictionVertical = lastStuckInBlockVertical = lastStuckInBlockHorizontal = 1.0;
@@ -392,7 +401,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         liftOffEnvelope = defaultLiftOffEnvelope;
         removeAllPlayerSpeedModifiers();
         vehicleConsistency = MoveConsistency.INCONSISTENT; // Not entirely sure here.
-        verticalBounce = null;
         timeSinceSetBack = 0;
         lastFrictionVertical = lastStuckInBlockVertical = lastStuckInBlockHorizontal = 1.0;
         lastFrictionHorizontal = lastBlockSpeedMultiplier =  1.0f;
@@ -417,7 +425,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         playerMoves.invalidate();
         vehicleMoves.invalidate();
         sfJumpPhase = 0;
-        verticalBounce = null;
         // Remember where we send the player to.
         setTeleported(loc);
         // TODO: sfHoverTicks ?
@@ -566,7 +573,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     private void resetPlayerPositions() {
         playerMoves.invalidate();
         liftOffEnvelope = defaultLiftOffEnvelope;
-        verticalBounce = null;
         blockChangeRef.valid = false;
         lastFrictionVertical = lastStuckInBlockVertical = lastStuckInBlockHorizontal = 1.0;
         lastFrictionHorizontal = 0.6f;
@@ -621,7 +627,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         clearPlayerMorePacketsData();
         sfJumpPhase = 0;
         sfHoverTicks = -1;
-        verticalBounce = null;
         timeSinceSetBack = 0;
         if (loc != null && loc.getWorld() != null) {
             // Folia/teleport safety: packet models can carry coordinate-only targets, but set backs need a real world.
@@ -951,16 +956,12 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         removeInvalidVelocity(tick - cc.velocityActivationTicks);
 
         if (pData.isDebugActive(CheckType.MOVING)) {
-            CheckUtils.debug(player, CheckType.MOVING, " New velocity: " + vx + ", " + vy + ", " + vz);
+            final boolean additive = (flags & VelocityFlags.ADDITIVE) != 0;
+            CheckUtils.debug(player, CheckType.MOVING, " New velocity: " + vx + ", " + vy + ", " + vz
+                    + " tick=" + tick + (additive ? " additive" : " set"));
         }
 
-        // Always add vertical velocity.
-        verVel.add(new SimpleEntry(tick, vy, flags, cc.velocityActivationCounter));
-
-        // TODO: Should also switch to adding always.
-        if (vx != 0.0 || vz != 0.0) {
-            horVel.add(new PairEntry(tick, vx, vz, cc.velocityActivationCounter));
-        }
+        VelocityTickCoalescer.coalesceAndQueue(verVel, horVel, tick, vx, vy, vz, flags, cc.velocityActivationCounter);
     }
 
 
@@ -970,6 +971,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public void removeAllVelocity() {
         horVel.clear();
         verVel.clear();
+        velocityDeferredOnClient = false;
     }
 
 
@@ -1388,17 +1390,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         getTrace(maxAge, maxSize).addEntry(time, loc.getX(), loc.getY(), loc.getZ(), 
                 iead.getWidth(player) / 2.0, Math.max(player.getEyeHeight(), iead.getHeight(player)));
     }
-
-    public void useVerticalBounce(final Player player) {
-        // CHEATING: Ensure fall distance is reset.
-        player.setFallDistance(0f);
-        noFallMaxY = BlockProperties.getMinWorldY();
-        noFallFallDistance = 0f;
-        noFallSkipAirCheck = true;
-        prependVerticalVelocity(verticalBounce);
-        verticalBounce = null;
-    }
-
 
     public void handleTimeRanBackwards() {
         final long time = System.currentTimeMillis();

@@ -28,7 +28,7 @@ import fr.neatmonster.nocheatplus.utilities.TickTask;
 public class PairAxisVelocity {
 
     /** Size of queued for which to force cleanup on add. */
-    private static final double thresholdCleanup = 40;
+    private static final int thresholdCleanup = 40;
 
     private final LinkedList<PairEntry> queued = new LinkedList<PairEntry>();
 
@@ -63,6 +63,56 @@ public class PairAxisVelocity {
     public boolean hasQueued() {
         return !queued.isEmpty();
     }
+
+    /**
+     * Earliest queued entry with {@code invalidateBeforeTick <= tick <= currentTick} and {@code actCount > 0}.
+     */
+    public PairEntry peekDueEntry(final int currentTick, final int invalidateBeforeTick) {
+        PairEntry best = null;
+        for (final PairEntry entry : queued) {
+            if (entry.actCount <= 0 || entry.tick < invalidateBeforeTick || entry.tick > currentTick) {
+                continue;
+            }
+            if (best == null || entry.tick < best.tick) {
+                best = entry;
+            }
+        }
+        return best;
+    }
+
+    public void removeEntry(final PairEntry entry) {
+        queued.remove(entry);
+    }
+
+    public PairEntry findEntryByTick(final int tick) {
+        for (final PairEntry entry : queued) {
+            if (entry.tick == tick) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    public void removeEntriesByTick(final int tick) {
+        final Iterator<PairEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            if (it.next().tick == tick) {
+                it.remove();
+            }
+        }
+    }
+
+    /** Remove additive entries from earlier server ticks superseded by a later set packet. */
+    public void removeAdditiveEntriesBeforeTick(final int tick) {
+        final Iterator<PairEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            final PairEntry entry = it.next();
+            if (entry.tick < tick && (entry.flags & VelocityFlags.ADDITIVE) != 0) {
+                it.remove();
+            }
+        }
+    }
+
     /**
      * Use the next matching entry.
      * 

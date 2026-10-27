@@ -17,15 +17,18 @@ package fr.neatmonster.nocheatplus.checks.net.protocollib;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.Vector;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.BukkitConverters;
 
 import fr.neatmonster.nocheatplus.checks.CheckType;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
@@ -35,27 +38,27 @@ import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 
 /**
- * Adapter for handling the explosion packet (for velocity)
+ * Adapter for handling velocity related packet
  */
 public class VelocityAdapter extends BaseAdapter {
     private static PacketType[] initPacketTypes() {
         final List<PacketType> types = new LinkedList<PacketType>(Arrays.asList(
-                PacketType.Play.Server.EXPLOSION
-                //PacketType.Play.Server.ENTITY_VELOCITY
+                PacketType.Play.Server.EXPLOSION,
+                PacketType.Play.Server.ENTITY_VELOCITY
         ));
         return types.toArray(new PacketType[types.size()]);
     }
 
     public VelocityAdapter(Plugin plugin) {
-        super(plugin, ListenerPriority.MONITOR, initPacketTypes());
+        super(plugin, ListenerPriority.LOWEST, initPacketTypes());
     }
 
     @Override
     public void onPacketSending(final PacketEvent event) {
-        handleVelocityPacket(event);
+        handleOutgoingVelocityPacket(event);
     }
     
-    private void handleVelocityPacket(PacketEvent event) {
+    private void handleOutgoingVelocityPacket(PacketEvent event) {
         try {
             if (event.isPlayerTemporary()) return;
         } 
@@ -68,13 +71,51 @@ public class VelocityAdapter extends BaseAdapter {
                 return;
             }
         }
-        if (event.getPacketType() != PacketType.Play.Server.EXPLOSION) return;
+        if (event.getPacketType() == PacketType.Play.Server.EXPLOSION) {
+            handleExplosionPacket(event);
+        } else {
+            handleEntityVelocityPacket(event);
+        }
+    }
+
+    private void handleEntityVelocityPacket(PacketEvent event) {
+        final Player player = event.getPlayer();
+        final PacketContainer packet = event.getPacket();
+        final StructureModifier<Integer> ints = packet.getIntegers();
+        Integer id = ints.readSafely(0);
+        id = (id == null) ? -1 : id;
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        if (id != player.getEntityId() || !pData.isCheckActive(CheckType.MOVING, player)) return;
+        final MovingData data = pData.getGenericInstance(MovingData.class);
+        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
+        if (ints.size() == 4) {
+            final Double velX = ints.read(1) / 8000D;
+            final Double velY = ints.read(2) / 8000D;
+            final Double velZ = ints.read(3) / 8000D;
+            data.addVelocity(player, cc, velX, velY, velZ);
+        } else {
+            final Vector vec = packet.getVectors().readSafely(0);
+            if (vec != null) {
+                data.addVelocity(player, cc, vec.getX(), vec.getY(), vec.getZ());
+            }
+        }
+    }
+
+    private void handleExplosionPacket(PacketEvent event) {
         final Player player = event.getPlayer();
         final PacketContainer packet = event.getPacket();
         final StructureModifier<Float> floats = packet.getFloat();
+        final IPlayerData pData = DataManager.getPlayerData(player);
+        if (!pData.isCheckActive(CheckType.MOVING, player)) return;
+        final MovingData data = pData.getGenericInstance(MovingData.class);
+        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
 
         if (floats.size() != 4) {
-            // TODO : Warning
+            Optional<Vector> read = packet.getOptionals(BukkitConverters.getVectorConverter()).read(0);
+            if (read.isPresent()) {
+                final Vector vec = read.get();
+                data.addVelocity(player, cc, vec.getX(), vec.getY(), vec.getZ(), VelocityFlags.ORIGIN_EXPLOSION | VelocityFlags.ADDITIVE);
+            }
             return;
         }
 
@@ -84,10 +125,6 @@ public class VelocityAdapter extends BaseAdapter {
         final Float velY = floats.read(2);
         final Float velZ = floats.read(3);
         if (Math.abs(velX) == 0.0 && Math.abs(velZ) == 0.0 && Math.abs(velY) == 0.0) return;
-        final IPlayerData pData = DataManager.getPlayerData(player);
-        if (!pData.isCheckActive(CheckType.MOVING, player)) return;
-        final MovingData data = pData.getGenericInstance(MovingData.class);
-        final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         // Process velocity.
         data.addVelocity(player, cc, velX, velY, velZ, VelocityFlags.ORIGIN_EXPLOSION | VelocityFlags.ADDITIVE);
     }

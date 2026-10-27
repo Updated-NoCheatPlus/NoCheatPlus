@@ -81,6 +81,69 @@ public class SimpleAxisVelocity {
     }
 
     /**
+     * Earliest queued entry with {@code invalidateBeforeTick <= tick <= currentTick} and {@code actCount > 0}.
+     */
+    public SimpleEntry peekDueEntry(final int currentTick, final int invalidateBeforeTick) {
+        SimpleEntry best = null;
+        for (final SimpleEntry entry : queued) {
+            if (entry.actCount <= 0 || entry.tick < invalidateBeforeTick || entry.tick > currentTick) {
+                continue;
+            }
+            if (best == null || entry.tick < best.tick) {
+                best = entry;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * All due entries in queue insertion order (matches packet arrival order).
+     */
+    public LinkedList<SimpleEntry> listDueEntriesInOrder(final int currentTick, final int invalidateBeforeTick) {
+        final LinkedList<SimpleEntry> result = new LinkedList<>();
+        for (final SimpleEntry entry : queued) {
+            if (entry.actCount <= 0 || entry.tick < invalidateBeforeTick || entry.tick > currentTick) {
+                continue;
+            }
+            result.add(entry);
+        }
+        return result;
+    }
+
+    public void removeEntry(final SimpleEntry entry) {
+        queued.remove(entry);
+    }
+
+    public SimpleEntry findEntryByTick(final int tick) {
+        for (final SimpleEntry entry : queued) {
+            if (entry.tick == tick) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    public void removeEntriesByTick(final int tick) {
+        final Iterator<SimpleEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            if (it.next().tick == tick) {
+                it.remove();
+            }
+        }
+    }
+
+    /** Remove additive entries from earlier server ticks superseded by a later set packet (unused: cross-tick set does not always override). */
+    public void removeAdditiveEntriesBeforeTick(final int tick) {
+        final Iterator<SimpleEntry> it = queued.iterator();
+        while (it.hasNext()) {
+            final SimpleEntry entry = it.next();
+            if (entry.tick < tick && (entry.flags & VelocityFlags.ADDITIVE) != 0) {
+                it.remove();
+            }
+        }
+    }
+
+    /**
      * Use the next matching entry.
      * 
      * @param amount

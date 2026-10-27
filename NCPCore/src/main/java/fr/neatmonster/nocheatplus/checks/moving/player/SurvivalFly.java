@@ -34,6 +34,8 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
+import fr.neatmonster.nocheatplus.checks.net.transaction.TransactionChannel;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsGroundResolver;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.workaround.LostGround;
@@ -43,6 +45,7 @@ import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput.Forwar
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput.StrafeDirection;
 import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
+import fr.neatmonster.nocheatplus.checks.moving.velocity.VelocityApplicator;
 import fr.neatmonster.nocheatplus.checks.workaround.WRPT;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
@@ -172,18 +175,60 @@ public class SurvivalFly extends Check {
         if (data.jumpDelay > 0) {
             data.jumpDelay--;
         }
-      
 
+        data.survivalFlyVelocityPass = false;
+        data.survivalFlyVelocityPending = null;
 
         /////////////////////////////////////
         // Horizontal move                ///
         /////////////////////////////////////
         double hAllowedDistance, hDistanceAboveLimit, hFreedom;
+        double yAllowedDistance, yDistanceAboveLimit;
         double[] resGlide = processGliding(from, to, pData, data, player, isNormalOrPacketSplitMove, fromOnGround, toOnGround, debug);
         // Set the allowed distance and determine the distance above limit
         double[] hRes = Bridge1_9.isGliding(player) ? resGlide : prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
         hAllowedDistance = hRes[0];
         hDistanceAboveLimit = hRes[1];
+        if (Bridge1_9.isGliding(player)) {
+            yAllowedDistance = resGlide[2];
+            yDistanceAboveLimit = resGlide[3];
+        }
+        else {
+            final double[] vRes = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, pData, false, debug, useBlockChangeTracker);
+            yAllowedDistance = vRes[0];
+            yDistanceAboveLimit = vRes[1];
+        }
+        // Pass B: physics failed — retry with queued knockback/explosion at NCP velocity insertion points.
+        boolean velocityPassBAttempted = false;
+        if (!Bridge1_9.isGliding(player) && (hDistanceAboveLimit > 0.0 || yDistanceAboveLimit > 0.0)) {
+            final java.util.List<VelocityApplicator.PendingApplication> velocityAlternatives =
+                    VelocityApplicator.peekDueAlternativesWithLag(data, tick, cc);
+            for (final VelocityApplicator.PendingApplication velocityPending : velocityAlternatives) {
+                velocityPassBAttempted = true;
+                tags.remove("vel_applied");
+                thisMove.verVelUsed.clear();
+                data.survivalFlyVelocityPass = true;
+                data.survivalFlyVelocityPending = velocityPending;
+                thisMove.activeVelocityDebug = velocityPending.formatDebugLine();
+                hRes = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
+                hAllowedDistance = hRes[0];
+                hDistanceAboveLimit = hRes[1];
+                final double[] vResVel = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, pData, false, debug, useBlockChangeTracker);
+                yAllowedDistance = vResVel[0];
+                yDistanceAboveLimit = vResVel[1];
+                data.survivalFlyVelocityPass = false;
+                if (hDistanceAboveLimit <= 0.0 && yDistanceAboveLimit <= 0.0) {
+                    VelocityApplicator.confirmConsume(data, data.survivalFlyVelocityPending);
+                    tags.remove("hdistrel");
+                    tags.remove("vdistrel");
+                    tags.add("vel_retry");
+                    data.survivalFlyVelocityPending = null;
+                    break;
+                }
+                data.survivalFlyVelocityPending = null;
+            }
+        }
+        VelocityApplicator.updateClientDeferredState(data, velocityPassBAttempted, tags.contains("vel_retry"));
         // Beyond limit? Check if there may have been a reason for this (and try to re-estimate if needed)
         if (hDistanceAboveLimit > 0.0) {
             double[] res = hDistAfterFailure(player, from, to, hAllowedDistance, hDistanceAboveLimit, thisMove, lastMove, debug, data, cc, pData, tick, useBlockChangeTracker, fromOnGround, toOnGround, isNormalOrPacketSplitMove);
@@ -192,26 +237,7 @@ public class SurvivalFly extends Check {
             hFreedom = res[2];
         }
         else {
-            // Clear active velocity if the distance is within limit (clearly not needed. :))
-            //data.clearActiveHorVel();
             hFreedom = 0.0;
-        }
-
-
-        /////////////////////////////////////
-        // Vertical move                  ///
-        /////////////////////////////////////
-        // Order of checking in EntityLiving.java water -> lava -> gliding -> air
-        // TODO: Clean-up this left-over bit of the old implementation (respect MC's order)
-        double yAllowedDistance, yDistanceAboveLimit;
-        if (Bridge1_9.isGliding(player)) {
-            yAllowedDistance = resGlide[2];
-            yDistanceAboveLimit = resGlide[3];
-        }
-        else {
-            final double[] res = vDistRel(player, from, fromOnGround, resetFrom, to, toOnGround, resetTo, thisMove.yDistance, isNormalOrPacketSplitMove, lastMove, data, pData, false, debug, useBlockChangeTracker );
-            yAllowedDistance = res[0];
-            yDistanceAboveLimit = res[1];
         }
 
         ////////////////////////////
@@ -336,7 +362,9 @@ public class SurvivalFly extends Check {
         data.lastInertia = data.nextInertia;
         data.lastLevitationLevel = !Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) ? Bridge1_9.getLevitationAmplifier(player) + 1 : 0.0;
         data.lastGravity = data.nextGravity;
-        data.lastCollidingEntitiesLocations = CollisionUtil.getCollidingEntitiesLocations(player);
+        if (!applyTrackedPush(player, pData, data, to, false)) {
+            data.lastCollidingEntitiesLocations = CollisionUtil.getCollidingEntitiesLocations(player);
+        }
         cData.wasSprinting = pData.isSprinting();
         cData.wasPressingShift = pData.isShiftKeyPressed();
         cData.wasSlowFalling = !Double.isInfinite(Bridge1_13.getSlowfallingAmplifier(player));
@@ -444,6 +472,41 @@ public class SurvivalFly extends Check {
 
 
     /**
+     * Entity push from the positions this client has actually been sent.
+     * Before 1.9 the client does not apply entity push. Without the packet hook, Bukkit locations are used.
+     */
+    /** @return true when the tracker supplied the list, including an empty one */
+    private static boolean applyTrackedPush(Player player, IPlayerData pData, MovingData data, PlayerLocation at, boolean log) {
+        if (!TransactionChannel.isHooked() || at == null) {
+            return false;
+        }
+        ClientVersion version = pData.getClientVersion();
+        if (version == null || version == ClientVersion.UNKNOWN) {
+            return false;
+        }
+        if (!version.isAtLeast(ClientVersion.V_1_9)) {
+            data.lastCollidingEntitiesLocations = new ArrayList<Location>();
+            return true;
+        }
+        ClientEntityTracker tracker = pData.getGenericInstance(ClientEntityTracker.class);
+        if (tracker == null) {
+            return false;
+        }
+        double width = at.getWidth() > 0.0D ? at.getWidth() : 0.6D;
+        double height = at.getHeight() > 0.0D ? at.getHeight() : 1.8D;
+        data.lastCollidingEntitiesLocations = tracker.collidingLocations(player, at.getX(), at.getY(), at.getZ(), width, height, log);
+        return true;
+    }
+
+    /**
+     * How many firework boosts to apply this move. Only rockets the client still has attached count.
+     * The right-click timer is not used: a rocket's lifetime is random, so the timer does not match the client.
+     */
+    private static int fireworkBoosts(Player player) {
+        return Math.min(ClientEntityTracker.boostingFireworks(player), 8);
+    }
+
+    /**
      * Determine the allowed h / v distance for gliding.
      * Handled in its own method because of vertical and horizontal motion being too intertwined to separate (y-distance changes relate to h-distance changes). <br>
      * Consistency checks are done within the {@link fr.neatmonster.nocheatplus.checks.combined.CombinedListener}.<br>
@@ -526,10 +589,16 @@ public class SurvivalFly extends Check {
             thisMove.xAllowedDistance += (viewVector.getX() / viewVecHorizontalLength * thisMoveHDistance - thisMove.xAllowedDistance) * 0.1;
             thisMove.zAllowedDistance += (viewVector.getZ() / viewVecHorizontalLength * thisMoveHDistance - thisMove.zAllowedDistance) * 0.1;
         }
-        // Boosted with a firework: propel the player.
-        if (data.fireworksBoostDuration > 0) {
-            // TODO: Firework netcode is horrible (a single firework can tick twice on the same tick, skipping the subsequent one), so simply applying the increase of speed won't cut it.
-            // Not even sure if we can predict this at all without some kind of hacks / workarounds.
+        // One boost per firework rocket the client still has attached.
+        // TODO: Some how the motion is wrongly calculated despite correct lifespan
+        int fireworkBoosts = fireworkBoosts(player);
+        if (debug) {
+            System.out.println("firework boosts=" + fireworkBoosts
+                    + " from=(" + from.getX() + ", " + from.getY() + ", " + from.getZ() + ")"
+                    + " look=(" + viewVector.getX() + ", " + viewVector.getY() + ", " + viewVector.getZ() + ")"
+                    + " motion=(" + thisMove.xAllowedDistance + ", " + thisMove.yAllowedDistance + ", " + thisMove.zAllowedDistance + ")");
+        }
+        for (int boost = 0; boost < fireworkBoosts; boost++) {
             thisMove.xAllowedDistance += viewVector.getX() * 0.1 + (viewVector.getX() * 1.5 - thisMove.xAllowedDistance) * 0.5;
             thisMove.yAllowedDistance += viewVector.getY() * 0.1 + (viewVector.getY() * 1.5 - thisMove.yAllowedDistance) * 0.5;
             thisMove.zAllowedDistance += viewVector.getZ() * 0.1 + (viewVector.getZ() * 1.5 - thisMove.zAllowedDistance) * 0.5;
@@ -570,8 +639,10 @@ public class SurvivalFly extends Check {
             // Accuracy margin.
         }
         else {
-            // If velocity can be used for compensation, use it.
-            if (data.getOrUseVerticalVelocity(thisMove.yDistance).isEmpty()) {
+            if (MagicWorkarounds.checkPostPredictWorkaround(data, fromOnGround, toOnGround, from, to, thisMove.yAllowedDistance, player, isNormalOrPacketSplitMove)) {
+                thisMove.yAllowedDistance = thisMove.yDistance;
+            }
+            else {
                 yDistanceAboveLimit = Math.max(yDistanceAboveLimit, Math.abs(offsetV));
                 tags.add("vdistrel");
             }
@@ -579,7 +650,7 @@ public class SurvivalFly extends Check {
 
         thisMove.hAllowedDistance = MathUtil.dist(thisMove.xAllowedDistance, thisMove.zAllowedDistance);
         final double offsetH = thisMove.hDistance - thisMove.hAllowedDistance;
-        if (offsetH < Magic.PREDICTION_EPSILON) {
+        if (Math.abs(offsetH) < Magic.PREDICTION_EPSILON) {
             // Accuracy margin.
         }
         else {
@@ -1045,6 +1116,15 @@ public class SurvivalFly extends Check {
                 yDistanceBeforeCollide = 0.0;
             }
         }
+        // Pass B: horizontal collide() Y must match vertical velocity applied later in vDistRel.
+        if (data.survivalFlyVelocityPass && data.survivalFlyVelocityPending != null
+                && data.survivalFlyVelocityPending.vertical != null
+                && !lastMove.from.inWater && !lastMove.from.inLava) {
+            yDistanceBeforeCollide = VelocityApplicator.resolveVerticalForCollideSweep(
+                    data.survivalFlyVelocityPending, yDistanceBeforeCollide,
+                    lastMove.toIsValid ? lastMove.yDistance : 0.0,
+                    fromOnGround, thisMove.yDistance, data.lastGravity);
+        }
         thisMove.motionY = yDistanceBeforeCollide;
         //End of yDistanceBeforeCollide getter
 
@@ -1146,14 +1226,27 @@ public class SurvivalFly extends Check {
         // From Entity.java.push()
         // The entity's location is in the past.
         if (player.getGameMode() != BridgeMisc.GAME_MODE_SPECTATOR) { // noPhysics check in vanilla.
+            // The tracked list is the position the client pushed from, so the push is part of the
+            // nine-input prediction. Forcing the move uncertain here picks one axis and then flags
+            // the whole sprint. Bukkit positions stay uncertain: they are not the client's boxes.
+            boolean trackedPush = applyTrackedPush(player, pData, data, from, debug);
             Vector push = from.doPush(new Vector(thisMove.xAllowedDistance, 0.0, thisMove.zAllowedDistance));
             thisMove.xAllowedDistance = push.getX();
             thisMove.zAllowedDistance = push.getZ();
-            if (data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
+            if (!trackedPush && data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
                 isPredictable = false;
             }
         }
-
+        // Pass B: horizontal velocity after entity push (before input brute-force / collide).
+        if (data.survivalFlyVelocityPass && data.survivalFlyVelocityPending != null
+                && data.survivalFlyVelocityPending.horizontal != null) {
+            final double[] xRef = {thisMove.xAllowedDistance};
+            final double[] zRef = {thisMove.zAllowedDistance};
+            VelocityApplicator.applyHorizontalVelocity(data.survivalFlyVelocityPending, xRef, zRef, null);
+            thisMove.xAllowedDistance = xRef[0];
+            thisMove.zAllowedDistance = zRef[0];
+            tags.add("vel_applied");
+        }
 
 
         //////////////////////////////////
@@ -2079,8 +2172,21 @@ public class SurvivalFly extends Check {
             } else if (from.isUnobstructed(thisMove.yAllowedDistance)) thisMove.yAllowedDistance = 0.3;
             tags.add("v_exiting_liquid");
         }
-        
-        
+        // Pass B: vertical velocity after gravity/friction/exiting-liquid (NCP insert before collide).
+        if (data.survivalFlyVelocityPass && data.survivalFlyVelocityPending != null
+                && data.survivalFlyVelocityPending.vertical != null) {
+            final double[] ySeed = {thisMove.yAllowedDistance};
+            VelocityApplicator.applyVerticalAfterTravel(data.survivalFlyVelocityPending,
+                    lastMove.toIsValid ? lastMove.yDistance : 0.0, fromOnGround, thisMove.yDistance,
+                    data.lastGravity, ySeed, yTheoreticalDistance);
+            thisMove.yAllowedDistance = ySeed[0];
+            thisMove.verVelUsed.clear();
+            if (data.survivalFlyVelocityPending.getConsumeVertical() != null) {
+                thisMove.verVelUsed.addAll(data.survivalFlyVelocityPending.getConsumeVertical());
+            }
+            tags.add("vel_applied");
+        }
+
         //////////////////////////////////
         // Last client-tick/move        //
         //////////////////////////////////
@@ -2284,11 +2390,13 @@ public class SurvivalFly extends Check {
                     player.sendMessage("[SurvivalFly] Workaround ID used: " + (!justUsedWorkarounds.isEmpty() ? StringUtil.join(justUsedWorkarounds, " , ") : ""));
                 }
             }
-            else if (data.getOrUseVerticalVelocity(yDistance).isEmpty()) {
-                // If velocity can be used for compensation, use it.
+            else {
                 yDistanceAboveLimit = Math.max(yDistanceAboveLimit, Math.abs(offset));
                 tags.add("vdistrel");
                 if (debug) {
+                    if (thisMove.activeVelocityDebug != null) {
+                        player.sendMessage(ChatColor.YELLOW + "[SurvivalFly] " + thisMove.activeVelocityDebug);
+                    }
                     player.sendMessage(ChatColor.RED + "[SurvivalFly] vdistrel: predicted=" + StringUtil.fdec6.format(thisMove.yAllowedDistance) + ", actual=" + StringUtil.fdec6.format(thisMove.yDistance) + ", offset=" + StringUtil.fdec6.format(offset));
                 }
             }
@@ -2368,12 +2476,12 @@ public class SurvivalFly extends Check {
         /*
          * 2: Undetectable jump (must brute force here): player failed with the onGround flag, lets try with off-ground then.
          */
-        if (PhysicsEnvelope.isVerticallyConstricted(from, to, pData) && hDistanceAboveLimit > 0.0) {
-            tags.add("vert_constricted");
-            double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, true);
-            hAllowedDistance = res[0];
-            hDistanceAboveLimit = res[1];
-        }
+        //if (PhysicsEnvelope.isVerticallyConstricted(from, to, pData) && hDistanceAboveLimit > 0.0) {
+        //    tags.add("vert_constricted");
+        //    double[] res = prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, true);
+        //    hAllowedDistance = res[0];
+        //    hDistanceAboveLimit = res[1];
+        //}
         /*
          * 3: Above limit again? Check for past onGround states caused by block changes (i.e.: ground was pulled off from the player's feet)
          */
@@ -2504,6 +2612,9 @@ public class SurvivalFly extends Check {
         }
         if (!thisMove.verVelUsed.isEmpty()) {
             builder.append(" , vVelUsed: " + thisMove.verVelUsed + " ");
+        }
+        if (thisMove.activeVelocityDebug != null) {
+            builder.append("\n" + thisMove.activeVelocityDebug);
         }
         data.addVerticalVelocity(builder);
         data.addHorizontalVelocity(builder);
