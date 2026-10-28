@@ -88,7 +88,7 @@ public class BlocksMC1_13 implements BlockPropertiesSetup {
 
         // Shulker boxes.
         for (Material mat : MaterialUtil.SHULKER_BOXES) {
-            BlockFlags.addFlags(mat, BlockFlags.F_XZ100 | BlockFlags.SOLID_GROUND);
+            BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND); // DO not add the XZ100 flag, as shulker boxes are not full blocks when opened.
         }
         
         for (Material mat : MaterialUtil.INFESTED_BLOCKS) {

@@ -51,7 +51,7 @@ public class MaterialUtil {
 
     private static final List<String> woodTypes = Arrays.asList(
             "acacia", "birch", "dark_oak", "jungle", "oak", "spruce", "warped", "crimson", "mangrove", "bamboo", "cherry", "pale",
-            "wood"// Legacy
+            "poplar","wood"// Legacy
             );
 
     private static List<EntityType> collectTypesBySuffix(String prefix) {
@@ -190,9 +190,7 @@ public class MaterialUtil {
     public static final Set<Material> ALL_TUFF = Collections.unmodifiableSet(BridgeMaterial.getByContains(AlmostBoolean.YES, Arrays.asList("tuff")));
 
     public static final Set<Material> ALL_CANDLES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("candle", AlmostBoolean.YES));
-
-    public static final Set<Material> LANTERNS = Collections.unmodifiableSet(BridgeMaterial.getAllBlocks("lantern", "soul_lantern"));
-
+    
     public static final Set<Material> ALL_CANDLE_CAKE = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("candle_cake", AlmostBoolean.YES));
 
     public static final Set<Material> ALL_WALLS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_wall", AlmostBoolean.YES, "legacy"));
@@ -204,6 +202,14 @@ public class MaterialUtil {
     public static final Set<Material> ALL_TRAP_DOORS = Collections.unmodifiableSet(BridgeMaterial.getByPrefixAndSuffix(null, Arrays.asList("trapdoor", "trap_door"), AlmostBoolean.YES, "legacy"));
 
     public static final Set<Material> ALL_PRESSURE_PLATES = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_pressure_plate", AlmostBoolean.YES, "legacy"));
+    
+    public static final Set<Material> WOOL_SLABS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_wool_slab", AlmostBoolean.YES));
+    
+    public static final Set<Material> CONCRETE_SLABS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_concrete_slab", AlmostBoolean.YES));
+    
+    public static final Set<Material> WOOL_STAIRS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_wool_stairs", AlmostBoolean.YES));
+    
+    public static final Set<Material> CONCRETE_STAIRS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_concrete_stairs", AlmostBoolean.YES));
 
     /** Includes Lightning rods besides end rods!! To be used only if you deal with shapes, because while they share the same shape, the block-breaking properties differs */
     public static final Set<Material> RODS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("_rod", AlmostBoolean.YES, "legacy"));
@@ -223,7 +229,11 @@ public class MaterialUtil {
                     "legacy", "_wall"
                     ), "standing_banner"));
 
-    public static final Set<Material> BEDS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_bed", AlmostBoolean.YES, "legacy"), "bed_block"));
+    /** Bouncy */
+    public static final Set<Material> BEDS = Collections.unmodifiableSet(addBlocks(BridgeMaterial.getBySuffix("_bed", AlmostBoolean.YES, "legacy", "straw_bed"), "bed_block"));
+    /** Not bouncy. mc 26.3 */
+    public static final Set<Material> STRAW_BEDS = Collections.unmodifiableSet(BridgeMaterial.getBySuffix("straw_bed", AlmostBoolean.YES));
+    
 
     public static final Set<Material> BOATS;
     public static final Set<Material> ALL_SEEDS;
@@ -269,6 +279,8 @@ public class MaterialUtil {
                     AlmostBoolean.YES, 
                     "block", "legacy"
                     ));
+                    
+                    
 
     /** Flower pot and potted plants / things. */
     public static final Set<Material> FLOWER_POTS = Collections.unmodifiableSet(addBlocks(
@@ -318,7 +330,8 @@ public class MaterialUtil {
                     Arrays.asList("_leaves"),
                     AlmostBoolean.YES
                     // , ...
-                    ), "leaves", "leaves_2", "azalea_leaves", "flowering_azalea_leaves"));
+                    ), "leaves", "leaves_2", "azalea_leaves", "flowering_azalea_leaves",
+                       "red_poplar_leaves", "orange_poplar_leaves", "yellow_poplar_leaves"));
 
     /** LOGS. */
     public static final Set<Material> LOGS = Collections.unmodifiableSet(addBlocks(
@@ -549,7 +562,7 @@ public class MaterialUtil {
                     "mangrove_propagule", "pink_petals", "torchflower", "torchflower_crop",
                     "pitcher_plant", "open_eyeblossom", "closed_eyeblossom", "pale_hanging_moss", 
                     "leaf_litter", "cactus_flower", "short_dry_grass", "tall_dry_grass", "wildflowers",
-                    "golden_dandelion"
+                    "golden_dandelion", "red_shrub"
                     ),
             new HashSet<Material>(Arrays.asList(BridgeMaterial.TALL_GRASS, 
                     BridgeMaterial.WHEAT_CROPS, BridgeMaterial.CARROTS, 
@@ -720,5 +733,16 @@ public class MaterialUtil {
     public static boolean isAnySign(final Material mat) {
         return WOODEN_SIGNS.contains(mat) // Includes hanging_sign
               || WALL_HANGING_SIGNS.contains(mat);
+    }
+    
+    /**
+     * Check if the material is a wool block, wool stairs or wool slabs. (I.e.: can be looted with shears, and is a wool block in terms of breaking profile.)
+     * 
+     * @param mat
+     * @return
+     */
+    public static boolean isShearable(final Material mat) {
+        return WOOL_BLOCKS.contains(mat) || WOOL_STAIRS.contains(mat) || WOOL_SLABS.contains(mat);
+        
     }
 }

@@ -2374,7 +2374,7 @@ public class BlockProperties {
                 isRightTool = true;
                 pureHardness = false;
             }
-            else if (MaterialUtil.WOOL_BLOCKS.contains(blockId)) {
+            else if (MaterialUtil.isShearable(blockId)) {
                 duration = 240;
                 isValidTool = true;
                 isRightTool = true;
@@ -2590,7 +2590,7 @@ public class BlockProperties {
             if (blockId == BridgeMaterial.COBWEB) {
                 return 15f;
             }
-            else if (MaterialUtil.WOOL_BLOCKS.contains(blockId)) {
+            else if (MaterialUtil.isShearable(blockId)) {
                 return 5f;
             }
             // No need as duration = 0

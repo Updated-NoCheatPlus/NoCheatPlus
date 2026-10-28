@@ -202,6 +202,15 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
             "light", "glow_lichen", "big_dripleaf_stem")) {
             processedBlocks.add(mat);
         }
+        
+        // Shelf mushrooms 
+        for (final Material mat : BridgeMaterial.getAllBlocks("shelf_mushroom")) {
+            addModel(mat, MODEL_AUTO_FETCH);
+        }
+        
+        for (Material mat : MaterialUtil.STRAW_BEDS) {
+            addModel(mat, MODEL_AUTO_FETCH);
+        }
 
         // Candle
         for (Material mat : MaterialUtil.ALL_CANDLES) {
@@ -222,9 +231,13 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         for (Material mat : BridgeMaterial.getAllBlocks(
             "azalea", "flowering_azalea",
             "sculk_sensor", "frogspawn",
-            "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor", "bubble_column",
+            "sniffer_egg", "decorated_pot", "pitcher_crop", "calibrated_sculk_sensor",
             "closed_eyeblossom", "open_eyeblossom", "pale_hanging_moss", "resin_clump","cactus_flower", 
             "short_dry_grass", "tall_dry_grass", "golden_dandelion")) {
+            addModel(mat, MODEL_AUTO_FETCH);
+        }
+        
+        for (final Material mat : BridgeMaterial.getAllBlocks("pale_moss_carpet")) {
             addModel(mat, MODEL_AUTO_FETCH);
         }
         
