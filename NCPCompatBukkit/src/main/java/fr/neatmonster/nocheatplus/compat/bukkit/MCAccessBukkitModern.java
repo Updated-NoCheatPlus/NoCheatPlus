@@ -115,7 +115,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
     private static final BukkitShapeModel MODEL_LANTERN = new BukkitLantern();
     private static final BukkitShapeModel MODEL_CONDUIT = new BukkitStatic(0.3125, 0.3125, 0.3125, 0.6875, 0.6875, 0.6875);
     private static final BukkitShapeModel MODEL_GROUND_HEAD = new BukkitStatic(0.25, 0.5);
-    private static final BukkitShapeModel MODEL_SINGLE_CHEST = new BukkitStatic(0.0625, 0.875);
+    private static final BukkitShapeModel MODEL_CHEST = new BukkitChest();
     private static final BukkitShapeModel MODEL_HONEY_BLOCK = new BukkitStatic(0.0625, 0.9375);
     private static final BukkitShapeModel MODEL_SCULK_SHRIEKER = new BukkitStatic(0.0, 0.5);
     private static final BukkitShapeModel MODEL_DRIED_GHAST = new BukkitStatic(0.1875f, 0.0f, 0.1875f, 0.8125f, 0.625f, 0.8125f); // NMS bounds: x1,y1,z1,x2,y2,y2 (y2 = 10/16 = 0.625)
@@ -374,13 +374,12 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         }
 
         // Chests.
-        // TOOD: Might add a facing/directional extension for double chests.
         for (Material mat : BridgeMaterial.getAllBlocks(
             "chest", "trapped_chest", "ender_chest")) {
-            addModel(mat, MODEL_SINGLE_CHEST);
+            addModel(mat, MODEL_CHEST);
         }
         for (Material mat : MaterialUtil.COPPER_CHESTS) {
-            addModel(mat, MODEL_SINGLE_CHEST);
+            addModel(mat, MODEL_CHEST);
         }
 
         // Beds

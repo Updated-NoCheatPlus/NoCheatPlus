@@ -24,6 +24,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketPostListener;
 
 import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntity;
 import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
@@ -121,6 +122,7 @@ public class EntityActivityAdapter extends BaseAdapter {
                 if (spawn != null) {
                     tracker.onSpawn(player, spawn.id, spawn.uuid, kind(type, spawn.typeName), spawn.typeName, spawn.typeId,
                             spawn.x, spawn.y, spawn.z, spawn.positionKnown, spawn.yaw, spawn.pitch);
+                    bracketAfter(event, player, tracker);
                 }
             }
             else if (type == PacketType.Play.Server.REL_ENTITY_MOVE || type == PacketType.Play.Server.REL_ENTITY_MOVE_LOOK
@@ -148,6 +150,7 @@ public class EntityActivityAdapter extends BaseAdapter {
                 if (id != null) {
                     tracker.onMetadata(player, id.intValue(), EntityPacketReader.readSharedFlags(packet),
                             EntityPacketReader.readFireworkAttached(packet));
+                    bracketAfter(event, player, tracker);
                 }
             }
             else if (type == PacketType.Play.Server.ENTITY_STATUS) {
@@ -172,6 +175,29 @@ public class EntityActivityAdapter extends BaseAdapter {
         }
         catch (Throwable throwable) {
             fail(throwable);
+        }
+    }
+
+    private void bracketAfter(PacketEvent event, final Player player, final ClientEntityTracker tracker) {
+        if (!tracker.consumeBracketPing()) {
+            return;
+        }
+        final Plugin owner = getPlugin();
+        try {
+            event.getNetworkMarker().addPostListener(new PacketPostListener() {
+                @Override
+                public Plugin getPlugin() {
+                    return owner;
+                }
+
+                @Override
+                public void onPostEvent(PacketEvent sent) {
+                    tracker.bracketPing(player);
+                }
+            });
+        }
+        catch (Throwable ignored) {
+            tracker.bracketPing(player);
         }
     }
 

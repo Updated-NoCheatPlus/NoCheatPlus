@@ -69,6 +69,8 @@ public final class ClientEntity {
     private double serverZ;
     private int steps;
     private int lastTransaction;
+    private double width;
+    private double height;
 
     ClientEntity(int id) {
         this.id = id;
@@ -105,6 +107,8 @@ public final class ClientEntity {
         copy.serverZ = serverZ;
         copy.steps = steps;
         copy.lastTransaction = lastTransaction;
+        copy.width = width;
+        copy.height = height;
         copy.tracked.copyFrom(tracked);
         return copy;
     }
@@ -325,6 +329,21 @@ public final class ClientEntity {
 
     public double getZ() {
         return z;
+    }
+
+    /** Standing hitbox width. Feet are {@link #getX()} and {@link #getZ()}. */
+    public double getWidth() {
+        return width;
+    }
+
+    /** Standing hitbox height. The top is {@link #getY()} plus this. */
+    public double getHeight() {
+        return height;
+    }
+
+    void setSize(double width, double height) {
+        this.width = width;
+        this.height = height;
     }
 
     /** Position the latest movement packet is taking the client towards. */

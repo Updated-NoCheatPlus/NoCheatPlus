@@ -56,8 +56,8 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     private final Map<Integer, Outgoing> outgoing = new HashMap<Integer, Outgoing>();
     private final Map<Integer, Integer> pendingAttach = new HashMap<Integer, Integer>();
     private final Set<Integer> destroyedSincePing = new HashSet<Integer>();
-    private final Set<Integer> boosting = new HashSet<Integer>();
-    private final Set<Integer> boostingRemoveNextTick = new HashSet<Integer>();
+    /** Rocket id to 1 until the in-flight move is checked, then 0 while it counts. */
+    private final Map<Integer, Integer> fireworks = new HashMap<Integer, Integer>();
 
     private TransactionChannel channel;
     private int generation;
@@ -67,7 +67,8 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     private int clockSent;
     private boolean active;
     private boolean sawClientTickEnd;
-    private boolean hadBoostingFirework;
+    /** The packet being sent completes a rocket attach. A ping is written immediately after it. */
+    private boolean bracketPing;
 
     @Override
     public boolean dataOnJoin(Player player, IPlayerData pData) {
@@ -124,10 +125,6 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                 }
             }
             sendClock(player);
-            if (!boostingRemoveNextTick.isEmpty()) {
-                boosting.removeAll(boostingRemoveNextTick);
-                boostingRemoveNextTick.clear();
-            }
         }
     }
 
@@ -176,6 +173,9 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
             if (sent.firework && attached != null && selfId != -1 && attached.intValue() == selfId) {
                 sent.boosting = true;
             }
+            if (sent.boosting) {
+                bracketPing = true;
+            }
             outgoing.put(Integer.valueOf(id), sent);
             final int token = generation;
             final int createdOn = clockSent;
@@ -199,9 +199,6 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                     entity.spawn(spawnUuid, spawnKind, spawnType, spawnTypeId,
                             spawnX, spawnY, spawnZ, spawnKnown, spawnYaw, spawnPitch, sent.dead, sent.invisible);
                     entities.put(Integer.valueOf(id), entity);
-                    if (sent.boosting) {
-                        rememberBoost(id, entity);
-                    }
                 }
             });
             addTask(createdOn + 1, new Runnable() {
@@ -213,6 +210,9 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                     ClientEntity entity = entities.get(Integer.valueOf(id));
                     if (entity != null) {
                         entity.confirm(createdOn + 1);
+                    }
+                    if (sent.boosting) {
+                        queueBoost(id, entity);
                     }
                 }
             });
@@ -312,9 +312,7 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                     for (int index = 0; index < copy.length; index++) {
                         int removed = copy[index];
                         removeEntity(removed);
-                        if (boosting.contains(Integer.valueOf(removed))) {
-                            boostingRemoveNextTick.add(Integer.valueOf(removed));
-                        }
+                        fireworks.remove(Integer.valueOf(removed));
                     }
                 }
             });
@@ -353,6 +351,7 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
             final boolean boost = fireworkAttached != null && selfId != -1 && fireworkAttached.intValue() == selfId;
             final boolean detach = fireworkAttached != null && !boost;
             final int token = generation;
+            final int boostOn = clockSent + 1;
             if (!hasFlags && fireworkAttached == null) {
                 return;
             }
@@ -367,20 +366,53 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                         entity.setInvisible(invisible);
                     }
                     boolean firework = knowFirework || (entity != null && entity.isFirework());
-                    if (!firework || fireworkAttached == null) {
+                    if (!firework || fireworkAttached == null || boost) {
                         return;
                     }
-                    if (boost) {
-                        rememberBoost(id, entity);
-                    }
-                    else if (detach && boosting.contains(Integer.valueOf(id))) {
-                        boostingRemoveNextTick.add(Integer.valueOf(id));
+                    if (detach) {
+                        fireworks.remove(Integer.valueOf(id));
                         if (entity != null) {
                             entity.setBoosting(false);
                         }
                     }
                 }
             });
+            if (boost && sent != null) {
+                bracketPing = true;
+                addTask(boostOn, new Runnable() {
+                    @Override
+                    public void run() {
+                        if (token != generation) {
+                            return;
+                        }
+                        ClientEntity entity = entities.get(Integer.valueOf(id));
+                        boolean firework = knowFirework || (entity != null && entity.isFirework());
+                        if (!firework) {
+                            return;
+                        }
+                        queueBoost(id, entity);
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * True once, after a rocket-attach packet. The caller writes a ping after that packet
+     * so the client cannot tick the rocket before answering.
+     */
+    public boolean consumeBracketPing() {
+        synchronized (lock) {
+            boolean pending = bracketPing;
+            bracketPing = false;
+            return pending;
+        }
+    }
+
+    /** Ping that follows the packet which just completed a rocket attach. */
+    public void bracketPing(Player player) {
+        synchronized (lock) {
+            sendClock(player);
         }
     }
 
@@ -408,9 +440,7 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                     if (entity != null) {
                         entity.setDead(true);
                     }
-                    if (boosting.contains(Integer.valueOf(id))) {
-                        boostingRemoveNextTick.add(Integer.valueOf(id));
-                    }
+                    fireworks.remove(Integer.valueOf(id));
                 }
             });
         }
@@ -523,28 +553,60 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     }
 
     /**
-     * Firework rockets the client currently has attached to this player.
-     * Destroy is kept until the next server tick, matching the rocket’s last boost tick.
+     * Firework rockets whose boost applies to this move.
+     * A rocket ticks after the player, so the boost it writes is the next move.
+     * TODO: 1.16.5 and older still false-flag the first boosted move.
      */
     public int getBoostingFireworkCount() {
         synchronized (lock) {
-            return boosting.size();
+            int count = 0;
+            for (Map.Entry<Integer, Integer> entry : fireworks.entrySet()) {
+                int when = entry.getValue().intValue();
+                if (when > 0) {
+                    entry.setValue(Integer.valueOf(0));
+                }
+                else {
+                    count++;
+                }
+            }
+            return count;
         }
     }
 
     /**
-     * True after a rocket was confirmed on this player and then removed.
-     * Callers can stop trusting the right-click timer once this is set and the count is 0.
+     * Confirmed entities whose client hitbox meets the given box.
+     * Position is the one the client is drawing. {@link ClientEntity#getWidth()}
+     * and {@link ClientEntity#getHeight()} are that type's standing box.
+     * The list is a snapshot.
      */
-    public boolean hasFinishedFireworkBoost() {
+    public List<ClientEntity> nearbyEntities(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+        List<ClientEntity> found = new ArrayList<ClientEntity>();
         synchronized (lock) {
-            return hadBoostingFirework && boosting.isEmpty();
+            for (ClientEntity entity : entities.values()) {
+                if (entity.isDead() || !entity.isConfirmed() || !entity.hasPosition()) {
+                    continue;
+                }
+                double[] sized = box(entity);
+                double half = sized[0] * 0.5D;
+                double x = entity.getX();
+                double y = entity.getY();
+                double z = entity.getZ();
+                if (x + half <= minX || x - half >= maxX || y + sized[1] <= minY || y >= maxY || z + half <= minZ || z - half >= maxZ) {
+                    continue;
+                }
+                ClientEntity copy = entity.copy();
+                copy.setSize(sized[0], sized[1]);
+                found.add(copy);
+            }
         }
+        return found;
     }
 
     /**
      * Entities that push this player on the client, at the position the client is ticking.
      * A mob does this from its own tick: it finds players inside its box and calls {@code player.push(mob)}.
+	 * TODO: Half of the function was literally converting ClientEntity to Bukkit Entity for retrieving bounding box. Not optimal
+     * TODO: Somewhere in old versions the player is pushed twice, and it pushes before the mob lerps. 1.16.5 still false-flags.
      */
     public List<Location> collidingLocations(Player player, double x, double y, double z, double playerWidth, double playerHeight, boolean log) {
         List<PushSpot> spots = new ArrayList<PushSpot>();
@@ -882,9 +944,8 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
         outgoing.clear();
         pendingAttach.clear();
         destroyedSincePing.clear();
-        boosting.clear();
-        boostingRemoveNextTick.clear();
-        hadBoostingFirework = false;
+        fireworks.clear();
+        bracketPing = false;
         vehicleId = -1;
         serverVehicleId = -1;
         clockSent = 0;
@@ -933,12 +994,14 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
         return kept;
     }
 
-    private void rememberBoost(int id, ClientEntity entity) {
-        boosting.add(Integer.valueOf(id));
-        boostingRemoveNextTick.remove(Integer.valueOf(id));
-        hadBoostingFirework = true;
+    private void queueBoost(int id, ClientEntity entity) {
+        Integer key = Integer.valueOf(id);
         if (entity != null) {
             entity.setBoosting(true);
+        }
+        Integer when = fireworks.get(key);
+        if (when == null || when.intValue() != 0) {
+            fireworks.put(key, Integer.valueOf(1));
         }
     }
 
@@ -1027,6 +1090,9 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
         }
         if (isBoat(key)) {
             return new double[] { 1.375D, 0.5625D };
+        }
+        if ("SHULKER".equals(key)) {
+            return new double[] { 1.0D, 1.0D };
         }
         if ("SLIME".equals(key) || "MAGMA_CUBE".equals(key)) {
             return new double[] { 2.04D, 2.04D };

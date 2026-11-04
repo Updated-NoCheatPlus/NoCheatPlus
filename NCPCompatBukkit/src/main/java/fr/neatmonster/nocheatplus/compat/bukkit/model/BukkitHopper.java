@@ -47,13 +47,11 @@ public class BukkitHopper implements BukkitShapeModel {
                 case NORTH:
                     return new double[] {
                         // Standing inside
-                        //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                        0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
                         0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
                         // Bottom
                         0.375, 0.25, 0.0, 0.625, 0.5, 0.25,
-                        // Top
-                        0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         // 4 sides of hopper (top)
                         0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
                         0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
@@ -63,13 +61,11 @@ public class BukkitHopper implements BukkitShapeModel {
                 case SOUTH:
                     return new double[] {
                         // Standing inside
-                        //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                        0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
                         0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
                         // Bottom
                         0.375, 0.25, 0.75, 0.625, 0.5, 1.0,
-                        // Top
-                        0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         // 4 sides of hopper (top)
                         0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
                         0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
@@ -79,13 +75,11 @@ public class BukkitHopper implements BukkitShapeModel {
                 case WEST:
                     return new double[] {
                         // Standing inside
-                        //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                        0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
                         0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
                         // Bottom
                         0.0, 0.25, 0.375, 0.25, 0.5, 0.625,
-                        // Top
-                        0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         // 4 sides of hopper (top)
                         0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
                         0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
@@ -95,13 +89,11 @@ public class BukkitHopper implements BukkitShapeModel {
                 case EAST:
                     return new double[] {
                         // Standing inside
-                        //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                        0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
                         0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
                         // Bottom
                         0.75, 0.25, 0.375, 1.0, 0.5, 0.625,
-                        // Top
-                        0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         // 4 sides of hopper (top)
                         0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
                         0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,
@@ -111,13 +103,11 @@ public class BukkitHopper implements BukkitShapeModel {
                 case DOWN:
                     return new double[] {
                         // Standing inside
-                        //0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
+                        0.0, 0.625, 0.0, 1.0, 0.6875, 1.0,
                         // Middle
                         0.25, 0.25, 0.25, 0.75, 0.625, 0.75,
                         // Bottom
                         0.375, 0.0, 0.375, 0.625, 0.25, 0.625,
-                        // Top
-                        0.0, 0.6875, 0.0, 1.0, 1.0, 1.0,
                         // 4 sides of hopper (top)
                         0.0, 0.6875, 0.0, 1.0, 1.0, 0.125,
                         0.0, 0.6875, 0.875, 1.0, 1.0, 1.0,

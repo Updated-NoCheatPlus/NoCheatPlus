@@ -34,7 +34,9 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.combined.Improbable;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
+import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
 import fr.neatmonster.nocheatplus.checks.net.transaction.TransactionChannel;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.envelope.PhysicsGroundResolver;
@@ -503,7 +505,7 @@ public class SurvivalFly extends Check {
      * The right-click timer is not used: a rocket's lifetime is random, so the timer does not match the client.
      */
     private static int fireworkBoosts(Player player) {
-        return Math.min(ClientEntityTracker.boostingFireworks(player), 8);
+        return Math.min(ClientEntityTracker.boostingFireworks(player), 12);
     }
 
     /**
@@ -533,6 +535,32 @@ public class SurvivalFly extends Check {
         thisMove.zAllowedDistance = lastMove.toIsValid ? lastMove.zDistance : 0.0;
         // Reset momentum if collided with something on the previous tick.
         doWallCollision(lastMove, thisMove);
+        int fireworkBoosts = fireworkBoosts(player);
+        // Fireworks tick at start of move, "to" has been written to "from"
+        Vector boostLook = TrigUtil.getLookingDirection(from, player);
+        // Duplicated packet hold the needed look(useItem)
+        if (pData.getClientVersion().isBetween(ClientVersion.V_1_16_4, ClientVersion.V_1_21)) {
+            final DataPacketFlying[] flyingQueue = pData.getGenericInstance(NetData.class).copyFlyingQueue();
+            for (int i = flyingQueue.length - 1; i >= 0; i--) {
+                final DataPacketFlying packet = flyingQueue[i];
+                if (packet != null && packet.hasPos && packet.hasLook
+                        && TrigUtil.isSamePos(from.getX(), from.getY(), from.getZ(), packet.getX(), packet.getY(), packet.getZ())) {
+                    boostLook = TrigUtil.getLookingDirection(packet.getYaw(), packet.getPitch(), player);
+                    break;
+                }
+            }
+        }
+        //if (debug) {
+        //    System.out.println("firework boosts=" + fireworkBoosts
+        //            + " from=(" + from.getX() + ", " + from.getY() + ", " + from.getZ() + ")"
+        //            + " look=(" + boostLook.getX() + ", " + boostLook.getY() + ", " + boostLook.getZ() + ")"
+        //            + " motion=(" + thisMove.xAllowedDistance + ", " + thisMove.yAllowedDistance + ", " + thisMove.zAllowedDistance + ")");
+        //}
+        for (int boost = 0; boost < fireworkBoosts; boost++) {
+            thisMove.xAllowedDistance += boostLook.getX() * 0.1 + (boostLook.getX() * 1.5 - thisMove.xAllowedDistance) * 0.5;
+            thisMove.yAllowedDistance += boostLook.getY() * 0.1 + (boostLook.getY() * 1.5 - thisMove.yAllowedDistance) * 0.5;
+            thisMove.zAllowedDistance += boostLook.getZ() * 0.1 + (boostLook.getZ() * 1.5 - thisMove.zAllowedDistance) * 0.5;
+        }
         // Throttle speed if stuck in a block.
         if (TrigUtil.lengthSquared(data.lastStuckInBlockHorizontal, data.lastStuckInBlockVertical, data.lastStuckInBlockHorizontal) > 1.0E-7) {
             if (data.lastStuckInBlockVertical != 1.0) {
@@ -555,7 +583,7 @@ public class SurvivalFly extends Check {
             thisMove.yAllowedDistance += riptideVelocity.getY();
             thisMove.zAllowedDistance += riptideVelocity.getZ();
         }
-        // TODO: Reduce verbosity (at least, make it easier to look at)
+        // Mouse look is applied after the client tick, so elytra on this move uses "to".
         Vector viewVector = TrigUtil.getLookingDirection(to, player);
         float radianPitch = to.getPitch() * TrigUtil.toRadians;
         // Horizontal length of the look direction
@@ -588,20 +616,6 @@ public class SurvivalFly extends Check {
             // Accelerate
             thisMove.xAllowedDistance += (viewVector.getX() / viewVecHorizontalLength * thisMoveHDistance - thisMove.xAllowedDistance) * 0.1;
             thisMove.zAllowedDistance += (viewVector.getZ() / viewVecHorizontalLength * thisMoveHDistance - thisMove.zAllowedDistance) * 0.1;
-        }
-        // One boost per firework rocket the client still has attached.
-        // TODO: Some how the motion is wrongly calculated despite correct lifespan
-        int fireworkBoosts = fireworkBoosts(player);
-        if (debug) {
-            System.out.println("firework boosts=" + fireworkBoosts
-                    + " from=(" + from.getX() + ", " + from.getY() + ", " + from.getZ() + ")"
-                    + " look=(" + viewVector.getX() + ", " + viewVector.getY() + ", " + viewVector.getZ() + ")"
-                    + " motion=(" + thisMove.xAllowedDistance + ", " + thisMove.yAllowedDistance + ", " + thisMove.zAllowedDistance + ")");
-        }
-        for (int boost = 0; boost < fireworkBoosts; boost++) {
-            thisMove.xAllowedDistance += viewVector.getX() * 0.1 + (viewVector.getX() * 1.5 - thisMove.xAllowedDistance) * 0.5;
-            thisMove.yAllowedDistance += viewVector.getY() * 0.1 + (viewVector.getY() * 1.5 - thisMove.yAllowedDistance) * 0.5;
-            thisMove.zAllowedDistance += viewVector.getZ() * 0.1 + (viewVector.getZ() * 1.5 - thisMove.zAllowedDistance) * 0.5;
         }
         // Friction here. (TEST)
         // Note about inertia: the game assigns the radian pitch to the "f" variable, which is the variable used to apply friction at the end of the tick, _normally_.
