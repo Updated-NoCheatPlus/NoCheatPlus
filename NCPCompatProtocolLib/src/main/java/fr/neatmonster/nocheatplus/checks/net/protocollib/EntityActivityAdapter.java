@@ -29,6 +29,7 @@ import com.comphenix.protocol.events.PacketPostListener;
 import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntity;
 import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
 import fr.neatmonster.nocheatplus.checks.net.entity.EntityPacketReader;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.logging.StaticLog;
 import fr.neatmonster.nocheatplus.players.DataManager;
@@ -56,12 +57,11 @@ public class EntityActivityAdapter extends BaseAdapter {
         add(types, PacketType.Play.Server.ENTITY_STATUS);
         add(types, PacketType.Play.Server.MOUNT);
         add(types, PacketType.Play.Server.ATTACH_ENTITY);
-        add(types, PacketType.Play.Client.POSITION);
-        add(types, PacketType.Play.Client.POSITION_LOOK);
-        add(types, PacketType.Play.Client.LOOK);
-        add(types, PacketType.Play.Client.FLYING);
-        add(types, PacketType.Play.Client.VEHICLE_MOVE);
-        add(types, PacketType.Play.Client.CLIENT_TICK_END);
+        // 1.20.6 and older servers do not have this packet. The server tick steps entities there.
+        // It appears only when the server is 1.21.2 or newer, once per server tick.
+        if (ServerVersion.isAtLeast("1.21.2")) {
+            add(types, PacketType.Play.Client.CLIENT_TICK_END);
+        }
         return types.toArray(new PacketType[types.size()]);
     }
 
@@ -72,6 +72,19 @@ public class EntityActivityAdapter extends BaseAdapter {
             }
         }
         catch (Throwable ignored) {}
+    }
+
+    /** True when this client actually sends tick-end. Older clients only see ViaVersion's fake copy, and only if the server protocol has the packet. */
+    private static boolean sendsRealTickEnd(Player player) {
+        if (!ServerVersion.isAtLeast("1.21.2")) {
+            return false;
+        }
+        IPlayerData data = DataManager.getPlayerDataSafe(player);
+        if (data == null) {
+            return false;
+        }
+        ClientVersion version = data.getClientVersion();
+        return version != null && version.isAtLeast(ClientVersion.V_1_21_2);
     }
 
     private int failures;
@@ -93,10 +106,11 @@ public class EntityActivityAdapter extends BaseAdapter {
             }
             PacketType type = event.getPacketType();
             if (type == PacketType.Play.Client.CLIENT_TICK_END) {
-                tracker.onClientTick(true);
-                return;
+                // Once per server tick when the server protocol has the packet. ViaVersion inserts
+                // it for older clients. A 1.20.6 server never delivers it; the server tick steps
+                // those entities instead. Only a real 1.21.2+ client captures the pre-step position.
+                tracker.onTickEnd(sendsRealTickEnd(player));
             }
-            tracker.onClientTick(false);
         }
         catch (Throwable throwable) {
             fail(throwable);

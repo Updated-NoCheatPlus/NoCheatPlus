@@ -69,6 +69,12 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     private boolean sawClientTickEnd;
     /** The packet being sent completes a rocket attach. A ping is written immediately after it. */
     private boolean bracketPing;
+    /** Server ticks that stepped interpolation, on a server with no tick-end packet. */
+    private int serverTicks;
+    /** Real 1.21.2+ tick-end packets that stepped interpolation. */
+    private int realTickEnds;
+    /** ViaVersion tick-end packets. One per server tick for a client that does not send its own. */
+    private int fakeTickEnds;
 
     @Override
     public boolean dataOnJoin(Player player, IPlayerData pData) {
@@ -87,6 +93,9 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
             resetEntities();
             active = true;
             sawClientTickEnd = false;
+            serverTicks = 0;
+            realTickEnds = 0;
+            fakeTickEnds = 0;
             try {
                 selfId = player.getEntityId();
             }
@@ -125,16 +134,37 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                 }
             }
             sendClock(player);
+            // No tick-end packet has arrived. Step once per server tick, after this tick's
+            // movement has already been checked. A tick-end, real or ViaVersion's, already stepped.
+            if (!sawClientTickEnd) {
+                serverTicks++;
+                for (ClientEntity entity : entities.values()) {
+                    entity.tick();
+                }
+            }
         }
     }
 
-    public void onClientTick(boolean endOfTick) {
+    /**
+     * One tick-end packet, once per server tick. A real 1.21.2+ client has already sent
+     * its move, so the push position is the one before this step. ViaVersion's copy for
+     * an older client is that same server tick. A server without the packet steps in
+     * {@link #onEndOfTick(Player)} instead.
+     */
+    public void onTickEnd(boolean realClientTick) {
         synchronized (lock) {
-            if (endOfTick) {
-                sawClientTickEnd = true;
+            sawClientTickEnd = true;
+            if (realClientTick) {
+                realTickEnds++;
+                for (ClientEntity entity : entities.values()) {
+                    entity.capturePushPosition();
+                }
             }
-            else if (sawClientTickEnd) {
-                return;
+            else {
+                fakeTickEnds++;
+                for (ClientEntity entity : entities.values()) {
+                    entity.clearPushPosition();
+                }
             }
             for (ClientEntity entity : entities.values()) {
                 entity.tick();
@@ -629,9 +659,18 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                 spot.type = entity.getTypeName();
                 spot.player = entity.getKind() == ClientEntity.Kind.PLAYER || "PLAYER".equals(typeKey(entity.getTypeName()));
                 spot.boat = isBoat(typeKey(entity.getTypeName()));
-                spot.x = entity.getX();
-                spot.y = entity.getY();
-                spot.z = entity.getZ();
+                // Older clients line up with the interpolated position. 1.21.2+ tick end
+                // runs after the move packet, so the push position was captured before that step.
+                if (entity.hasPushPosition()) {
+                    spot.x = entity.getPushX();
+                    spot.y = entity.getPushY();
+                    spot.z = entity.getPushZ();
+                }
+                else {
+                    spot.x = entity.getX();
+                    spot.y = entity.getY();
+                    spot.z = entity.getZ();
+                }
                 spot.serverX = entity.getServerX();
                 spot.serverY = entity.getServerY();
                 spot.serverZ = entity.getServerZ();

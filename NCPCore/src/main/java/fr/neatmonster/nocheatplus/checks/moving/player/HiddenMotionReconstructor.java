@@ -16,7 +16,6 @@ package fr.neatmonster.nocheatplus.checks.moving.player;
 
 import java.util.Collection;
 
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
@@ -24,6 +23,11 @@ import fr.neatmonster.nocheatplus.checks.combined.CombinedData;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerKeyboardInput;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
+import fr.neatmonster.nocheatplus.checks.moving.player.order.AxisScheduler;
+import fr.neatmonster.nocheatplus.checks.moving.player.order.MotionPhaseId;
+import fr.neatmonster.nocheatplus.checks.moving.player.order.MotionSchedule;
+import fr.neatmonster.nocheatplus.checks.moving.player.order.MotionSchedule.JumpVertical;
+import fr.neatmonster.nocheatplus.checks.moving.player.order.MotionSchedule.LiquidModel;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.BridgeMisc;
 import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
@@ -47,6 +51,9 @@ import fr.neatmonster.nocheatplus.utilities.moving.Magic;
  * hidden intermediate ticks by brute-forcing all nine plausible WASD keyboard states across up to {@link #MAX_HIDDEN_TICK_DEPTH} simulated
  * ticks. Each candidate path re-runs the client-side horizontal physics pipeline
  * (inertia, liquid push, etc...) and the closest match to the observed final position is returned.
+ * Each simulated tick walks {@link fr.neatmonster.nocheatplus.checks.moving.player.order.MotionSchedule#forVersion}
+ * (1.12.2 and below, 1.13 through 1.21.1, 1.21.2 and above), the same list
+ * {@link fr.neatmonster.nocheatplus.checks.moving.player.SurvivalFly} uses. From 1.21.2 the input is known, so the nine-state loop is not the schedule.
  * </p>
  *
  */
@@ -156,11 +163,221 @@ public class HiddenMotionReconstructor {
         }
         return resultY;
     }
-    
+
+    /** Slime step and honey slide. Shared by the hidden horizontal paths. */
+    private static double[] scaleSlimeAndHoney(final PlayerLocation from, final PlayerMoveData lastMove, final PlayerMoveData thisMove,
+            final IPlayerData pData, final double baseX, final double baseZ) {
+        double x = baseX;
+        double z = baseZ;
+        if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
+            final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
+            x *= slimeMul;
+            z *= slimeMul;
+        }
+        if (from.isSlidingDown() && lastMove.yDistance < -Magic.SLIDE_START_AT_VERTICAL_MOTION_THRESHOLD) {
+            x *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
+            z *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
+        }
+        return new double[] { x, z };
+    }
+
+    private static double zeroStuckHorizontal(final MovingData data, final double component) {
+        if (data.lastStuckInBlockHorizontal != 1.0
+                && TrigUtil.lengthSquared(data.lastStuckInBlockHorizontal, data.lastStuckInBlockVertical, data.lastStuckInBlockHorizontal) > 1.0E-7) {
+            return 0.0;
+        }
+        return component;
+    }
+
+    /**
+     * Horizontal phases the hidden-tick search shares with {@link SurvivalFly}.
+     * Input, edge, and collide stay in the candidate loop.
+     */
+    private static void applyHiddenHorizontalPhase(final MotionPhaseId id, final double[] hz, final PlayerLocation from, final PlayerMoveData lastMove,
+            final PlayerMoveData thisMove, final MovingData data, final IPlayerData pData) {
+        switch (id) {
+        case SLIME_STEP:
+            if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
+                final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
+                hz[0] *= slimeMul;
+                hz[1] *= slimeMul;
+            }
+            break;
+        case INSIDE_BLOCKS:
+            if (from.isSlidingDown() && lastMove.yDistance < -Magic.SLIDE_START_AT_VERTICAL_MOTION_THRESHOLD) {
+                hz[0] *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
+                hz[1] *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
+            }
+            break;
+        case BLOCK_SPEED:
+            hz[0] *= (double) data.nextBlockSpeedMultiplier;
+            hz[1] *= (double) data.nextBlockSpeedMultiplier;
+            break;
+        case MEDIUM_GRAVITY_FRICTION:
+            hz[0] *= (double) data.lastInertia;
+            hz[1] *= (double) data.lastInertia;
+            break;
+        case FLUID_CURRENT:
+            if (from.isInLiquid()) {
+                Vector liquidFlowVector = from.getLiquidPushingVector(hz[0], hz[1], from.isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
+                hz[0] += liquidFlowVector.getX();
+                hz[1] += liquidFlowVector.getZ();
+            }
+            break;
+        case NEGLIGIBLE_SPEED: {
+            final double[] negligible = doNegligibleMomentum(pData, hz[0], hz[1]);
+            hz[0] = negligible[0];
+            hz[1] = negligible[1];
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    /**
+     * Vertical phases the hidden-tick search shares with {@link SurvivalFly}.
+     * Candidates are created in {@link MotionPhaseId#JUMP} when the player is in liquid.
+     */
+    private static void applyHiddenVerticalPhase(final MotionPhaseId id, final MotionSchedule schedule, final double[] yBox, final double[][] candidatesOut,
+            final Player player, final MovingData data, final CombinedData cData, final IPlayerData pData, final PlayerLocation from, final PlayerLocation to,
+            final PlayerMoveData lastMove, final boolean onGround, final int depthIndex, final double incomingY, final double jumpGain,
+            final double verticalLiquidPushComponent, final double yBeforeMove) {
+        switch (id) {
+        case SLIME_BOUNCE:
+            if (!pData.isShiftKeyPressed() && yBox[0] < 0.0 && from.isOnBouncyBlock()) {
+                yBox[0] = from.isOnSlimeBlock() ? -yBox[0] : -yBox[0] * 0.66;
+            }
+            break;
+        case INSIDE_BLOCKS:
+            if (from.isSlidingDown()) {
+                yBox[0] = -Magic.SLIDE_SPEED_THROTTLE;
+            }
+            break;
+        case CLIMBABLE_POST_MOVE:
+            if (!lastMove.from.inLiquid && !lastMove.isGliding) {
+                if (lastMove.collidesHorizontally && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) {
+                    yBox[0] = 0.2;
+                }
+            }
+            break;
+        case MEDIUM_GRAVITY_FRICTION:
+            if (lastMove.from.inWater) {
+                if (lastMove.collidesHorizontally && lastMove.from.onClimbable && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
+                    yBox[0] = 0.2;
+                }
+                yBox[0] *= data.lastFrictionVertical;
+                if (BridgeMisc.hasGravity(player)) {
+                    if (schedule.liquidModel() == LiquidModel.FIXED_GRAVITY) {
+                        yBox[0] -= Magic.LEGACY_LIQUID_GRAVITY;
+                    }
+                    else {
+                        final boolean falling = schedule.gravitySample() == MotionSchedule.GravitySample.BEFORE_MOVE ? yBeforeMove <= 0.0 : yBox[0] <= 0.0;
+                        yBox[0] = from.getFluidFallingAdjustedMovement(data.lastGravity, falling, new Vector(0.0, yBox[0], 0.0), cData.wasSprinting).getY();
+                    }
+                }
+            }
+            else if (lastMove.from.inLava) {
+                if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) {
+                    yBox[0] *= data.lastFrictionVertical;
+                    if (BridgeMisc.hasGravity(player)) {
+                        if (schedule.liquidModel() == LiquidModel.FIXED_GRAVITY) {
+                            yBox[0] -= Magic.LEGACY_LIQUID_GRAVITY;
+                        }
+                        else {
+                            final boolean falling = schedule.gravitySample() == MotionSchedule.GravitySample.BEFORE_MOVE ? yBeforeMove <= 0.0 : yBox[0] <= 0.0;
+                            yBox[0] = from.getFluidFallingAdjustedMovement(data.lastGravity, falling, new Vector(0.0, yBox[0], 0.0), cData.wasSprinting).getY();
+                        }
+                    }
+                }
+                else {
+                    yBox[0] *= data.lastFrictionVertical;
+                }
+                if (schedule.liquidModel() == LiquidModel.FLUID_FALLING && data.lastGravity != 0.0) {
+                    yBox[0] += -data.lastGravity / 4.0;
+                }
+            }
+            else {
+                if (cData.wasLevitating) {
+                    yBox[0] += (0.05 * data.lastLevitationLevel - (depthIndex == 0 ? lastMove.yAllowedDistance : incomingY)) * 0.2;
+                }
+                else yBox[0] -= data.lastGravity;
+                yBox[0] *= data.lastFrictionVertical;
+            }
+            break;
+        case LIQUID_EXIT:
+            if (lastMove.from.inLiquid && lastMove.collidesHorizontally && from.isUnobstructed(0.0)) {
+                yBox[0] = 0.3;
+            }
+            break;
+        case FLUID_CURRENT:
+            if (from.isInLiquid() && verticalLiquidPushComponent != 0.0) {
+                yBox[0] += verticalLiquidPushComponent;
+            }
+            break;
+        case DESCEND_IN_WATER:
+            if (pData.isShiftKeyPressed() && from.isInWater()) {
+                yBox[0] -= Magic.LIQUID_SPEED_GAIN;
+            }
+            break;
+        case NEGLIGIBLE_SPEED:
+            yBox[0] = doNegligibleMomentumVertical(pData, yBox[0]);
+            break;
+        case JUMP:
+            if (from.isInLiquid()) {
+                final double[] yTheoreticalDistance = new double[] { yBox[0], yBox[0], yBox[0] };
+                final boolean isSubmergedInWater = from.isInWater() && data.playerMoves.getCurrentMove().submergedWaterHeight > 0.0;
+                final double fluidJumpThreshold = from.getEyeHeight() < 0.4D ? 0.0D : 0.4D;
+                final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
+                if (isSubmergedInWater && (!onGround || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
+                    yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
+                }
+                else if (from.isInLava() && (!onGround || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
+                    yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
+                }
+                else if ((onGround || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
+                    final double jump = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * jumpGain;
+                    yTheoreticalDistance[0] = schedule.jumpVertical() == JumpVertical.KEEP_IF_HIGHER ? Math.max(jump, yTheoreticalDistance[0]) : jump;
+                }
+                candidatesOut[0] = yTheoreticalDistance;
+            }
+            break;
+        case SWIM_PITCH:
+            if (schedule.hasSwimming() && candidatesOut[0] != null && Bridge1_13.isSwimming(player) && !player.isInsideVehicle()) {
+                final Vector lookVector = TrigUtil.getLookingDirection(to, player);
+                final double swimmingScalar = lookVector.getY() < -0.2 ? 0.085 : 0.06;
+                candidatesOut[0][0] += (lookVector.getY() - candidatesOut[0][0]) * swimmingScalar;
+                candidatesOut[0][1] += (lookVector.getY() - candidatesOut[0][1]) * swimmingScalar;
+            }
+            break;
+        case CLIMBABLE_CLAMP:
+            if (!from.isInLiquid() && from.isOnClimbable() && from.canClimbUp(data.liftOffEnvelope.getMaxJumpHeight(data.jumpAmplifier))) {
+                yBox[0] = Math.max(yBox[0], -Magic.CLIMBABLE_MAX_SPEED);
+                final long theseFlags = BlockFlags.getBlockFlags(from.getBlockType());
+                if (yBox[0] < 0.0 && pData.isShiftKeyPressed()
+                    && (theseFlags & BlockFlags.F_SCAFFOLDING) == 0
+                    && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
+                    yBox[0] = 0.0;
+                }
+            }
+            break;
+        case STUCK_SPEED:
+            if (TrigUtil.lengthSquared(data.nextStuckInBlockHorizontal, data.nextStuckInBlockVertical, data.nextStuckInBlockHorizontal) > 1.0E-7) {
+                if (candidatesOut[0] != null) {
+                    for (int i = 0; i < candidatesOut[0].length; i++) {
+                        candidatesOut[0][i] *= data.nextStuckInBlockVertical;
+                    }
+                }
+                else yBox[0] *= data.nextStuckInBlockVertical;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
     private static double[] reconstructHiddenTicksRecursive(final double yDistance, final Player player, final MovingData data, final CombinedData cData, final IPlayerData pData, final PlayerLocation from, final PlayerLocation to, final double jumpGain, final double verticalLiquidPushComponent, final boolean onGround, final int depthRemaining, final double totalY,
             final double targetY, final int depthIndex) {
-        final PlayerMoveData thisMove = data.playerMoves.getCurrentMove();
-        
         // ------------------------------------------------------------------
         // Early exit 1: accumulated displacement already matches the target.
         // ------------------------------------------------------------------
@@ -188,170 +405,20 @@ public class HiddenMotionReconstructor {
         
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         double baseY = yDistance;
-        if (!pData.isShiftKeyPressed()) { 
-            if (baseY < 0.0) { // NOTE: Must be the allowed distance, not the actual one (exploit)
-                if (from.isOnBouncyBlock()) {
-                    // The effect works by inverting the distance.
-                    // Beds have a weaker bounce effect (BedBlock.java).
-                    baseY = from.isOnSlimeBlock() ? -baseY : -baseY * 0.66;
-                }
-            }
-        }
-        // *----------tryCheckInsideBlocks()----------*
-        // Bubble columns are checked in the tryCheckInsideBlocks method, so it comes after updateEntityAfterFallOn()...
-        //Vector bubbleVector = from.tryApplyBubbleColumnMotion(new Vector(0.0, baseY, 0.0));
-        //baseY = bubbleVector.getY();
-        // Honey block sliding mechanic...
-        if (from.isSlidingDown()) {
-            // Speed is static in this case
-            baseY = -Magic.SLIDE_SPEED_THROTTLE;
-        }
-        // *----------stuck-speed-momentum-reset----------*
+        // Last stuck multiplier is a seed, same as SurvivalFly. The schedule then orders bounce, medium, and block effects.
         if (TrigUtil.lengthSquared(data.lastStuckInBlockHorizontal, data.lastStuckInBlockVertical, data.lastStuckInBlockHorizontal) > 1.0E-7) {
             if (data.lastStuckInBlockVertical != 1.0) {
                 baseY = 0.0;
             }
         }
-        // *----------Finalization of handleRelativeFrictionAndCalculateMovement; this check/condition is called after having called the move() function. The former method is called only when the player is traveling in air, thus the liquid and gliding checks ----------*
-        if (!lastMove.from.inLiquid && !lastMove.isGliding) {
-            // TODO: We have to loop the jumping state for 1.21.1 and below... No other way to put it unfortunately. This will make the code an ugly mess than it already is.
-            final boolean jumpedOrCollided = lastMove.collidesHorizontally;
-            if (jumpedOrCollided && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) { 
-                baseY = 0.2;
-            }
-        }
-        // *----------Gravity, friction and other medium-dependent modifiers in LivingEntity.travel() (water first, then lava and finally air)----------*
-        if (lastMove.from.inWater) {
-            if (lastMove.collidesHorizontally && lastMove.from.onClimbable && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
-                baseY = 0.2;
-            }
-            // Water applies friction before calling the fluidFalling function.
-            baseY *= data.lastFrictionVertical;
-            if (BridgeMisc.hasGravity(player)) {
-                // Legacy: clients older than 1.13 have some kind of gravity effect applied to them even in liquids, if they don't press the space bar.
-                // On 1.13 and above, only friction gets applied, resulting in a much slower descending speed when not pressing the space bar pressed.
-                if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
-                    baseY -= Magic.LEGACY_LIQUID_GRAVITY;
-                } 
-                else {
-                    // In 1.13 the gravity effect in liquids was removed and this function got added.
-                    Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, baseY <= 0.0, new Vector(0.0, baseY, 0.0), cData.wasSprinting);
-                    baseY = fluidFallingAdjustMovement.getY();
-                }
-            }
-        }
-        else if (lastMove.from.inLava) {
-            // Lava friction is quite odd. Depending on specified thresholds, it can be 0.5 or 0.8
-            if (data.lastFrictionVertical != Magic.LAVA_VERTICAL_INERTIA) { // Note that this condition is not vanilla. It's just a shortcut to avoid replicating the condition contained in BlockProperties.getBlockFrictionFactor.
-                baseY *= data.lastFrictionVertical;
-                if (BridgeMisc.hasGravity(player)) {
-                    if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_13)) {
-                        baseY -= Magic.LEGACY_LIQUID_GRAVITY;
-                    } 
-                    else {
-                        // getFluidFallingAdjustedMovement is only applied if friction is 0.8.
-                        Vector fluidFallingAdjustMovement = from.getFluidFallingAdjustedMovement(data.lastGravity, baseY <= 0.0, new Vector(0.0, baseY, 0.0), cData.wasSprinting);
-                        baseY = fluidFallingAdjustMovement.getY();
-                    }
-                }
-            }
-            else {
-                // Otherwise, 0.5
-                baseY *= data.lastFrictionVertical;
-            }
-            if (data.lastGravity != 0.0) {
-                baseY += -data.lastGravity / 4.0;
-            }
-        }
-        else {
-            // Air motion
-            if (cData.wasLevitating) {
-                // Levitation forces players to ascend and does not work in liquids, so thankfully we don't have to account for that, other than stuck-speed.
-                baseY += (0.05 * data.lastLevitationLevel - (depthIndex == 0 ? lastMove.yAllowedDistance : yDistance)) * 0.2;
-            }
-            else baseY -= data.lastGravity;
-            baseY *= data.lastFrictionVertical;
-        }
-        // *----------Finalize LivingEntity.travel; isFree() check----------*
-        // Try making the player jump out of the liquid... 
-        // This condition is the same for both lava and water, and is always done at the end of the travel() function.
-        if (lastMove.from.inLiquid && lastMove.collidesHorizontally 
-            // TODO: Somewhat work. Incorrect horizontal move. Require this function call at the time BOTH horizontal and vertical calculating at the same time. Which is not possible with current infrastructure
-            && from.isUnobstructed(0.0)) {
-            baseY = 0.3;
-        }
-        
-        
-        //////////////////////////////////
-        // Last client-tick/move        //
-        //////////////////////////////////
-        if (from.isInLiquid() && verticalLiquidPushComponent != 0.0) {
-            // Liquid vertical push component calculated in hdistrel.
-            baseY += verticalLiquidPushComponent;
-        }
-        // *----------LivingEntity.aiStep(), negligible speed----------*
-        baseY = doNegligibleMomentumVertical(pData, baseY);
-        // *----------LivingEntity.travel(), handleRelativeFrictionAndCalculateMovement() -> handleOnClimbable()----------*
-        // TODO: Is it correct to put here?
-        if (!from.isInLiquid() && from.isOnClimbable() && from.canClimbUp(data.liftOffEnvelope.getMaxJumpHeight(data.jumpAmplifier))) {
-            baseY = Math.max(baseY, -Magic.CLIMBABLE_MAX_SPEED);
-            // Should replicate the condition: !this.getInBlockState().is(Blocks.SCAFFOLDING)
-            final Material typeId = from.getBlockType();
-            final long theseFlags = BlockFlags.getBlockFlags(typeId);
-            if (baseY < 0.0 && pData.isShiftKeyPressed()
-                && (theseFlags & BlockFlags.F_SCAFFOLDING) == 0 && pData.getClientVersion().isAtLeast(ClientVersion.V_1_14)) {
-                baseY = 0.0;
-            }
-        }
-        double[] yTheoreticalDistance = null;
-        // *----------EntityLiving.aiStep(), apply liquid motion----------*
-        if (from.isInLiquid()) {
-            yTheoreticalDistance = new double[3];
-            // *----------LocalPlayer.aiStep(), goDownInWater()----------*
-            if (pData.isShiftKeyPressed() && from.isInWater()) {
-                baseY -= Magic.LIQUID_SPEED_GAIN;
-            }
-            // With space bar pressed
-            yTheoreticalDistance[0] = baseY;
-            // With space bar not pressed
-            yTheoreticalDistance[1] = baseY;
-            // With swimming speed not applied
-            yTheoreticalDistance[2] = baseY;
-            boolean isSubmergedInWater = from.isInWater() && thisMove.submergedWaterHeight > 0.0;
-            double fluidJumpThreshold = from.getEyeHeight() < 0.4D ? 0.0D : 0.4D;
-            if (isSubmergedInWater && (!onGround || thisMove.submergedWaterHeight > fluidJumpThreshold)) {
-                yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
-            }
-            else if (from.isInLava() && (!onGround || thisMove.submergedLavaHeight > fluidJumpThreshold)) {
-                yTheoreticalDistance[0] += Magic.LIQUID_SPEED_GAIN;
-            }
-            else if ((onGround || isSubmergedInWater && thisMove.submergedWaterHeight <= fluidJumpThreshold) && data.jumpDelay == 0) {
-                yTheoreticalDistance[0] = data.liftOffEnvelope.getJumpGain(data.jumpAmplifier) * jumpGain;
-                //data.jumpDelay = Magic.MAX_JUMP_DELAY;
-                //thisMove.hasImpulse = AlmostBoolean.YES;
-                // (Can't set thisMove.isJump yet.)
-            }
-            if (Bridge1_13.isSwimming(player) && !player.isInsideVehicle()) {
-                Vector lookVector = TrigUtil.getLookingDirection(to, player);
-                double swimmingScalar = lookVector.getY() < -0.2 ? 0.085 : 0.06;
-            // Note: Since thisMove.isJump is always false because not been set yet, make these conditions unusable, result in brute force
-            //if (lookVector.getY() <= 0.0 || thisMove.isJump 
-            //    || BlockProperties.getLiquidHeightAt(from.getBlockCache(), Location.locToBlock(from.getX()), Location.locToBlock(from.getY()+1.0-0.1), Location.locToBlock(from.getZ()), BlockFlags.F_WATER, true) != 0.0) {
-                yTheoreticalDistance[0] += (lookVector.getY() - yTheoreticalDistance[0]) * swimmingScalar;
-                yTheoreticalDistance[1] += (lookVector.getY() - yTheoreticalDistance[1]) * swimmingScalar;
-            //}
-            }
-        }
-
-        // *----------Beginning of EntityLiving.travel(); call Entity.move(); apply stuck speed multipliers----------*
-        if (TrigUtil.lengthSquared(data.nextStuckInBlockHorizontal, data.nextStuckInBlockVertical, data.nextStuckInBlockHorizontal) > 1.0E-7) {
-            // If we looped the space bar impulse, all later modifiers are applied to each speed.
-            if (yTheoreticalDistance != null) {
-                for (int i = 0; i < yTheoreticalDistance.length; i++) {
-                    yTheoreticalDistance[i] *= data.nextStuckInBlockVertical;
-                }
-            } else baseY *= data.nextStuckInBlockVertical; 
-        }
+        final double[] yBox = new double[] { baseY };
+        final double[][] hiddenCandidates = new double[1][];
+        final MotionSchedule verticalSchedule = MotionSchedule.forVersion(pData.getClientVersion());
+        final double yBeforeMove = yBox[0];
+        AxisScheduler.carryThenPre(verticalSchedule, id -> applyHiddenVerticalPhase(id, verticalSchedule, yBox, hiddenCandidates, player, data, cData, pData, from, to,
+                lastMove, onGround, depthIndex, yDistance, jumpGain, verticalLiquidPushComponent, yBeforeMove), null);
+        baseY = yBox[0];
+        final double[] yTheoreticalDistance = hiddenCandidates[0];
         double[] best = null;
         double bestErrSq = Double.MAX_VALUE;
         if (yTheoreticalDistance != null) {
@@ -532,39 +599,17 @@ public class HiddenMotionReconstructor {
                 baseZ = 0.0;
             }
         }
-        // TODO: More complicated than this!!!. Hidden onground need to feed here
-        if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
-            final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
-            baseX *= slimeMul;
-            baseZ *= slimeMul;
-        }
-
-        if (from.isSlidingDown()) {
-            if (lastMove.yDistance < -Magic.SLIDE_START_AT_VERTICAL_MOTION_THRESHOLD) {
-                baseX *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
-                baseZ *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
+        // Same carry-then-pre list as SurvivalFly. Input, edge, and collide stay in the candidate loop below.
+        final double[] hz = new double[] { baseX, baseZ };
+        final MotionSchedule horizontalSchedule = MotionSchedule.forVersion(pData.getClientVersion());
+        AxisScheduler.carryThenPre(horizontalSchedule, id -> applyHiddenHorizontalPhase(id, hz, from, lastMove, thisMove, data, pData), () -> {
+            if (thisMove.hasAttackSlowDown) {
+                hz[0] *= Magic.ATTACK_SLOWDOWN;
+                hz[1] *= Magic.ATTACK_SLOWDOWN;
             }
-        }
-
-        baseX *= (double) data.nextBlockSpeedMultiplier;
-        baseZ *= (double) data.nextBlockSpeedMultiplier;
-        
-        baseX *= (double) data.lastInertia;
-        baseZ *= (double) data.lastInertia;
-        
-        if (thisMove.hasAttackSlowDown) {
-            baseX *= Magic.ATTACK_SLOWDOWN;
-            baseZ *= Magic.ATTACK_SLOWDOWN;
-        }
-        if (from.isInLiquid()) {
-            Vector liquidFlowVector = from.getLiquidPushingVector(baseX, baseZ, from.isInWater() ? BlockFlags.F_WATER : BlockFlags.F_LAVA);
-            baseX += liquidFlowVector.getX();
-            baseZ += liquidFlowVector.getZ();
-        }
-        
-        double[] negligible = doNegligibleMomentum(pData, baseX, baseZ);
-        baseX = negligible[0];
-        baseZ = negligible[1];
+        });
+        baseX = hz[0];
+        baseZ = hz[1];
         
         double[] best = null;
         double bestErrSq = Double.MAX_VALUE;
@@ -709,30 +754,30 @@ public class HiddenMotionReconstructor {
             Vector liquidFlowVector = from.getLiquidPushingVector(baseX, baseZ, BlockFlags.F_WATER);
             baseX += liquidFlowVector.getX();
             baseZ += liquidFlowVector.getZ();
-            // Shortcut: only do when non zero
-            if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
-                final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
-                baseX *= slimeMul;
-                baseZ *= slimeMul;
+            // This shortcut only runs on a fresh water entry. Block effects after friction follow the 1.21.2 list.
+            final MotionSchedule stopSchedule = MotionSchedule.forVersion(pData.getClientVersion());
+            if (stopSchedule.areBlockEffectsAfterFriction()) {
+                baseX = zeroStuckHorizontal(data, baseX);
+                baseZ = zeroStuckHorizontal(data, baseZ);
+                baseX *= (double) data.nextBlockSpeedMultiplier;
+                baseZ *= (double) data.nextBlockSpeedMultiplier;
+                baseX *= (double) data.lastInertia;
+                baseZ *= (double) data.lastInertia;
+                final double[] scaled = scaleSlimeAndHoney(from, lastMove, thisMove, pData, baseX, baseZ);
+                baseX = scaled[0];
+                baseZ = scaled[1];
             }
-            if (from.isSlidingDown()) { 
-                if (lastMove.yDistance < -Magic.SLIDE_START_AT_VERTICAL_MOTION_THRESHOLD) {
-                    baseX *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
-                    baseZ *= -Magic.SLIDE_SPEED_THROTTLE / lastMove.yDistance;
-                }
+            else {
+                final double[] scaled = scaleSlimeAndHoney(from, lastMove, thisMove, pData, baseX, baseZ);
+                baseX = scaled[0];
+                baseZ = scaled[1];
+                baseX = zeroStuckHorizontal(data, baseX);
+                baseZ = zeroStuckHorizontal(data, baseZ);
+                baseX *= (double) data.nextBlockSpeedMultiplier;
+                baseZ *= (double) data.nextBlockSpeedMultiplier;
+                baseX *= (double) data.lastInertia;
+                baseZ *= (double) data.lastInertia;
             }
-            if (data.lastStuckInBlockHorizontal != 1.0) {
-                if (TrigUtil.lengthSquared(data.lastStuckInBlockHorizontal, data.lastStuckInBlockVertical, data.lastStuckInBlockHorizontal) > 1.0E-7) {
-                    baseX = 0.0;
-                    baseZ = 0.0;
-                }
-            }
-            baseX *= (double) data.nextBlockSpeedMultiplier;
-            baseZ *= (double) data.nextBlockSpeedMultiplier;
-            
-            baseX *= (double) data.lastInertia;
-            baseZ *= (double) data.lastInertia;
-            
             if (thisMove.hasAttackSlowDown) {
                 baseX *= Magic.ATTACK_SLOWDOWN;
                 baseZ *= Magic.ATTACK_SLOWDOWN;

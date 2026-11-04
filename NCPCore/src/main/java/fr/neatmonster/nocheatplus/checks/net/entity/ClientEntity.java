@@ -24,6 +24,9 @@ import java.util.UUID;
  * three client ticks, teleports stick on the next confirming transaction.
  * While a move is still in flight, the possible position is the span from
  * where the client was to where the packet is sending it.
+ * On 1.21.2 and newer the player sends the move during the entity tick, and the
+ * tick-end packet comes after. The mobs that push that move were still at the
+ * position from before the tick-end interpolation.
  */
 public final class ClientEntity {
 
@@ -69,6 +72,11 @@ public final class ClientEntity {
     private double serverZ;
     private int steps;
     private int lastTransaction;
+    /** Set on 1.21.2+ tick end, before {@link #tick()} interpolates. */
+    private boolean hasPush;
+    private double pushX;
+    private double pushY;
+    private double pushZ;
     private double width;
     private double height;
 
@@ -107,6 +115,10 @@ public final class ClientEntity {
         copy.serverZ = serverZ;
         copy.steps = steps;
         copy.lastTransaction = lastTransaction;
+        copy.hasPush = hasPush;
+        copy.pushX = pushX;
+        copy.pushY = pushY;
+        copy.pushZ = pushZ;
         copy.width = width;
         copy.height = height;
         copy.tracked.copyFrom(tracked);
@@ -187,6 +199,42 @@ public final class ClientEntity {
             y = targetY;
             z = targetZ;
         }
+    }
+
+    /** Where this entity was before the 1.21.2+ tick-end interpolation. */
+    void capturePushPosition() {
+        if (!positionKnown) {
+            return;
+        }
+        pushX = x;
+        pushY = y;
+        pushZ = z;
+        hasPush = true;
+    }
+
+    public boolean hasPushPosition() {
+        return hasPush;
+    }
+
+    /** Older clients push from the interpolated position, so a captured pre-step point must not stick. */
+    void clearPushPosition() {
+        hasPush = false;
+    }
+
+    public int getSteps() {
+        return steps;
+    }
+
+    public double getPushX() {
+        return pushX;
+    }
+
+    public double getPushY() {
+        return pushY;
+    }
+
+    public double getPushZ() {
+        return pushZ;
     }
 
     void tick() {
