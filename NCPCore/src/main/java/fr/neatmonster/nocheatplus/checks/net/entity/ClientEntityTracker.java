@@ -14,9 +14,11 @@
  */
 package fr.neatmonster.nocheatplus.checks.net.entity;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,6 +30,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import fr.neatmonster.nocheatplus.checks.net.transaction.TransactionChannel;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.components.data.IData;
 import fr.neatmonster.nocheatplus.components.data.IDataOnJoin;
 import fr.neatmonster.nocheatplus.components.data.IDataOnLeave;
@@ -69,12 +72,23 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     private boolean sawClientTickEnd;
     /** The packet being sent completes a rocket attach. A ping is written immediately after it. */
     private boolean bracketPing;
-    /** Server ticks that stepped interpolation, on a server with no tick-end packet. */
+    /** Server ticks that stepped interpolation. Used when this client does not send tick-end. */
     private int serverTicks;
     /** Real 1.21.2+ tick-end packets that stepped interpolation. */
     private int realTickEnds;
-    /** ViaVersion tick-end packets. One per server tick for a client that does not send its own. */
-    private int fakeTickEnds;
+    /**
+     * Mob positions for one position packet, taken before a real tick-end steps.
+     * A burst of client ticks can step the tracker before the earlier move is checked,
+     * so the check takes the sample tagged with that move's destination.
+     */
+    private final ArrayDeque<PushSample> pushQueue = new ArrayDeque<PushSample>();
+    private PushSample pushSample;
+    private boolean positionSinceTickEnd;
+    private double pendingPushX;
+    private double pendingPushY;
+    private double pendingPushZ;
+    private static final int PUSH_QUEUE_LIMIT = 30;
+    private static final double PUSH_SAMPLE_MATCH = 0.001D;
 
     @Override
     public boolean dataOnJoin(Player player, IPlayerData pData) {
@@ -95,7 +109,6 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
             sawClientTickEnd = false;
             serverTicks = 0;
             realTickEnds = 0;
-            fakeTickEnds = 0;
             try {
                 selfId = player.getEntityId();
             }
@@ -134,41 +147,157 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                 }
             }
             sendClock(player);
-            // No tick-end packet has arrived. Step once per server tick, after this tick's
-            // movement has already been checked. A tick-end, real or ViaVersion's, already stepped.
-            if (!sawClientTickEnd) {
+            // A real tick-end this server tick already stepped. Anything else, including a
+            // client whose version was not known when an earlier tick-end arrived, steps here.
+            // The flag is only for this server tick. A fake tick-end must not latch it on.
+            if (!sawClientTickEnd || !clientSendsTickEnd(player)) {
                 serverTicks++;
+                for (ClientEntity entity : entities.values()) {
+                    entity.clearPushPosition();
+                }
                 for (ClientEntity entity : entities.values()) {
                     entity.tick();
                 }
+            }
+            sawClientTickEnd = false;
+        }
+    }
+
+    /** True only for a client that sends its own tick-end. Older clients are stepped by the server tick. */
+    private static boolean clientSendsTickEnd(Player player) {
+        IPlayerData data = DataManager.getPlayerDataSafe(player);
+        if (data == null) {
+            return false;
+        }
+        ClientVersion version = data.getClientVersion();
+        return version != null && version.isAtLeast(ClientVersion.V_1_21_2);
+    }
+
+    /**
+     * One real tick-end. The client has already sent its move, so the push position is the
+     * one before this step. Not called for ViaVersion's copy or on a server that has no packet.
+     */
+    public void onTickEnd() {
+        synchronized (lock) {
+            sawClientTickEnd = true;
+            realTickEnds++;
+            if (positionSinceTickEnd) {
+                rememberPushSample();
+                positionSinceTickEnd = false;
+            }
+            for (ClientEntity entity : entities.values()) {
+                entity.capturePushPosition();
+            }
+            for (ClientEntity entity : entities.values()) {
+                entity.tick();
             }
         }
     }
 
     /**
-     * One tick-end packet, once per server tick. A real 1.21.2+ client has already sent
-     * its move, so the push position is the one before this step. ViaVersion's copy for
-     * an older client is that same server tick. A server without the packet steps in
-     * {@link #onEndOfTick(Player)} instead.
+     * A position packet arrived. The real tick-end after it still has the mob positions from
+     * the push that produced this packet, so the sample is tagged with the destination.
      */
-    public void onTickEnd(boolean realClientTick) {
+    public void notePositionPacket(double x, double y, double z) {
         synchronized (lock) {
-            sawClientTickEnd = true;
-            if (realClientTick) {
-                realTickEnds++;
-                for (ClientEntity entity : entities.values()) {
-                    entity.capturePushPosition();
+            pendingPushX = x;
+            pendingPushY = y;
+            pendingPushZ = z;
+            positionSinceTickEnd = true;
+        }
+    }
+
+    /**
+     * Select the mob positions saved for the position packet at {@code x,y,z}.
+     * That is the destination of the move whose push those mobs belong to.
+     */
+    public void takePushSample(double x, double y, double z) {
+        synchronized (lock) {
+            PushSample chosen = null;
+            Iterator<PushSample> it = pushQueue.iterator();
+            while (it.hasNext()) {
+                PushSample sample = it.next();
+                if (Math.abs(sample.x - x) <= PUSH_SAMPLE_MATCH
+                        && Math.abs(sample.y - y) <= PUSH_SAMPLE_MATCH
+                        && Math.abs(sample.z - z) <= PUSH_SAMPLE_MATCH) {
+                    chosen = sample;
                 }
             }
-            else {
-                fakeTickEnds++;
-                for (ClientEntity entity : entities.values()) {
-                    entity.clearPushPosition();
+            if (chosen != null) {
+                while (!pushQueue.isEmpty() && pushQueue.peekFirst() != chosen) {
+                    pushQueue.removeFirst();
                 }
+                pushQueue.removeFirst();
             }
+            pushSample = chosen;
+        }
+    }
+
+    private void rememberPushSample() {
+        Map<Integer, double[]> at = new HashMap<Integer, double[]>();
+        for (ClientEntity entity : entities.values()) {
+            if (!entity.hasPosition()) {
+                continue;
+            }
+            at.put(Integer.valueOf(entity.getId()), new double[] {entity.getX(), entity.getY(), entity.getZ()});
+        }
+        if (pushQueue.size() >= PUSH_QUEUE_LIMIT) {
+            pushQueue.removeFirst();
+        }
+        pushQueue.addLast(new PushSample(pendingPushX, pendingPushY, pendingPushZ, at));
+    }
+
+    /** Mob positions at one tick-end, tagged with the player position packet that preceded it. */
+    private static final class PushSample {
+        final double x;
+        final double y;
+        final double z;
+        final Map<Integer, double[]> at;
+
+        PushSample(double x, double y, double z, Map<Integer, double[]> at) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.at = at;
+        }
+    }
+
+    /**
+     * One line for the entity-push comparison. {@code at} is the position the check just used.
+     * {@code sent} is the last absolute position written into an outgoing packet, before the client interpolates it.
+     */
+    public String pushTrace(double atX, double atY, double atZ) {
+        synchronized (lock) {
+            ClientEntity best = null;
+            Outgoing bestSent = null;
+            double bestDistance = Double.MAX_VALUE;
             for (ClientEntity entity : entities.values()) {
-                entity.tick();
+                if (!entity.hasPosition()) {
+                    continue;
+                }
+                double dx = entity.getX() - atX;
+                double dy = entity.getY() - atY;
+                double dz = entity.getZ() - atZ;
+                double distance = dx * dx + dy * dy + dz * dz;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = entity;
+                    bestSent = outgoing.get(Integer.valueOf(entity.getId()));
+                }
             }
+            if (best == null) {
+                return String.format(Locale.ROOT, "clock=server:%d,end:%d entity=none",
+                        serverTicks, realTickEnds);
+            }
+            double sentX = bestSent == null ? 0.0D : bestSent.position.x;
+            double sentY = bestSent == null ? 0.0D : bestSent.position.y;
+            double sentZ = bestSent == null ? 0.0D : bestSent.position.z;
+            return String.format(Locale.ROOT,
+                    "clock=server:%d,end:%d steps=%d push=%s at=%.3f,%.3f,%.3f target=%.3f,%.3f,%.3f sent=%.3f,%.3f,%.3f",
+                    serverTicks, realTickEnds, best.getSteps(), best.hasPushPosition(),
+                    best.getX(), best.getY(), best.getZ(),
+                    best.getTargetX(), best.getTargetY(), best.getTargetZ(),
+                    sentX, sentY, sentZ);
         }
     }
 
@@ -584,9 +713,12 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
 
     /**
      * Firework rockets whose boost applies to this move.
-     * A rocket ticks after the player, so the boost it writes is the next move.
-     * TODO: 1.16.5 and older still false-flag the first boosted move.
+     * A rocket ticks after the player, so a new attach waits one move.
+     * The rocket is dropped as soon as the client confirms the explode packet.
+     * That confirmation can pass the last boosted position, so the glide check
+     * also tries the previous count for the one move where the count falls.
      */
+    //TODO: 1.16.5 and older still false-flag the first boosted move.
     public int getBoostingFireworkCount() {
         synchronized (lock) {
             int count = 0;
@@ -635,7 +767,7 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
     /**
      * Entities that push this player on the client, at the position the client is ticking.
      * A mob does this from its own tick: it finds players inside its box and calls {@code player.push(mob)}.
-	 * TODO: Half of the function was literally converting ClientEntity to Bukkit Entity for retrieving bounding box. Not optimal
+     * TODO: Half of the function was literally converting ClientEntity to Bukkit Entity for retrieving bounding box. Not optimal
      * TODO: Somewhere in old versions the player is pushed twice, and it pushes before the mob lerps. 1.16.5 still false-flags.
      */
     public List<Location> collidingLocations(Player player, double x, double y, double z, double playerWidth, double playerHeight, boolean log) {
@@ -659,9 +791,18 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
                 spot.type = entity.getTypeName();
                 spot.player = entity.getKind() == ClientEntity.Kind.PLAYER || "PLAYER".equals(typeKey(entity.getTypeName()));
                 spot.boat = isBoat(typeKey(entity.getTypeName()));
-                // Older clients line up with the interpolated position. 1.21.2+ tick end
-                // runs after the move packet, so the push position was captured before that step.
-                if (entity.hasPushPosition()) {
+                // A queued sample is the tick this move started on. The live capture is only
+                // that tick when no later tick-end has stepped the tracker yet.
+                double[] sampled = pushSample == null ? null : pushSample.at.get(Integer.valueOf(entity.getId()));
+                if (pushSample != null && sampled == null) {
+                    continue;
+                }
+                if (sampled != null) {
+                    spot.x = sampled[0];
+                    spot.y = sampled[1];
+                    spot.z = sampled[2];
+                }
+                else if (entity.hasPushPosition()) {
                     spot.x = entity.getPushX();
                     spot.y = entity.getPushY();
                     spot.z = entity.getPushZ();
@@ -726,15 +867,6 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
             double dz = spot.z - z;
             if (!hit && dx * dx + dz * dz > 4.0D) {
                 continue;
-            }
-            if (log) {
-                Location server = bukkit == null ? null : bukkit.getLocation();
-                System.out.println("push ac player=(" + x + ", " + y + ", " + z + ")"
-                        + " otherId=" + spot.id
-                        + " type=" + spot.type
-                        + " client=(" + spot.x + ", " + spot.y + ", " + spot.z + ")"
-                        + " server=(" + (server == null ? "absent" : server.getX() + ", " + server.getY() + ", " + server.getZ()) + ")"
-                        + " hit=" + hit);
             }
             if (hit) {
                 locations.add(new Location(player.getWorld(), spot.x, spot.y, spot.z));
@@ -984,6 +1116,9 @@ public final class ClientEntityTracker implements IData, IDataOnJoin, IDataOnLea
         pendingAttach.clear();
         destroyedSincePing.clear();
         fireworks.clear();
+        pushQueue.clear();
+        pushSample = null;
+        positionSinceTickEnd = false;
         bracketPing = false;
         vehicleId = -1;
         serverVehicleId = -1;

@@ -398,7 +398,9 @@ public class HiddenMotionReconstructor {
         // threshold, so this tick cannot be a hidden tick — stop recursing.
         // The threshold differs between old and new protocol versions.
         // ------------------------------------------------------------------
-        final double suppressionThreshold = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+        //Assume hidden still a thing after 1.18.2
+        //final double suppressionThreshold = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+        final double suppressionThreshold = Magic.Minecraft_minMoveSqDistance_legacy;
         if (yDistance > suppressionThreshold) {
             return new double[]{0.0, targetY - totalY};
         }
@@ -567,18 +569,23 @@ public class HiddenMotionReconstructor {
         // threshold, so this tick cannot be a hidden tick — stop recursing.
         // The threshold differs between old and new protocol versions.
         // ------------------------------------------------------------------
-        final double suppressionThresholdSq = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
-        final double incomingHSq = MathUtil.square(xDistance) + MathUtil.square(zDistance);
-        final boolean incomingSuppressed = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? MathUtil.dist(xDistance, zDistance) < suppressionThresholdSq
-                : incomingHSq < suppressionThresholdSq;
+        final double suppressionThresholdSq = Magic.Minecraft_minMoveSqDistance_legacy;
+        //Assume hidden still a thing after 1.18.2
+        //final double suppressionThresholdSq = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+        //final double incomingHSq = MathUtil.square(xDistance) + MathUtil.square(zDistance);
+        //final boolean incomingSuppressed = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? MathUtil.dist(xDistance, zDistance) < suppressionThresholdSq
+        //        : incomingHSq < suppressionThresholdSq;
+        final boolean incomingSuppressed = MathUtil.dist(xDistance, zDistance) < suppressionThresholdSq;
         final double residualX = targetX - totalX;
         final double residualZ = targetZ - totalZ;
-        final double residualSq = MathUtil.square(residualX) + MathUtil.square(residualZ);
-        final boolean residualNeedsHidden = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? MathUtil.dist(residualX, residualZ) >= suppressionThresholdSq
-                : residualSq >= suppressionThresholdSq;
+        //Assume hidden still a thing after 1.18.2
+        //final double residualSq = MathUtil.square(residualX) + MathUtil.square(residualZ);
+        //final boolean residualNeedsHidden = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? MathUtil.dist(residualX, residualZ) >= suppressionThresholdSq
+        //        : residualSq >= suppressionThresholdSq;
+        final boolean residualNeedsHidden = MathUtil.dist(residualX, residualZ) >= suppressionThresholdSq;
         if (!incomingSuppressed && !residualNeedsHidden) {
             return new double[]{0.0, 0.0, residualX, residualZ};
         }

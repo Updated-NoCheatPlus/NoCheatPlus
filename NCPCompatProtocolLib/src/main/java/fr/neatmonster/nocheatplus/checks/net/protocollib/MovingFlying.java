@@ -38,6 +38,7 @@ import fr.neatmonster.nocheatplus.checks.moving.MovingData;
 import fr.neatmonster.nocheatplus.checks.net.FlyingFrequency;
 import fr.neatmonster.nocheatplus.checks.net.Moving;
 import fr.neatmonster.nocheatplus.checks.net.NetConfig;
+import fr.neatmonster.nocheatplus.checks.net.entity.ClientEntityTracker;
 import fr.neatmonster.nocheatplus.checks.net.NetData;
 import fr.neatmonster.nocheatplus.checks.net.WrongTurn;
 import fr.neatmonster.nocheatplus.checks.net.model.DataPacketFlying;
@@ -281,6 +282,12 @@ public class MovingFlying extends BaseAdapter {
             }
             // Add as valid packet (exclude invalid coordinates etc. for now).
             validContent.add(packetData.getSimplifiedContentType());
+            if (packetData.hasPos && !skipChecks) {
+                ClientEntityTracker pushTracker = pData.getGenericInstance(ClientEntityTracker.class);
+                if (pushTracker != null) {
+                    pushTracker.notePositionPacket(packetData.getX(), packetData.getY(), packetData.getZ());
+                }
+            }
         }
 
         // Actual packet frequency check.

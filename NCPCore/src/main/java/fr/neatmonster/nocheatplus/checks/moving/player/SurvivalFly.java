@@ -192,6 +192,15 @@ public class SurvivalFly extends Check {
         double hAllowedDistance, hDistanceAboveLimit, hFreedom;
         double yAllowedDistance, yDistanceAboveLimit;
         double[] resGlide = processGliding(from, to, pData, data, player, isNormalOrPacketSplitMove, fromOnGround, toOnGround, debug);
+        //TODO: The gate condition might not right and needed at all as it should always run. But right in current NCP design
+        if (!Bridge1_9.isGliding(player)) {
+            // The tick-end after a position packet still holds the mobs from the push that
+            // produced that packet. That packet's position is this move's destination.
+            ClientEntityTracker pushTracker = pData.getGenericInstance(ClientEntityTracker.class);
+            if (pushTracker != null) {
+                pushTracker.takePushSample(to.getX(), to.getY(), to.getZ());
+            }
+        }
         // Set the allowed distance and determine the distance above limit
         double[] hRes = Bridge1_9.isGliding(player) ? resGlide : prepareSpeedEstimation(from, to, pData, player, data, thisMove, lastMove, fromOnGround, toOnGround, debug, isNormalOrPacketSplitMove, false, false);
         hAllowedDistance = hRes[0];
@@ -735,6 +744,14 @@ public class SurvivalFly extends Check {
         return offV + offH;
     }
 
+    /** Console and chat, for the entity-push comparison with the client. */
+    private static void cmp(final Player player, final String line) {
+        //System.out.println(line);
+        if (player != null) {
+            player.sendMessage(ChatColor.AQUA + line);
+        }
+    }
+
     /**
      * Reset the given speed upon wall collision.
      * 
@@ -898,6 +915,7 @@ public class SurvivalFly extends Check {
         else hDistanceAboveLimit = handleUnpredictableMove(thisMove, cc.survivalFlyStrictHorizontal);
         hDistanceAboveLimit = applyEdgeCornerResolvedTolerance(thisMove, hDistanceAboveLimit, cc.survivalFlyStrictHorizontal);
         hDistanceAboveLimit = HiddenMotionReconstructor.applyEdgeSneakBypass(player, pData, data, from, lastMove, thisMove, hDistanceAboveLimit, tags);
+        hDistanceAboveLimit = applyNeighborPushSlack(data, hDistanceAboveLimit);
         if (hDistanceAboveLimit > 0.0) {
             tags.add("hdistrel");
             if (debug) {
@@ -1543,12 +1561,20 @@ public class SurvivalFly extends Check {
            Otherwise, only the combined horizontal distance will be checked against the offset.
         */
         boolean strict = cc.survivalFlyStrictHorizontal;
-        final double hiddenThresholdSq = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
-        final double hiddenThresholdH = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? hiddenThresholdSq : Math.sqrt(hiddenThresholdSq);
-        final boolean yDistanceSuppressed = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
-                ? thisMove.yDistance < hiddenThresholdSq : thisMove.yDistance * thisMove.yDistance < hiddenThresholdSq;
+        double hiddenThresholdSq = 0.0;
+        double hiddenThresholdH = 0.0;
+        boolean yDistanceSuppressed = false;
+        if (pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)) {
+            hiddenThresholdSq = hiddenThresholdH = Magic.Minecraft_minMoveSqDistance_legacy;
+            yDistanceSuppressed = thisMove.yDistance < hiddenThresholdSq;
+        }
+        //Assume hidden still a thing after 1.18.2
+        //final double hiddenThresholdSq = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+        //final double hiddenThresholdH = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? hiddenThresholdSq : Math.sqrt(hiddenThresholdSq);
+        //final boolean yDistanceSuppressed = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2)
+        //        ? thisMove.yDistance < hiddenThresholdSq : thisMove.yDistance * thisMove.yDistance < hiddenThresholdSq;
         for (i = 0; i < 9; i++) {
             // If this theoretical candidate results in a post-collision horizontal
             // displacement smaller than the client's packet-suppression threshold,
@@ -1688,8 +1714,16 @@ public class SurvivalFly extends Check {
         int xIdx = -1;
         int zIdx = -1;
         if (indexPair >= 9) {
-            // Cheating: prevent an index out of bounds (we couldn't find the correct pair of speed to set)
-            indexPair = 4;
+            // A push turns the velocity off the eight key directions. Keep the closest key. With no push, no keys remains the comparison.
+            // Do this so we don't have to widen the 0.01 offset
+            if (data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
+                indexPair = MathUtil.findClosestHorizontalIndex(xTheoreticalDistance, zTheoreticalDistance,
+                        thisMove.xDistance, thisMove.zDistance);
+            }
+            else {
+                // Cheating: prevent an index out of bounds (we couldn't find the correct pair of speed to set)
+                indexPair = 4;
+            }
         }
         // If the move is unpredictable, the x/z speeds cannot be associated to a specific input, thus we set them independently.
         // TODO: How can we know the impulse if the move is uncertain? ...
@@ -1815,6 +1849,18 @@ public class SurvivalFly extends Check {
             }
         } else if (Math.abs(thisMove.hDistance - thisMove.hAllowedDistance) <= tolerance) {
             return 0.0;
+        }
+        return hDistanceAboveLimit;
+    }
+
+    /**
+     * One mob is predicted from the entity packet. A second mob can shove that one on the client
+     * before the packet arrives, which left about 0.001 of horizontal speed in swarm.
+     * Forgive 0.01 on that move only. The push stored for the next tick is unchanged.
+     */
+    private static double applyNeighborPushSlack(final MovingData data, final double hDistanceAboveLimit) {
+        if (data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
+            return Math.max(0.0, hDistanceAboveLimit - 0.01);
         }
         return hDistanceAboveLimit;
     }
@@ -1990,9 +2036,26 @@ public class SurvivalFly extends Check {
                 final double entBeforeX = thisMove.xAllowedDistance;
                 final double entBeforeZ = thisMove.zAllowedDistance;
                 boolean trackedPush = applyTrackedPush(player, pData, data, from, debug);
+                //final int entCount = data.lastCollidingEntitiesLocations == null ? -1 : data.lastCollidingEntitiesLocations.size();
                 Vector push = from.doPush(new Vector(entBeforeX, 0.0, entBeforeZ));
                 thisMove.xAllowedDistance = push.getX();
                 thisMove.zAllowedDistance = push.getZ();
+                /*
+                if (entCount > 0 || entBeforeX != thisMove.xAllowedDistance || entBeforeZ != thisMove.zAllowedDistance) {
+                    ClientEntityTracker traceTracker = pData.getGenericInstance(ClientEntityTracker.class);
+                    int lines = entCount > 0 ? entCount : 1;
+                    for (int index = 0; index < lines; index++) {
+                        final Location usedLoc = entCount > 0 ? data.lastCollidingEntitiesLocations.get(index) : null;
+                        String trace = traceTracker == null || usedLoc == null ? "trace=none" : traceTracker.pushTrace(usedLoc.getX(), usedLoc.getY(), usedLoc.getZ());
+                        cmp(player, String.format(Locale.ROOT,
+                                "[CMP] ncp entity-push %s ver=%s tracked=%s entities=%d n=%d player=%.3f,%.3f,%.3f other=%.3f,%.3f,%.3f before=%.6f,%.6f after=%.6f,%.6f %s",
+                                player.getName(), pData.getClientVersion(), trackedPush, entCount, index + 1,
+                                from.getX(), from.getY(), from.getZ(),
+                                usedLoc == null ? 0.0 : usedLoc.getX(), usedLoc == null ? 0.0 : usedLoc.getY(), usedLoc == null ? 0.0 : usedLoc.getZ(),
+                                entBeforeX, entBeforeZ, thisMove.xAllowedDistance, thisMove.zAllowedDistance, trace));
+                    }
+                }
+                */
                 if (!trackedPush && data.lastCollidingEntitiesLocations != null && !data.lastCollidingEntitiesLocations.isEmpty()) {
                     predictable[0] = false;
                 }
@@ -2444,7 +2507,9 @@ public class SurvivalFly extends Check {
         // Calculate the offset: check for velocity and workarounds on violations // 
         ////////////////////////////////////////////////////////////////////////////
         if (yTheoreticalDistance != null) {
-            final double hiddenThreshold = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+            //Assume hidden still a thing after 1.18.2
+            //final double hiddenThreshold = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? Magic.Minecraft_minMoveSqDistance_legacy : Magic.Minecraft_minMoveSqDist_modern;
+            final double hiddenThreshold = pData.getClientVersion().isLowerThan(ClientVersion.V_1_18_2) ? Magic.Minecraft_minMoveSqDistance_legacy : 0.0;
             if (thisMove.hDistance < hiddenThreshold) {
                 for (int i = 0; i < yTheoreticalDistance.length; i++) {
                     if (yTheoreticalDistance[i] < hiddenThreshold && !collideLiquidY[i]) {

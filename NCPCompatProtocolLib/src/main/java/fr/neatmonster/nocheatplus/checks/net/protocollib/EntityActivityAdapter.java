@@ -106,10 +106,12 @@ public class EntityActivityAdapter extends BaseAdapter {
             }
             PacketType type = event.getPacketType();
             if (type == PacketType.Play.Client.CLIENT_TICK_END) {
-                // Once per server tick when the server protocol has the packet. ViaVersion inserts
-                // it for older clients. A 1.20.6 server never delivers it; the server tick steps
-                // those entities instead. Only a real 1.21.2+ client captures the pre-step position.
-                tracker.onTickEnd(sendsRealTickEnd(player));
+                // Registered only when the server is 1.21.2 or newer. ViaVersion still inserts a
+                // copy for older clients. That copy is not a client tick, so only a real 1.21.2+
+                // client steps here. Everyone else steps on the server tick.
+                if (sendsRealTickEnd(player)) {
+                    tracker.onTickEnd();
+                }
             }
         }
         catch (Throwable throwable) {
