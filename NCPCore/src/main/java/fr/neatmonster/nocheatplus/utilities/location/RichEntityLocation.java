@@ -901,39 +901,6 @@ public class RichEntityLocation extends RichBoundsLocation {
                 }
             }
         }
-    //        public void push(Entity entity) {
-    //            if (!this.isPassengerOfSameVehicle(entity)) {
-    //                if (!entity.noPhysics && !this.noPhysics) {
-    //                    double d0 = entity.getX() - this.getX();
-    //                    double d1 = entity.getZ() - this.getZ();
-    //                    double d2 = MathHelper.absMax(d0, d1);
-    //                    
-    //                    if (d2 >= 0.009999999776482582D) {
-    //                        d2 = Math.sqrt(d2);
-    //                        d0 /= d2;
-    //                        d1 /= d2;
-    //                        double d3 = 1.0D / d2;
-    //                        
-    //                        if (d3 > 1.0D) {
-    //                            d3 = 1.0D;
-    //                        }
-    //                        
-    //                        d0 *= d3;
-    //                        d1 *= d3;
-    //                        d0 *= 0.05000000074505806D;
-    //                        d1 *= 0.05000000074505806D;
-    //                        if (!this.isVehicle() && this.isPushable()) {
-    //                            this.push(-d0, 0.0D, -d1);
-    //                        }
-    //                        
-    //                        if (!entity.isVehicle() && entity.isPushable()) {
-    //                            entity.push(d0, 0.0D, d1);
-    //                        }
-    //                    }
-    //                    
-    //                }
-    //            }
-    //        }
         return movementVec;
     }
     

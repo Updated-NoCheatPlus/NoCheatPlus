@@ -68,7 +68,7 @@ public class BlocksMC26 implements BlockPropertiesSetup {
             BlockFlags.setBlockFlags("STRAW_BED", BlockFlags.SOLID_GROUND);
             
             BlockProperties.setBlockProps("SHELF_MUSHROOM", BlockProperties.instantType);
-            BlockFlags.addFlags("SHELF_MUSHROOM", BlockFlags.F_VARIABLE | BlockFlags.F_BOUNCE25);
+            BlockFlags.addFlags("SHELF_MUSHROOM",  BlockFlags.F_BOUNCE25);
             
             // red shrub added in Instant_plants
             
