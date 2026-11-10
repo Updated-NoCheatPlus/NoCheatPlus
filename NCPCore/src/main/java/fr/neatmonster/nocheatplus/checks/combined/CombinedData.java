@@ -46,6 +46,9 @@ public class CombinedData extends ACheckData implements IDataOnRemoveSubCheckDat
     
     /** Last time the player was slow falling */
     public boolean wasSlowFalling;
+    
+    /** Last time the player was gliding */
+    public boolean wasGliding;
 
     // Yawrate check.
     public float lastYaw;

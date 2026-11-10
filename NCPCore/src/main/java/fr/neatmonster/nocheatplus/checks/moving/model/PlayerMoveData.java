@@ -21,7 +21,6 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.util.Vector;
 
-import fr.neatmonster.nocheatplus.checks.moving.player.HiddenMotionReconstructor;
 import fr.neatmonster.nocheatplus.checks.moving.velocity.SimpleEntry;
 import fr.neatmonster.nocheatplus.compat.AlmostBoolean;
 
@@ -37,8 +36,6 @@ public class PlayerMoveData extends MoveData {
     // Reset with set, could be lazily set during checking.
     //////////////////////////////////////////////////////////
     // Properties of the player.
-    /** Player action set on {@link org.bukkit.event.player.PlayerMoveEvent}. NOTE: this is NOT the toggle glide moment, but the entire gliding phase. */
-    public boolean isGliding;
     
     /** Represents how far the player is submerged in lava. Set with {@link fr.neatmonster.nocheatplus.utilities.map.BlockProperties#getVerticalFrictionFactor(LivingEntity, fr.neatmonster.nocheatplus.utilities.location.PlayerLocation)} */
     public double submergedLavaHeight;
@@ -96,7 +93,7 @@ public class PlayerMoveData extends MoveData {
      * Set when {@code maybeBackOffFromEdge} ran this tick (shift + above ground).
      * Used for sneak-edge corner recovery in SurvivalFly.
      */
-    public boolean edgeBackoffApplied;
+    public boolean isSneakingOnEdge;
 
     /**
      * Set when edge backoff reduced at least one horizontal axis this tick ({@code preEdge != backOff}).
@@ -160,7 +157,7 @@ public class PlayerMoveData extends MoveData {
      *       displacements which are stored in the "corrected distance" fields
      *       (e.g. {@code xCorrectedDistancePre/Post}).</li>
      *   <li>The returned corrected distances are applied either as a starting
-     *       allowed momentum for the following tick ({@code xCorrectedDistancePre})
+     *       allowed momentum for the following tick ({@code xSimulatedMomentum})
      *       or folded into candidate computations for the current tick
      *       ({@code xCorrectedDistancePost}). A special-case "hdistzero" stores
      *       post-corrections when the observed move has zero displacement.</li>
@@ -187,19 +184,19 @@ public class PlayerMoveData extends MoveData {
      * usual lastMove.xDistance). Set to 0.0 after it is applied or when not
      * needed.
      */
-    public double xCorrectedDistancePre;
+    public double xSimulatedMomentum;
 
     /**
-     * Mirror of {@link #xCorrectedDistancePre} for the Y axis.
+     * Mirror of {@link #xSimulatedMomentum} for the Y axis.
      */
-    public double yCorrectedDistancePre;
+    public double ySimulatedMomentum;
     
     /**
      * Corrected Z displacement computed for the previous move by the
      * hidden-tick reconstructor. Applied the same way as
-     * {@link #xCorrectedDistancePre} but for the Z axis.
+     * {@link #xSimulatedMomentum} but for the Z axis.
      */
-    public double zCorrectedDistancePre;
+    public double zSimulatedMomentum;
     
     /**
      * Post-correction X displacement. When a hidden candidate exists but the
@@ -351,7 +348,7 @@ public class PlayerMoveData extends MoveData {
     protected void resetBase() {
         // Properties of the player.
         hasAttackSlowDown = false;
-        edgeBackoffApplied = false;
+        isSneakingOnEdge = false;
         edgeAxisClamped = false;
         edgeCornerClamp = false;
         edgeCornerResolved = false;
@@ -360,7 +357,6 @@ public class PlayerMoveData extends MoveData {
         motionZ = 0.0;
         submergedLavaHeight = 0.0;
         submergedWaterHeight = 0.0;
-        isGliding = false;
         forwardImpulse = PlayerKeyboardInput.ForwardDirection.NONE;
         strafeImpulse = PlayerKeyboardInput.StrafeDirection.NONE;
         // Properties involving the environment.
@@ -378,9 +374,9 @@ public class PlayerMoveData extends MoveData {
         hiddenDistanceIndex = -1;
         hiddenYDistanceIndex = -1;
         possibleStopMotion = false;
-        xCorrectedDistancePre = 0.0;
-        yCorrectedDistancePre = 0.0;
-        zCorrectedDistancePre = 0.0;
+        xSimulatedMomentum = 0.0;
+        ySimulatedMomentum = 0.0;
+        zSimulatedMomentum = 0.0;
         xCorrectedDistancePost = 0.0;
         zCorrectedDistancePost = 0.0;
         hAllowedDistance = 0.0;

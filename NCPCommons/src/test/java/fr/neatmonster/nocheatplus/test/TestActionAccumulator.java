@@ -74,4 +74,13 @@ public class TestActionAccumulator {
 		}
 	}
 	
+	@Test
+	public void testMeanOnEmptyAccumulator() {
+		ActionAccumulator acc = new ActionAccumulator(5, 10);
+		if (acc.mean() != 0f) fail("Mean should be 0 for an empty accumulator, got: " + acc.mean());
+		for (int i = 0; i < acc.numberOfBuckets(); i++) {
+			if (acc.mean(i) != 0f) fail("Mean should be 0 for an empty bucket, got: " + acc.mean(i));
+		}
+	}
+	
 }

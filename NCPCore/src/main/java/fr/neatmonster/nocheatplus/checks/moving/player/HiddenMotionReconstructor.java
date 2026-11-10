@@ -969,7 +969,7 @@ public class HiddenMotionReconstructor {
      */
     static boolean shouldUseEdgeHiddenCarry(final boolean edgeSneakNow, final PlayerLocation from,
             final double yDistanceBeforeCollide, final PlayerMoveData lastMove) {
-        if (!edgeSneakNow || !lastMove.toIsValid || !lastMove.edgeBackoffApplied || !lastMove.edgeAxisClamped) {
+        if (!edgeSneakNow || !lastMove.toIsValid || !lastMove.isSneakingOnEdge || !lastMove.edgeAxisClamped) {
             return false;
         }
         return edgeStillClamps(from, yDistanceBeforeCollide, lastMove.motionX, lastMove.motionZ);
@@ -1004,7 +1004,7 @@ public class HiddenMotionReconstructor {
     static double applyEdgeSneakBypass(final Player player, final IPlayerData pData, final MovingData data,
             final PlayerLocation from, final PlayerMoveData lastMove, final PlayerMoveData thisMove,
             final double hDistanceAboveLimit, final Collection<String> tags) {
-        final boolean edgeTick = thisMove.edgeBackoffApplied || (lastMove.toIsValid && lastMove.edgeBackoffApplied);
+        final boolean edgeTick = thisMove.isSneakingOnEdge || (lastMove.toIsValid && lastMove.isSneakingOnEdge);
         if (!edgeTick) {
             return hDistanceAboveLimit;
         }

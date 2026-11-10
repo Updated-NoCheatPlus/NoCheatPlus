@@ -120,7 +120,8 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public float flySpeed = 0.0f;
     /** Keep track of the amplifier given by the jump potion. */
     public double jumpAmplifier = 0;
-    /** Last time the player was riptiding */
+    /** Last time the player was riptiding 
+    * @deprecated */
     public long timeRiptiding = 0;
     /** Represents how long a vehicle has been tossed up by a bubble column */
     // TODO: Deprecate and use the blockChangeTracker, rather.
@@ -197,8 +198,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public boolean pendingClientToHorizontalCollision;
 
     // *----------Velocity handling----------* 
-    /** Tolerance value for using vertical velocity (the client sends different values than received with fight damage). */
-    private static final double TOL_VVEL = 0.0625; // Result of minimum gravity + 0.0001
     /** Vertical velocity modeled as an axis (positive and negative possible) */
     private final SimpleAxisVelocity verVel = new SimpleAxisVelocity();
     /** Horizontal velocity modeled as an axis (always positive) */
@@ -233,10 +232,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     // *----------Data of the CreativeFly check----------*
     /** Duration of the boost effect in ticks. Set in the BlockInteractListener. */
     public int fireworksBoostDuration = 0;
-    /** This firework boost tick needs to be checked. Aimed at solving vanilla bugs when boosting with elytra. */
-    public int fireworksBoostTickNeedCheck = 0;
-    /** Expire at this tick. */
-    public int fireworksBoostTickExpire = 0;
     private AlmostBoolean tridentRelease = AlmostBoolean.NO; 
 
     // *----------Data of the MorePackets check----------*
@@ -464,9 +459,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      *
      * @param trustHorizontalCollision {@code true} when the server protocol exposes horizontal collision (1.21.3+).
      */
-    public void setPendingClientPacketGround(final DataPacketFlying fromPacket,
-            final DataPacketFlying toPacket,
-            final boolean trustHorizontalCollision) {
+    public void setPendingClientPacketGround(final DataPacketFlying fromPacket, final DataPacketFlying toPacket, final boolean trustHorizontalCollision) {
         pendingHasClientFromOnGround = fromPacket != null;
         pendingClientFromOnGround = fromPacket != null && fromPacket.onGround;
         pendingHasClientToOnGround = toPacket != null;
@@ -915,7 +908,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         removeAllVelocity();
         // Elytra boost best fits velocity / effects.
         fireworksBoostDuration = 0; 
-        fireworksBoostTickExpire = 0;
     }
     
     /**
@@ -952,32 +944,16 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
      */
     public void addVelocity(final Player player, final MovingConfig cc, final double vx, final double vy, final double vz, final long flags) {
         final int tick = TickTask.getTick();
-        // TODO: Slightly odd to call this each time, might switch to a counter-strategy (move - remove). 
-        removeInvalidVelocity(tick - cc.velocityActivationTicks);
-
         if (pData.isDebugActive(CheckType.MOVING)) {
             final boolean additive = (flags & VelocityFlags.ADDITIVE) != 0;
-            CheckUtils.debug(player, CheckType.MOVING, " New velocity: " + vx + ", " + vy + ", " + vz
-                    + " tick=" + tick + (additive ? " additive" : " set"));
+            CheckUtils.debug(player, CheckType.MOVING, " New velocity: " + vx + ", " + vy + ", " + vz + " tick=" + tick + (additive ? " additive" : " set"));
         }
-
         VelocityTickCoalescer.coalesceAndQueue(verVel, horVel, tick, vx, vy, vz, flags, cc.velocityActivationCounter);
     }
-
-
-    /**
-     * Reset velocity tracking (h+v).
-     */
-    public void removeAllVelocity() {
-        horVel.clear();
-        verVel.clear();
-        velocityDeferredOnClient = false;
-    }
-
-
+    
     /**
      * Add velocity to internal book-keeping.
-     * 
+     *
      * @param player
      * @param cc
      * @param vx
@@ -987,112 +963,48 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public void addVelocity(final Player player, final MovingConfig cc, final double vx, final double vy, final double vz) {
         addVelocity(player, cc, vx, vy, vz, 0L);
     }
-
-
+    
     /**
-     * Remove all velocity entries that are invalid. Checks both active and queued.
-     * <br>(This does not catch invalidation by speed / direction changing.)
-     * @param tick All velocity that was added before this tick gets removed.
+     * Reset velocity tracking (h+v).
      */
-    public void removeInvalidVelocity(final int tick) {
-        horVel.removeInvalid(tick);
-        verVel.removeInvalid(tick);
-    }
-
-
-    /**
-     * Called for moving events. Remove invalid entries, increase age of velocity, decrease amounts, check which entries are invalid. Both horizontal and vertical.
-     */
-    public void velocityTick(final int invalidateBeforeTick) {
-        // Remove invalid velocity.
-        removeInvalidVelocity(invalidateBeforeTick);
-
-        // (Horizontal velocity does not tick.)
-        //horVel.tick();
-
-        // (Vertical velocity does not tick.)
-    }
-
-
-    ///////////////////////////////////////
-    // Horizontal velocity 
-    ///////////////////////////////////////
-    /**
-     * Std. validation counter for horizontal velocity, based on the value.
-     * 
-     * @param velocity
-     * @return
-     */
-    public static int getHorVelValCount(double velocity) {
-        // TODO: Configable max cap
-        // TODO: Not sure if this is intentional but the cap would force NCP to always pick 30 for velocity entries smaller than 3.0
-        // As a workaround/fix simply increase the actual velocity value
-        // See: https://github.com/NoCheatPlus/NoCheatPlus/commit/a5ed7805429c73f8f2fec409c1947fb032210833
-        return Math.max(30, 1 + (int) Math.round(velocity * 10.0)); // (Revert to 10 due to the hSpeed recode)
+    public void removeAllVelocity() {
+        horVel.clear();
+        verVel.clear();
+        velocityDeferredOnClient = false;
     }
     
-
     /**
-     * Add horizontal velocity directly to horizontal-only bookkeeping.
-     * 
-     * @param vel
-     *            Assumes positive values always.
-     */
-    public void addHorizontalVelocity(final PairEntry vel) {
-        horVel.add(vel);
-    }
-
-
-    /**
-     * Clear only active horizontal velocity.
-     */
-    //public void clearActiveHorVel() {
-    //    horVel.clearActive();
-    //}
-
-
-    /**
-     * Reset velocity tracking (h).
-     */
-    public void clearAllHorVel() {
-        horVel.clear();
-    }
-
-
-   /**
-    * Test if the player has active horizontal velocity
-    */
-    //public boolean hasActiveHorVel() {
-    //    return horVel.hasActive();
-    //}
-
-
-    /**
-     * Test if the player has horizontal velocity entries in queue.
+     * Get the xz-axis velocity tracker. Rather for testing purposes.
+     *
      * @return
      */
-    //public boolean hasQueuedHorVel() {
-    //    return horVel.hasQueued();
-    //}
-
-
+    public PairAxisVelocity getHorizontalVelocityTracker() {
+        return horVel;
+    }
+    
     /**
-     * Test if the player has any horizontal velocity entry at all (active and queued)
-     */
-    //public boolean hasAnyHorVel() {
-    //    return horVel.hasAny();
-    //}
-
-
-    /**
-     * Get effective amount of all used velocity. Non-destructive.
+     * Get the y-axis velocity tracker. Rather for testing purposes.
      * @return
      */
-    //public double getHorizontalFreedom() {
-    //    return horVel.getFreedom();
-    //}
-
-
+    public SimpleAxisVelocity getVerticalVelocityTracker() {
+        return verVel;
+    }
+    
+    /**
+     * Get the first matching velocity entry (invalidate others). Sets
+     * verVelUsed if available.
+     *
+     * @param amount
+     * @return
+     */
+    public List<SimpleEntry> useVerticalVelocity(final double amount) {
+        final List<SimpleEntry> available = verVel.use(amount, Magic.PREDICTION_EPSILON);
+        if (available != null) {
+            playerMoves.getCurrentMove().verVelUsed = available;
+        }
+        return available;
+    }
+    
     /**
      * Use all queued velocity until at least amount is matched.
      * Amount is the horizontal distance that is to be covered by velocity (active has already been checked).
@@ -1106,97 +1018,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         final List<PairEntry> available = horVel.use(x, z, 0.001);
         return available;
     }
-
-
-    /**
-     * Get the xz-axis velocity tracker. Rather for testing purposes.
-     * 
-     * @return
-     */
-    public PairAxisVelocity getHorizontalVelocityTracker() {
-        return horVel;
-    }
-
-
-    /**
-     * Debugging.
-     * @param builder
-     */
-    public void addHorizontalVelocity(final StringBuilder builder) {
-        //if (horVel.hasActive()) {
-        //    builder.append("\n" + " Horizontal velocity (active):");
-        //    horVel.addActive(builder);
-        //}
-        if (horVel.hasQueued()) {
-            builder.append("\n" + " Horizontal velocity (queued):");
-            horVel.addQueued(builder);
-        }
-    }
-
-
-
-    //////////////////////////////////
-    // Vertical velocity
-    //////////////////////////////////
-    //  /**
-    //   * Clear only active vertical velocity.
-    //   */
-    //  public void clearActiveVerVel() {
-    //      verVel.clearActive();
-    //  }
-
-
-    public void prependVerticalVelocity(final SimpleEntry entry) {
-        verVel.addToFront(entry);
-    }
-
-
-    /**
-     * Get the first element without using it.
-     * @param amount
-     * @param minActCount
-     * @param maxActCount
-     * @return
-     */
-    public List<SimpleEntry> peekVerticalVelocity(final double amount, final int minActCount, final int maxActCount) {
-        return verVel.peek(amount, minActCount, maxActCount, Magic.PREDICTION_EPSILON);
-    }
-
-
-    /**
-     * Add vertical velocity directly to vertical-only bookkeeping.
-     * 
-     * @param entry
-     */
-    public void addVerticalVelocity(final SimpleEntry entry) {
-        verVel.add(entry);
-    }
-
-
-    /**
-     * Test if the player has vertical velocity entries in queue.
-     * @return
-     */
-    public boolean hasQueuedVerVel() {
-        return verVel.hasQueued();
-    }
-
-
-    /**
-     * Get the first matching velocity entry (invalidate others). Sets
-     * verVelUsed if available.
-     * 
-     * @param amount
-     * @return
-     */
-    public List<SimpleEntry> useVerticalVelocity(final double amount) {
-        final List<SimpleEntry> available = verVel.use(amount, Magic.PREDICTION_EPSILON);
-        if (available != null) {
-            playerMoves.getCurrentMove().verVelUsed = available;
-        }
-        return available;
-    }
-
 
     /**
      * Use the verVelUsed field, if it matches. Otherwise call
@@ -1216,7 +1037,6 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         }
         return useVerticalVelocity(amount);
     }
-    
 
     /**
      * Remove from start while the flag is present.
@@ -1225,29 +1045,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     public void removeLeadingQueuedVerticalVelocityByFlag(final long flag) {
         verVel.removeLeadingQueuedVerticalVelocityByFlag(flag);
     }
-
-
-    /**
-     * Get the y-axis velocity tracker. Rather for testing purposes.
-     * @return
-     */
-    public SimpleAxisVelocity getVerticalVelocityTracker() {
-        return verVel;
-    }
-
-
-    /**
-     * Debugging.
-     * @param builder
-     */
-    public void addVerticalVelocity(final StringBuilder builder) {
-        if (verVel.hasQueued()) {
-            builder.append("\n" + " Vertical velocity (queued):");
-            verVel.addQueued(builder);
-        }
-    }
-    /////////////////////////////////////////////////////
-
+    
 
     /**
      * Test if the location is the same, ignoring pitch and yaw.
@@ -1387,8 +1185,7 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
         if (trace != null) {
             trace.reset();
         }
-        getTrace(maxAge, maxSize).addEntry(time, loc.getX(), loc.getY(), loc.getZ(), 
-                iead.getWidth(player) / 2.0, Math.max(player.getEyeHeight(), iead.getHeight(player)));
+        getTrace(maxAge, maxSize).addEntry(time, loc.getX(), loc.getY(), loc.getZ(), iead.getWidth(player) / 2.0, Math.max(player.getEyeHeight(), iead.getHeight(player)));
     }
 
     public void handleTimeRanBackwards() {

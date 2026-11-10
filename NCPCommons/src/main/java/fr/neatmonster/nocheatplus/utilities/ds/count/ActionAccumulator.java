@@ -131,15 +131,17 @@ public class ActionAccumulator {
      * @return the mean of this bucket
      */
     public float mean(final int bucket) {
-        return bucketScore(bucket) / bucketCount(bucket);
+        final int bucketCount = bucketCount(bucket);
+        return bucketCount == 0 ? 0f : bucketScore(bucket) / bucketCount;
     }
 
     /**
      * Get the mean of the whole accumulator
      */
     public float mean() {
-        return score() / count();
-    }  
+        final int globalCount = count();
+        return globalCount == 0 ? 0f : score() / globalCount;
+    }
     
     /**
      * How many buckets does the ActionAccumulator instance have

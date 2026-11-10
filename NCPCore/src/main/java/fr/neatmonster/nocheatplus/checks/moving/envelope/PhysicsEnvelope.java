@@ -6,6 +6,7 @@ import org.bukkit.util.Vector;
 import fr.neatmonster.nocheatplus.NCPAPIProvider;
 import fr.neatmonster.nocheatplus.checks.moving.MovingConfig;
 import fr.neatmonster.nocheatplus.checks.moving.MovingData;
+import fr.neatmonster.nocheatplus.checks.moving.model.LiftOffEnvelope;
 import fr.neatmonster.nocheatplus.checks.moving.model.PlayerMoveData;
 import fr.neatmonster.nocheatplus.compat.Bridge1_13;
 import fr.neatmonster.nocheatplus.compat.Bridge1_9;
@@ -16,10 +17,8 @@ import fr.neatmonster.nocheatplus.components.registry.event.IGenericInstanceHand
 import fr.neatmonster.nocheatplus.players.DataManager;
 import fr.neatmonster.nocheatplus.players.IPlayerData;
 import fr.neatmonster.nocheatplus.utilities.location.PlayerLocation;
-import fr.neatmonster.nocheatplus.utilities.map.BlockProperties;
 import fr.neatmonster.nocheatplus.utilities.math.MathUtil;
 import fr.neatmonster.nocheatplus.utilities.moving.Magic;
-import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 
 /**
  * Various auxiliary (and hard-coded) methods for moving behaviour modeled after the client or otherwise observed on the server-side.
@@ -27,6 +26,105 @@ import fr.neatmonster.nocheatplus.utilities.moving.MovingUtil;
 public class PhysicsEnvelope {
     
     private static final IGenericInstanceHandle<IAttributeAccess> attributeAccess = NCPAPIProvider.getNoCheatPlusAPI().getGenericInstanceHandle(IAttributeAccess.class);
+    
+    /**
+     * Check if the allowed speed set in thisMove should be canceled due to it being lower than the negligible speed threshold. <br>
+     * (Horizontal only)
+     *
+     * @param pData
+     * @param thisMove
+     */
+    public static void checkNegligibleMomentum(IPlayerData pData, PlayerMoveData thisMove) {
+        if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_21_5)) {
+            // This condition was added on 1.21.5. If the horizontal distance squared is below 0.000009 and the entity is a player, both horizontal momenta are set to 0.0.
+            // This means that both x/z momenta can be reset even if one of them is above the threshold, as long as the overall horizontal momentum is below the threshold.
+            // EntityLiving.java -> aiStep
+            // We use the unchecked hDistance for performance reasons (no sqrt needed).
+            if (thisMove.hDistance < Magic.NEGLIGIBLE_SPEED_THRESHOLD) {
+                thisMove.xAllowedDistance = 0.0;
+                thisMove.zAllowedDistance = 0.0;
+            }
+        }
+        else if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_9)) {
+            if (Math.abs(thisMove.xAllowedDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD) {
+                thisMove.xAllowedDistance = 0.0;
+            }
+            if (Math.abs(thisMove.zAllowedDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD) {
+                thisMove.zAllowedDistance = 0.0;
+            }
+        }
+        else {
+            // In 1.8 and lower, momentum is compared to 0.005 instead.
+            if (Math.abs(thisMove.xAllowedDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
+                thisMove.xAllowedDistance = 0.0;
+            }
+            if (Math.abs(thisMove.zAllowedDistance) < Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY) {
+                thisMove.zAllowedDistance = 0.0;
+            }
+        }
+    }
+    
+    /**
+     * Check if the allowed speed set in thisMove should be canceled due to it being lower than the negligible speed threshold. <br>
+     * (Vertical only).
+     *
+     * @param pData
+     * @param thisMove
+     * @param yTheoreticalDistance Used to check as an indirect way of knowing if the player sends the space bar impulse.
+     */
+    public static void checkNegligibleMomentumVertical(IPlayerData pData, PlayerMoveData thisMove, double[] yTheoreticalDistance) {
+        final double threshold = pData.getClientVersion().isAtLeast(ClientVersion.V_1_9) ? Magic.NEGLIGIBLE_SPEED_THRESHOLD : Magic.NEGLIGIBLE_SPEED_THRESHOLD_LEGACY;
+        final boolean isInputKnown = yTheoreticalDistance == null; // We don't have an array of theoretical distances aka, the input is known
+        if (isInputKnown) {
+            if (Math.abs(thisMove.yAllowedDistance) < threshold) {
+                thisMove.yAllowedDistance = 0.0;
+            }
+        } 
+        else {
+            for (int i = 0; i < yTheoreticalDistance.length; i++) {
+                if (Math.abs(yTheoreticalDistance[i]) < threshold) {
+                    yTheoreticalDistance[i] = 0.0;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Reset the given speed upon wall collision.
+     *
+     * @param lastMove
+     * @param thisMove
+     */
+    public static void doWallCollision(PlayerMoveData lastMove, PlayerMoveData thisMove) {
+        if (lastMove.collideX) {
+            thisMove.xAllowedDistance = 0.0;
+        }
+        if (lastMove.collideZ) {
+            thisMove.zAllowedDistance = 0.0;
+        }
+    }
+    
+    /**
+     * Check if the violation level may decrease.
+     *
+     * @param data
+     * @param cc
+     * @param inAir
+     * @param lastMove
+     * @param thisMove
+     * @return
+     */
+    public static boolean canRelaxVL(MovingData data, MovingConfig cc, boolean inAir, PlayerMoveData lastMove, PlayerMoveData thisMove) {
+        // Slowly reduce the level with each event, if violations have not recently happened.
+        return data.getPlayerMoveCount() - data.sfVLMoveCount > cc.survivalFlyVLFreezeCount
+                && (!cc.survivalFlyVLFreezeInAir || !inAir
+                // Favor bunny-hopping slightly: clean descend.
+                || !data.sfVLInAir
+                && data.liftOffEnvelope == LiftOffEnvelope.NORMAL
+                && lastMove.toIsValid
+                && lastMove.yDistance < -Magic.GRAVITY_MIN
+                && thisMove.yDistance - lastMove.yDistance < -Magic.GRAVITY_MIN);
+    }
     
     /**
      * Test if the player is constricted in an area with a 1.5 blocks-high ceiling (applies to 1.14 clients and above).
@@ -97,7 +195,7 @@ public class PhysicsEnvelope {
         ////////////////////////////////
         // 0: Early return conditions.
         ////////////////////////////////
-        if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) || Bridge1_13.isRiptiding(player) || thisMove.isGliding || from.isInLiquid()) {
+        if (!Double.isInfinite(Bridge1_9.getLevitationAmplifier(player)) || Bridge1_13.isRiptiding(player) || Bridge1_9.isGliding(player) || from.isInLiquid()) {
             // Cannot jump for sure under these conditions
             return false;
         }
@@ -196,48 +294,6 @@ public class PhysicsEnvelope {
         return !lastMove.toIsValid && data.sfJumpPhase == 0 && thisMove.multiMoveCount > 0
                 && setBackYDistance > 0.0 && setBackYDistance < Magic.PAPER_DIST 
                 && thisMove.yDistance > 0.0 && thisMove.yDistance < Magic.PAPER_DIST && inAir(thisMove);
-    }
-
-    /**
-     * Pre-conditions: A slime block is underneath and the player isn't really
-     * sneaking (with negative motion with thisMove). This does not account for pistons pushing (slime) blocks.<br>
-     * 
-     * @param player
-     * @param from
-     * @param to
-     * @param data
-     * @param cc
-     * @return
-     */
-    public static boolean canBounce(final Player player, final PlayerLocation from, final PlayerLocation to, 
-                                    final MovingData data, final MovingConfig cc, final IPlayerData pData) {
-        
-        // Workaround/fix for bed bouncing. getBlockY() would return an int, while a bed's maxY is 0.5625, causing this method to always return false.
-        // A better way to do this would to get the maxY through another method, just can't seem to find it :/
-        if (pData.isShiftKeyPressed()) {
-            return false;
-        }
-        double blockY = (to.getY() + 0.4375) % 1 == 0 ? to.getY() : to.getBlockY();
-        return 
-                // 0: Normal envelope (forestall NoFall).
-                MovingUtil.getRealisticFallDistance(player, from.getY(), to.getY(), data, pData) > 1.0
-                && (
-                    // 1: Ordinary.
-                    to.getY() - blockY <= Math.max(cc.yOnGround, cc.noFallyOnGround)
-                    // 1: With carpet.
-                    || BlockProperties.isCarpet(to.getBlockType()) && to.getY() - to.getBlockY() <= 0.9
-                ) 
-                // 0: Within wobble-distance.
-                || to.getY() - blockY < 0.286 && to.getY() - from.getY() > -0.9
-                && to.getY() - from.getY() < -Magic.GRAVITY_MIN
-                && !to.isOnGround()
-                // 0: Wildcard riptiding. No point in checking for distance constraints here when speed is so high.
-                || Bridge1_13.isRiptiding(player)
-                // 0: Wildcard micro bounces on beds
-                || to.isOnGround() && !from.isOnGround() && to.getY() - from.getY() < 0.0 
-                && MovingUtil.getRealisticFallDistance(player, from.getY(), to.getY(), data, pData) <= 0.5 // 0.5... Can probably be even smaller, since these are micro bounces.
-                && to.isOnBouncyBlock() && !to.isOnSlimeBlock()
-                ;
     }
     
     /**

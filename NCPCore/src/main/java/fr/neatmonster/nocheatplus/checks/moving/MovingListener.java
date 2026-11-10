@@ -955,9 +955,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 //int toIndex = -1;
                 for (int idx = 0; idx < scanLimit; idx++) {
                     final DataPacketFlying packetData = flyingQueue[idx];
-                    if (packetData != null && packetData.hasPos
-                            && TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(),
-                                    packetData.getX(), packetData.getY(), packetData.getZ())) {
+                    if (packetData != null && packetData.hasPos && TrigUtil.isSamePos(to.getX(), to.getY(), to.getZ(), packetData.getX(), packetData.getY(), packetData.getZ())) {
                         netData.updateLastMatchedMoveToSequence(packetData.getSequence());
                         break;
                     }
@@ -1108,8 +1106,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             currentToIndex = count >= maxSplit ? -1 : i;
                             /* The 'to' location skipped/lost by Bukkit in the flying queue. Use Bukkit's "to" if the maximum split was reached */
                             Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
-                            final DataPacketFlying segmentToPacket = count >= maxSplit && toIndex >= 0
-                                    ? flyingQueue[toIndex] : filteredFlyingQueue[i];
+                            final DataPacketFlying segmentToPacket = count >= maxSplit && toIndex >= 0 ? flyingQueue[toIndex] : filteredFlyingQueue[i];
                             data.setPendingClientPacketGround(segmentFromPacket, segmentToPacket, trustPacketHorizontalCollision);
                             // Finally, set the moving data to be used by checks.
                             moveInfo.set(player, packet, packetTo, cc.yOnGround);
@@ -1299,7 +1296,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         thisMove.set(pFrom, pTo);
         thisMove.multiMoveCount = multiMoveCount;
         thisMove.setBackYDistance = pTo.getY() - data.getSetBackY();
-        thisMove.isGliding = Bridge1_9.isGliding(player);
         thisMove.tridentRelease = data.consumeTridentReleaseEvent();
         data.applyPendingClientPacketGround(thisMove);
 
@@ -1318,8 +1314,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         ///////////////////////////////////////////////
         // TODO: Rework to generic (?) queued velocity entries: activation + invalidation
         final int tick = TickTask.getTick();
-        data.velocityTick(tick - cc.velocityActivationTicks);
-
 
         ////////////////////////////////////
         // Check which fly check to use.  //
@@ -1374,7 +1368,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             data.setSetBack(from);
             //TODO: Fake velocity
             //data.addHorizontalVelocity(new AccountEntry(thisMove.hDistance, 1, 1));
-            data.addVerticalVelocity(new SimpleEntry(thisMove.yDistance, 1));
+            data.addVelocity(player, cc, 0.0, thisMove.yDistance, 0.0);
             //data.addVerticalVelocity(new SimpleEntry(-0.16, 2));
             data.lastVehicleType = null;
         }
@@ -1671,7 +1665,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
              * access signatures including thisMove.
              */
             final SimpleEntry vel = new SimpleEntry(tick, amount, VelocityFlags.ORIGIN_BLOCK_MOVE, 1);
-            data.addVerticalVelocity(vel);
+            data.addVelocity(player, cc, 0.0, amount, 0.0, VelocityFlags.ORIGIN_BLOCK_MOVE);
             data.useVerticalVelocity(thisMove.yDistance);
             if (debug) {
                 debug(player, "checkPastStateVerticalPush: set velocity: " + vel);
@@ -1724,12 +1718,11 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
     
         final BlockChangeEntry entry = BlockChangeSearch(from, tick, dir, debug, data, cc, worldId, false);
         if (entry != null) {
-            final int count = MovingData.getHorVelValCount(0.6);
             // TODO: Add horizontal vel
             //data.clearActiveHorVel();
             //data.addHorizontalVelocity(new AccountEntry(tick, 0.6, count, count));
             // Stuck in block, Hack
-            data.addVerticalVelocity(new SimpleEntry(-0.35, 6));
+            data.addVelocity(player, cc, 0.0, -0.35, 0.0);
             data.blockChangeRef.updateSpan(entry);
 
             if (debug) {
@@ -2155,11 +2148,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 final PlayerMoveData firstPastMove = data.playerMoves.getFirstPastMove();
                 if (pLoc.isOnGround() && pLoc.isInLava() && firstPastMove.toIsValid && firstPastMove.yDistance < 0.0) {
                     if (debug) debug(player, "NoFall/Damage: allow fall damage in lava (hotfix).");
-                } 
-                // Fix issues when gliding down vines with elytra.
-                // Checking for velocity does not work since sometimes it can be applied after this check runs
-                else if (moveInfo.from.isOnClimbable() && firstPastMove.isGliding) {
-                    if (debug) debug(player, "Ignore fakefall on climbable on elytra move");
                 }
                 // NOTE: Double violations are possible with the in-air check below.
                 // TODO: Differing sub checks, once cancel action...

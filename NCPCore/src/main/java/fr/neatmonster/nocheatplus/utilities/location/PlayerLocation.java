@@ -366,7 +366,7 @@ public class PlayerLocation extends RichEntityLocation {
     /**
      * Set cached info according to other.<br>
      * Minimal optimizations: take block flags directly, on-ground max/min
-     * bounds, only set stairs if not on ground and not reset-condition.
+     * bounds.
      *
      * @param other
      *            the other
