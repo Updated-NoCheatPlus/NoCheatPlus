@@ -107,8 +107,6 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                     final IPlayerData pData = DataManager.getPlayerData((Player)event.getEntity());
                     final MovingData data = pData.getGenericInstance(MovingData.class);
                     final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
-                    // Always fake use velocity here to smoothen the transition between glide->no glide or no glide->glide transitions.
-                    data.addVelocity((Player)event.getEntity(), pData.getGenericInstance(MovingConfig.class), lastMove.xAllowedDistance, lastMove.yAllowedDistance, lastMove.zAllowedDistance, VelocityFlags.FAKED);
                     if (shouldDenyGlidingStart((Player)event.getEntity(), event.isGliding(), true)) {
                         event.setCancelled(true);
                     }
@@ -121,10 +119,10 @@ public class CombinedListener extends CheckListener implements JoinLeaveListener
                 // We can ignore the event here, if cancelled, since the player will not be able to move anyway
                 @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
                 public void onEventlessToggleGlide(final PlayerMoveEvent event) {
-                    final PlayerMoveData lastMove = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(MovingData.class).playerMoves.getFirstPastMove();
                     final PlayerMoveData thisMove = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(MovingData.class).playerMoves.getCurrentMove();
+                    final CombinedData data = DataManager.getPlayerData(event.getPlayer()).getGenericInstance(CombinedData.class);
                     // Assumption: we consider players toggle gliding on if they were not gliding before, and they now are.
-                    if (shouldDenyGlidingStart(event.getPlayer(), thisMove.isGliding && !lastMove.isGliding, false)) {
+                    if (shouldDenyGlidingStart(event.getPlayer(), Bridge1_9.isGliding(event.getPlayer()) && !data.wasGliding, false)) {
                         // Force-stop. 
                         // IMPORTANT: DO NOT CANCEL THE EVENT HERE!
                         event.getPlayer().setGliding(false);

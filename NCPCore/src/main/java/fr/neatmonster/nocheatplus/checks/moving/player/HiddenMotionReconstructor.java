@@ -255,7 +255,7 @@ public class HiddenMotionReconstructor {
             }
             break;
         case CLIMBABLE_POST_MOVE:
-            if (!lastMove.from.inLiquid && !lastMove.isGliding) {
+            if (!lastMove.from.inLiquid && !cData.wasGliding) {
                 if (lastMove.collidesHorizontally && (lastMove.from.onClimbable || lastMove.from.touchedPowderSnow && BridgeMisc.canStandOnPowderSnow(player))) {
                     yBox[0] = 0.2;
                 }
