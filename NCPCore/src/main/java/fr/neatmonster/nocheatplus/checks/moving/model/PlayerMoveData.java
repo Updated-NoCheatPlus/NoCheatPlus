@@ -112,7 +112,7 @@ public class PlayerMoveData extends MoveData {
 
     public double motionX;
     /** Slime: last tick modeled {@code yBC}; chains as seed when packet {@code yDistance == 0} until leaving slime. */
-    public double motionY;
+    public double motionYAtStepOn;
     public double motionZ;
 
     // Bounds set by checks.
@@ -342,6 +342,11 @@ public class PlayerMoveData extends MoveData {
      * @see PlayerMoveData#hasImpulse
      */
     public boolean collidesHorizontally;
+    /**
+     * 
+     * yMotion used in horizontal computation before the collide method
+     */
+    public double yDistanceBeforeCollide;
     
     
     @Override
@@ -353,7 +358,7 @@ public class PlayerMoveData extends MoveData {
         edgeCornerClamp = false;
         edgeCornerResolved = false;
         motionX = 0.0;
-        motionY = 0.0;
+        motionYAtStepOn = 0.0;
         motionZ = 0.0;
         submergedLavaHeight = 0.0;
         submergedWaterHeight = 0.0;
@@ -390,6 +395,7 @@ public class PlayerMoveData extends MoveData {
         hasNoMovementDueToDuplicatePacket = false;
         negligibleHorizontalCollision = false;
         collidesHorizontally = false;
+        yDistanceBeforeCollide = 0.0;
         hasImpulse = AlmostBoolean.NO;
         tridentRelease = AlmostBoolean.NO;
         // Super class last, because it'll set valid to true in the end.

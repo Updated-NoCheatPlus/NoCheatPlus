@@ -110,13 +110,6 @@ public class BlockFlags {
     /** This block can be climbed up. Only relevant for legacy vines, which needed to be attached to a solid block to tbe climbed up  */
     public static final long F_CLIMBUPABLE                  = f_flag();
 
-    /** 
-     * The block can change shape. This is most likely not 100% accurate...<br>
-     * Signal to NCP that an entity may be able to jump inside this block.  
-     * More likely to indicate block change shape when stacking up; 
-     */
-    public static final long F_VARIABLE                     = f_flag();
-
     /** Block is 1-block wide. */
     public static final long F_XZ100                        = f_flag();
 

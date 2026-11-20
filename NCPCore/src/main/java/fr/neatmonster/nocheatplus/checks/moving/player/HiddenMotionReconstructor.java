@@ -169,8 +169,8 @@ public class HiddenMotionReconstructor {
             final IPlayerData pData, final double baseX, final double baseZ) {
         double x = baseX;
         double z = baseZ;
-        if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
-            final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
+        if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(thisMove.motionYAtStepOn) < 0.1 && !pData.isShiftKeyPressed()) {
+            final double slimeMul = 0.4 + Math.abs(thisMove.motionYAtStepOn) * 0.2;
             x *= slimeMul;
             z *= slimeMul;
         }
@@ -197,8 +197,8 @@ public class HiddenMotionReconstructor {
             final PlayerMoveData thisMove, final MovingData data, final IPlayerData pData) {
         switch (id) {
         case SLIME_STEP:
-            if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(lastMove.motionY) < 0.1 && !pData.isShiftKeyPressed()) {
-                final double slimeMul = 0.4 + Math.abs(lastMove.motionY) * 0.2;
+            if (from.isOnSlimeBlock() && thisMove.hasClientFromOnGround && thisMove.clientFromOnGround && Math.abs(thisMove.motionYAtStepOn) < 0.1 && !pData.isShiftKeyPressed()) {
+                final double slimeMul = 0.4 + Math.abs(thisMove.motionYAtStepOn) * 0.2;
                 hz[0] *= slimeMul;
                 hz[1] *= slimeMul;
             }

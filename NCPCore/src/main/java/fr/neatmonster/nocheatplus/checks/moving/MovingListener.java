@@ -880,6 +880,13 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         final Location loc = player.getLocation(moveInfo.useLoc);
         final PlayerMoveData lastMove = data.playerMoves.getFirstPastMove();
         if (cc.loadChunksOnMove) MovingUtil.ensureChunksLoaded(player, from, to, lastMove, "move", cc, pData);
+        final float newYaw = LocUtil.getYawBeforeInternallyCorrected(from.getYaw(), to.getYaw());
+        if (to.getYaw() != newYaw) {
+            data.originalIncomingYaw = newYaw;
+            data.correctedIncomingYaw = to.getYaw();
+        }
+        if (from.getYaw() == data.correctedIncomingYaw) from.setYaw(data.originalIncomingYaw);
+        if (to.getYaw() == data.correctedIncomingYaw) to.setYaw(data.originalIncomingYaw);
         
         if (
             // 0: This is how we know if the event was fired correctly; player#getLocaton() and the event's "from" location are the same (More specifically, for Bukkit, from = the current Location of the player).
@@ -1083,9 +1090,10 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 // 3: Actual split
                 int count = 1;
                 // The maximum amount by which a single PlayerMoveEvent can be split.
-                int maxSplit = 20;
-                int currentFromIndex = -1;
-                int currentToIndex = -1;
+                // Collide with cobweb and fall down split up to 23!
+                int maxSplit = 25;
+                //int currentFromIndex = -1;
+                //int currentToIndex = -1;
                 float currentYaw = from.getYaw();
                 float currentPitch = from.getPitch();
                 Location packet = null;
@@ -1103,7 +1111,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                         // If from was set...
                         if (packet != null) {
                             // TODO: We now have some extra look,ground if fromIndex - toIndex > 1. Now how to feed in 0.03 reconstructor if there is, from here?
-                            currentToIndex = count >= maxSplit ? -1 : i;
+                            //currentToIndex = count >= maxSplit ? -1 : i;
                             /* The 'to' location skipped/lost by Bukkit in the flying queue. Use Bukkit's "to" if the maximum split was reached */
                             Location packetTo = count >= maxSplit ? to : new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
                             final DataPacketFlying segmentToPacket = count >= maxSplit && toIndex >= 0 ? flyingQueue[toIndex] : filteredFlyingQueue[i];
@@ -1136,7 +1144,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                             }
                         }
                         /* The 'from' location skipped/lost by Bukkit in the flying queue */
-                        currentFromIndex = i;
+                        //currentFromIndex = i;
                         segmentFromPacket = filteredFlyingQueue[i];
                         packet = new Location(from.getWorld(), filteredFlyingQueue[i].getX(), filteredFlyingQueue[i].getY(), filteredFlyingQueue[i].getZ(), currentYaw, currentPitch);
                     }

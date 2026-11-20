@@ -47,7 +47,7 @@ public class BlocksMC26 implements BlockPropertiesSetup {
                 BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 1.5f, true));
                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND);
             }
-            BlockFlags.addFlags("SULFUR_SPIKE", BlockFlags.SOLID_GROUND | BlockFlags.F_VARIABLE);
+            BlockFlags.addFlags("SULFUR_SPIKE", BlockFlags.SOLID_GROUND);
             BlockProperties.setBlockProps("SULFUR_SPIKE", new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 1.5f));
         }
         if (ServerVersion.isAtLeast("26.3")) {

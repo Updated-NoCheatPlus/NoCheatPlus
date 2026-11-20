@@ -102,7 +102,7 @@ public class BlocksMC1_21 implements BlockPropertiesSetup {
             }
             for (Material mat : MaterialUtil.COPPER_BARS) {
                 BlockProperties.setBlockProps(mat, new BlockProperties.BlockProps(BlockProperties.woodPickaxe, 5f, true));
-                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_THIN_FENCE | BlockFlags.F_VARIABLE); // Variable ?
+                 BlockFlags.addFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_THIN_FENCE);
             }
             if (BridgeMaterial.IRON_CHAIN != null) {
                 // Re-define legacy chain as iron chain.

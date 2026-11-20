@@ -25,7 +25,6 @@ import org.bukkit.block.data.type.Chest.Type;
 import fr.neatmonster.nocheatplus.utilities.map.BlockCache;
 
 public class BukkitChest implements BukkitShapeModel {
-    //TODO: With/without this, NCP still throw false when nearby doubled chest. Something else was wrong. Do note flags are correct too: (CHEST / SOLID+GROUND) BlockProps(2.5 / ToolProps(AXE/WOOD) / [3750, 1900, 950, 750, 600, 450, 400])
     private final double[] NORTH_AABB = new double[] {0.0625, 0.0, 0.0, 0.9375, 0.875, 0.9375};
     private final double[] SOUTH_AABB = new double[] {0.0625, 0.0, 0.0625, 0.9375, 0.875, 1.0};
     private final double[] WEST_AABB  = new double[] {0.0, 0.0, 0.0625, 0.9375, 0.875, 0.9375};

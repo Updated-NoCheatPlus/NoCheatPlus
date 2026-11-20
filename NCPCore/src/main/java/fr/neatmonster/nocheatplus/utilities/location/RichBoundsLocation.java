@@ -1004,8 +1004,7 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
                 final IBlockCacheNode useNode = bY == blockY ? getOrCreateBlockCacheNode() : (bY == blockY -1 ? getOrCreateBlockCacheNodeBelow() : blockCache.getOrCreateBlockCacheNode(blockX,  bY, blockZ, false));
                 final Material id = useNode.getType();
                 final long flags = BlockFlags.getBlockFlags(id);
-                // TODO: Might remove check for variable ?
-                if ((flags & BlockFlags.F_GROUND) != 0 && (flags & BlockFlags.F_VARIABLE) == 0) {
+                if ((flags & BlockFlags.F_GROUND) != 0) {
                     final double[] bounds = useNode.getBounds(blockCache, blockX, bY, blockZ);
                     // Check collision if not inside of the block. [Might be a problem for cauldron or similar + something solid above.]
                     // TODO: Might need more refinement.
@@ -1274,12 +1273,8 @@ public class RichBoundsLocation implements IGetBukkitLocation, IGetBlockPosition
      */
     public void collectBlockFlags(double maxYonGround) {
         maxYonGround = Math.max(yOnGround, maxYonGround);
-        // TODO: Clearly refine this for 1.5 high blocks.
-        // TODO: Check which checks need blocks below.
         final double yExtra = 0.6; // y - blockY - maxYonGround > 0.5 ? 0.5 : 1.0;
-        // TODO: xz margin still needed ?
-        final double xzM = 0; //0.001;
-        blockFlags = BlockProperties.collectFlagsSimple(blockCache, minX - xzM, minY - yExtra - maxYonGround, minZ - xzM, maxX + xzM, Math.max(maxY, minY + 1.5), maxZ + xzM);
+        blockFlags = BlockProperties.collectFlagsSimple(blockCache, minX, minY - yExtra - maxYonGround, minZ, maxX, Math.max(maxY, minY + 1.5), maxZ);
     }
 
     /**

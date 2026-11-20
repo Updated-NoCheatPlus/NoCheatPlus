@@ -480,7 +480,8 @@ public class RichEntityLocation extends RichBoundsLocation {
             // Minimum speed.
             return false;
         }
-        collectBlockFlags(); // Do call here, else NPE for some places.
+        // Let catch for root cause this time. Should be from CFly
+        //collectBlockFlags(); // Do call here, else NPE for some places.
         if ((blockFlags & BlockFlags.F_STICKY) == 0) {
             return false;
         }

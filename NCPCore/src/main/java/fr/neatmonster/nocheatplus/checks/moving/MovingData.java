@@ -291,7 +291,9 @@ public class MovingData extends ACheckData implements IDataOnRemoveSubCheckData,
     //////////////////////////////////////////////
     // HOT FIX / WORKAROUNDS                    //
     //////////////////////////////////////////////
-    /**
+    public float originalIncomingYaw = 0f;
+    public float correctedIncomingYaw = 0f;
+	/**
      * Set to true after login/respawn, only if the set back is reset there. Reset in MovingListener after handling PlayerMoveEvent.
      * For more details see: <a href="https://github.com/Updated-NoCheatPlus/NoCheatPlus/commit/6d6f908512543f6289b51bb4c60a1940bcea9d4d">...</a> 
      */

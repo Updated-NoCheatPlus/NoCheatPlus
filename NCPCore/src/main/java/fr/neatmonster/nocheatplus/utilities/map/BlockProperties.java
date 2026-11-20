@@ -1532,8 +1532,8 @@ public class BlockProperties {
         }
 
         // 1.5 high blocks (fences, walls, gates)
-        final long flags150 = BlockFlags.F_HEIGHT150 | BlockFlags.F_VARIABLE | BlockFlags.F_THICK_FENCE;
-        final long flags1502 = BlockFlags.F_HEIGHT150 | BlockFlags.F_VARIABLE;
+        final long flags150 = BlockFlags.F_HEIGHT150 | BlockFlags.F_THICK_FENCE;
+        final long flags1502 = BlockFlags.F_HEIGHT150;
         BlockFlags.setFlag(BridgeMaterial.COBBLESTONE_WALL, flags1502);
         for (final Material mat : new Material[]{BridgeMaterial.NETHER_BRICK_FENCE}) {
             BlockFlags.setFlag(mat, flags150);
@@ -1548,10 +1548,7 @@ public class BlockProperties {
         // BlockFlags.F_PASSABLE_X4, BlockFlags.F_VARIABLE
         // TODO: PASSABLE_X4 is abused for other checks, need another one?
         for (final Material mat : MaterialUtil.WOODEN_FENCE_GATES) {
-            BlockFlags.setFlag(mat, BlockFlags.F_PASSABLE_X4 | BlockFlags.F_VARIABLE);
-        }
-        for (final Material mat : MaterialUtil.WOODEN_TRAP_DOORS) {
-            BlockFlags.setFlag(mat, BlockFlags.F_VARIABLE);
+            BlockFlags.setFlag(mat, BlockFlags.F_PASSABLE_X4);
         }
         
         // Blocks that vary with redstone or interaction.
@@ -1584,7 +1581,7 @@ public class BlockProperties {
         }
 
         // Thin fences (iron fence, glass panes).
-        final long paneFlags = BlockFlags.F_THIN_FENCE | BlockFlags.F_VARIABLE;
+        final long paneFlags = BlockFlags.F_THIN_FENCE;
         for (final Material mat : new Material[]{BridgeMaterial.IRON_BARS,}) {
             BlockFlags.setFlag(mat, paneFlags);
         }
@@ -3431,7 +3428,7 @@ public class BlockProperties {
      */
     public static double getGroundMinHeight(final BlockCache access, final int x, final int y, final int z, 
                                             final IBlockCacheNode node, final long flags) {
-        final Material id = node.getType();
+        //final Material id = node.getType();
         final double[] bounds = node.getBounds(access, x, y, z);
 
         if ((flags & BlockFlags.F_HEIGHT_8_INC) != 0) {
@@ -3449,10 +3446,6 @@ public class BlockProperties {
             return 0.0;
         }
         else if ((flags & BlockFlags.F_GROUND_HEIGHT) != 0) {
-            // Assume open gates/trapdoors/things to only allow standing on to, if at all.
-            if ((flags & BlockFlags.F_PASSABLE_X4) != 0 && (node.getData(access, x, y, z) & 0x04) != 0) {
-                return bounds[4];
-            }
             // All blocks that are not treated individually are ground all through.
             return 0;
         }
@@ -3804,7 +3797,7 @@ public class BlockProperties {
         final int iMaxX = Location.locToBlock(maxX);
         // At least find fences etc. if searched for.
         // TODO: BlockFlags.F_HEIGHT150 could also be ground etc., more consequent might be to always use or flag it.
-        final int iMinY = Location.locToBlock(minY - ((flags & BlockFlags.F_HEIGHT150) != 0 ? 0.5625 : 0));
+        final int iMinY = Location.locToBlock(minY - ((flags & BlockFlags.F_HEIGHT150) != 0 ? 0.5 : 0));
         final int iMaxY = Math.min(Location.locToBlock(maxY), access.getMaxBlockY());
         final int iMinZ = Location.locToBlock(minZ);
         final int iMaxZ = Location.locToBlock(maxZ);
@@ -3856,7 +3849,7 @@ public class BlockProperties {
                                            final Material mat) {
         final int iMinX = Location.locToBlock(minX);
         final int iMaxX = Location.locToBlock(maxX);
-        final int iMinY = Location.locToBlock(minY - ((BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0 ? 0.5625 : 0));
+        final int iMinY = Location.locToBlock(minY - ((BlockFlags.getBlockFlags(mat) & BlockFlags.F_HEIGHT150) != 0 ? 0.5 : 0));
         final int iMaxY = Location.locToBlock(maxY);
         final int iMinZ = Location.locToBlock(minZ);
         final int iMaxZ = Location.locToBlock(maxZ);
@@ -3900,7 +3893,7 @@ public class BlockProperties {
                                               final Material id) {
         final int iMinX = Location.locToBlock(minX);
         final int iMaxX = Location.locToBlock(maxX);
-        final int iMinY = Location.locToBlock(minY - ((BlockFlags.getBlockFlags(id) & BlockFlags.F_HEIGHT150) != 0 ? 0.5625 : 0));
+        final int iMinY = Location.locToBlock(minY - ((BlockFlags.getBlockFlags(id) & BlockFlags.F_HEIGHT150) != 0 ? 0.5 : 0));
         final int iMaxY = Math.min(Location.locToBlock(maxY), access.getMaxBlockY());
         final int iMinZ = Location.locToBlock(minZ);
         final int iMaxZ = Location.locToBlock(maxZ);
@@ -4188,33 +4181,6 @@ public class BlockProperties {
     }
 
     /**
-     * Similar to collides(... , BlockFlags.F_GROUND), but also checks the block above
-     * (against spider).<br>
-     * NOTE: This does not return true if stuck, to check for that use
-     * collidesBlock for the players location.
-     *
-     * @param access
-     *            the access
-     * @param minX
-     *            the min x
-     * @param minY
-     *            the min y
-     * @param minZ
-     *            the min z
-     * @param maxX
-     *            the max x
-     * @param maxY
-     *            the max y
-     * @param maxZ
-     *            the max z
-     * @return true, if is on ground
-     */
-    public static final boolean isOnGround(final World world, final BlockCache access, final double minX, double minY, final double minZ, 
-                                           final double maxX, final double maxY, final double maxZ) {
-        return isOnGround(access, minX, minY, minZ, maxX, maxY, maxZ, 0L);
-    }
-
-    /**
      * A convenience wrapper around the isOnGround check that takes coordinates as parameters and dispatches them to the isOnGround function as arguments for minXYZ and maxXYZ.
      * For the minXYZ arguments, the minimum value between the given coordinates is used.
      * For the maxXYZ arguments, the maximum value between the given coordinates is used.
@@ -4280,7 +4246,7 @@ public class BlockProperties {
         final int maxBlockY = access.getMaxBlockY();
         final int iMinX = Location.locToBlock(minX);
         final int iMaxX = Location.locToBlock(maxX);
-        final int iMinY = Location.locToBlock(minY - 0.5626); // TODO: Where does this magic come from...
+        final int iMinY = Location.locToBlock(minY - 0.5);
         if (iMinY > maxBlockY) {
             return false;
         }
@@ -4382,82 +4348,66 @@ public class BlockProperties {
         // Check whether the minimum ground height of the block is higher than where the entity’s bounding box ends in the Y-axis. 
         // If it is, the entity is considered to be inside the block or “stuck,” which means this block isn’t a valid candidate for being ground.
         if (getGroundMinHeight(access, x, y, z, node, flags) > maxY - y) { // TODO: height >= ?
-            if (AxisAlignedBBUtils.isFullBounds(blockAABB)) {
+            //if (AxisAlignedBBUtils.isFullBounds(blockAABB)) {
                 return AlmostBoolean.NO;
-            }
+            //}
             // Still inside.
-            else return AlmostBoolean.MAYBE;
+            //else return AlmostBoolean.MAYBE;
         }        
-
+        // Still inside block in this case (half slabs,carpet with large bb).
+        if (maxY - y < 1.0 && maxY - minY > 1.0) {
+            return AlmostBoolean.NO;
+        }
         // (Collided block is solid and the player is not inside of it)
         ////////////////////////////////////////////
         // Fast return tests for the block above  // 
         ////////////////////////////////////////////
-        // No need to check the block above in this case (half slabs, stairs).
-        if (maxY - y < 1.0) {
-            return AlmostBoolean.YES;
-        }        
         // Check if the block is at or above max build height
-        if (y >= access.getMaxBlockY()) {
+        //if (y >= access.getMaxBlockY()) {
             // Only air above (cannot build past max build height)
-            return AlmostBoolean.YES;
-        }
-        if (nodeAbove == null) {
+        //    return AlmostBoolean.YES;
+        //}
+        //if (nodeAbove == null) {
             // Ensure node above is set.
-            nodeAbove = access.getOrCreateBlockCacheNode(x, y + 1, z, false);
-        }
-        final Material aboveMat = nodeAbove.getType();
-        final long aboveFlags = BlockFlags.getBlockFlags(aboveMat);
+        //    nodeAbove = access.getOrCreateBlockCacheNode(x, y + 1, z, false);
+        //}
+        //final Material aboveMat = nodeAbove.getType();
+        //final long aboveFlags = BlockFlags.getBlockFlags(aboveMat);
         // Block above has the IGNORE_PASSABLE flag, so we don't have to check it. (Note for above block check before ground property).
-        if ((aboveFlags & BlockFlags.F_IGN_PASSABLE_CHECK) != 0) {
-            return AlmostBoolean.YES;
-        }
+        //if ((aboveFlags & BlockFlags.F_IGN_PASSABLE_CHECK) != 0) {
+        //    return AlmostBoolean.YES;
+        //}
         // Block above is liquid, not solid/ground, or set to not be considered as ground, skip here as well.
-        if ((aboveFlags & BlockFlags.F_GROUND) == 0 || (aboveFlags & BlockFlags.F_LIQUID) != 0 || (aboveFlags & ignoreFlags) != 0) {
-            return AlmostBoolean.YES;
-        }
-        boolean variable = (flags & BlockFlags.F_VARIABLE) != 0;
-        variable |= (aboveFlags & BlockFlags.F_VARIABLE) != 0;
+        //if ((aboveFlags & BlockFlags.F_GROUND) == 0 || (aboveFlags & BlockFlags.F_LIQUID) != 0 || (aboveFlags & ignoreFlags) != 0) {
+        //    return AlmostBoolean.YES;
+        //}
         
         // In case the block above has the GROUND flag, check if it is the same id/material of the collided block (walls)
-        if (!variable && id == aboveMat) {
-            if (AxisAlignedBBUtils.isFullBounds(blockAABB)) {
-                // Cannot regard a stone wall as ground.
-                return AlmostBoolean.NO;
-            }
-            // Might be, keep looping.
-            else return AlmostBoolean.MAYBE;
-        }
+        //if (id == aboveMat && AxisAlignedBBUtils.isFullBounds(blockAABB)) {
+            // Cannot regard a stone wall as ground.
+        //    return AlmostBoolean.NO;
+        //}
         // Another early return, if the bounds of the block above are null
-        final double[] blockAABB_Above = nodeAbove.getBounds(access, x, y + 1, z);
-        if (blockAABB_Above == null) {
-            return AlmostBoolean.YES;
-        }
+        //final double[] blockAABB_Above = nodeAbove.getBounds(access, x, y + 1, z);
+        //if (blockAABB_Above == null) {
+        //    return AlmostBoolean.YES;
+        //}
 
         // Check for passability(without the ignore flag) of the block above, if the player does collide with it.
-        if (isPassableWorkaround(access, x, y + 1, z, minX - x, minY - (y + 1), minZ - z, 
-                                 nodeAbove, maxX - minX, maxY - minY, maxZ - minZ,
-                                 minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {
+        //if (isPassableWorkaround(access, x, y + 1, z, minX - x, minY - (y + 1), minZ - z, 
+        //                         nodeAbove, maxX - minX, maxY - minY, maxZ - minZ,
+        //                         minX, minY, minZ, maxX, maxY, maxZ, 1.0)) {
             // Block above is passable. Regard the block collision as ground.
-            return AlmostBoolean.YES;
-        }
-        if (AxisAlignedBBUtils.isFullBounds(blockAABB_Above)) {
+        //    return AlmostBoolean.YES;
+        //}
+        //if (AxisAlignedBBUtils.isFullBounds(blockAABB_Above)) {
             // This collision cannot be ground at this x - z position.
-            return AlmostBoolean.NO;
-        }
-        // TODO: This might be seen as a violation for many block types.
-        // TODO: More distinction necessary here.
-        if (variable) {
-            // Simplistic hot fix attempt for same type + same shape.
-            // TODO: Needs passable workaround check.
-            if (AxisAlignedBBUtils.isSameShape(blockAABB, blockAABB_Above)) {
-                // Can not stand on (rough heuristics).
-                return AlmostBoolean.MAYBE; // There could be ground underneath (block vs. fence).
-            }
-            else return AlmostBoolean.YES;
-        }
+        //    return AlmostBoolean.NO;
+        //}
         // Cannot judge ground status for this collision.
-        return AlmostBoolean.MAYBE;
+        //return AlmostBoolean.NO;
+        // Comment out code was bottom-up, top-down don't have to worry about those, return YES
+        return AlmostBoolean.YES;
     }
     
     /**

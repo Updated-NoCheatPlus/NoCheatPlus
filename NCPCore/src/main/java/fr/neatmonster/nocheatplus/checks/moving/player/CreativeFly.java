@@ -92,10 +92,9 @@ public class CreativeFly extends Check {
         final double hDistance = thisMove.hDistance;
         final boolean flying = gameMode == BridgeMisc.GAME_MODE_SPECTATOR || player.isFlying();
         final boolean sprinting = player.isSprinting();
-
+        MovingUtil.prepareFullCheck(from, to, thisMove, Math.max(cc.yOnGround, cc.noFallyOnGround));
         // Lost ground, if set so.
         if (model.getGround()) {
-            MovingUtil.prepareFullCheck(from, to, thisMove, Math.max(cc.yOnGround, cc.noFallyOnGround));
             LostGround.runLostGroundChecks(player, from, to, hDistance, yDistance, lastMove, data, cc, useBlockChangeTracker ? blockChangeTracker : null, tags);
         }
 

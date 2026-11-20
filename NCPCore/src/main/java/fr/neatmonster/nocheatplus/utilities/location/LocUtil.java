@@ -245,23 +245,13 @@ public class LocUtil {
     }
 
     /**
-     * Quick out of bounds check for yaw (-360 < yaw < 360).
-     * 
-     * @param yaw
-     * @return
-     */
-    public static final boolean needsYawCorrection2(final float yaw) {
-        return Float.isNaN(yaw) || yaw <= -360f || yaw >= 360f;
-    }
-
-    /**
      * Quick out of bounds check for yaw.
      * 
      * @param yaw
      * @return
      */
     public static final boolean needsYawCorrection(final float yaw) {
-        return Float.isNaN(yaw) || yaw < 0f || yaw >= 360f;
+        return Float.isNaN(yaw);
     }
 
     /**
@@ -306,6 +296,34 @@ public class LocUtil {
         }
         return false;
     }
+    
+    /**
+     * An attempt to reverse to the original yaw from being corrected by PME
+     * If 180 < yaw < -180. Then it will be add/subtract by 360 till it within the range
+     * The problem appear when large number reduce to small number like this case: 303.1501 -56.849915
+     * It has extra 0.000015 shift the direction a bit. Make SFly 0.01 off in distance
+     * 
+     * @param fromYaw
+     * @param toYaw
+     * @return The real "to" yaw before correction
+     * 
+     */
+    public static float getYawBeforeInternallyCorrected(float fromYaw, float toYaw) {
+        if (toYaw > -180f && toYaw < 180f && Math.abs(fromYaw - toYaw) > 359f) {
+            float tmpYaw = toYaw;
+            if (fromYaw > toYaw) {
+                do {
+                    tmpYaw += 360f; 
+                } while(Math.abs(fromYaw - tmpYaw) >= 360f);
+            } else {
+                do {
+                    tmpYaw -= 360f; 
+                } while(Math.abs(fromYaw - tmpYaw) >= 360f);
+            }
+            return tmpYaw;
+        }
+        return toYaw;
+    }
 
     /**
      * Quick out of bounds check for yaw and pitch.
@@ -319,17 +337,6 @@ public class LocUtil {
     }
 
     /**
-     * Quick out of bounds check for yaw and pitch.
-     * 
-     * @param yaw
-     * @param pitch
-     * @return
-     */
-    public static final boolean needsDirectionCorrection2(final float yaw, final float pitch) {
-        return needsYawCorrection2(yaw) || needsPitchCorrection(pitch);
-    }
-
-    /**
      * Ensure 0 <= yaw < 360.
      * 
      * @param yaw
@@ -338,43 +345,6 @@ public class LocUtil {
     public static final float correctYaw(float yaw) {
         if (Float.isNaN(yaw)) {
             return 0f;
-        }
-        if (yaw >= 360f) {
-            if (yaw > 10000f) {
-                yaw = 0f;
-            } else {
-                while (yaw > 360f) {
-                    yaw -= 360f;
-                }
-            }
-        }
-        if (yaw < 0f) {
-            if (yaw < -10000f) {
-                yaw = 0f;
-            } else {
-                while (yaw < 0f) {
-                    yaw += 360f;
-                }
-            }
-        }
-        return yaw;
-    }
-
-    /**
-     * Ensure -360 < yaw < 360.
-     * 
-     * @param yaw
-     * @return
-     */
-    public static final float correctYaw2(float yaw) {
-        if (Float.isNaN(yaw) || yaw == Float.NEGATIVE_INFINITY || yaw == Float.POSITIVE_INFINITY) {
-            return 0f;
-        }
-        if (yaw >= 360f) {
-            yaw -= 360f * Math.floor(yaw / 360f);
-        }
-        if (yaw <= -360f) {
-            yaw -= 360f * Math.ceil(yaw / 360f);
         }
         return yaw;
     }

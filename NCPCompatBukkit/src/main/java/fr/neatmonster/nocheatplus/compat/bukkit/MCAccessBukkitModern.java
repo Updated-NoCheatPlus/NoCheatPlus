@@ -488,7 +488,7 @@ public class MCAccessBukkitModern extends MCAccessBukkit {
         
         // Walls.
         for (Material mat : MaterialUtil.ALL_WALLS) {
-            BlockFlags.setBlockFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_VARIABLE);
+            BlockFlags.setBlockFlags(mat, BlockFlags.SOLID_GROUND | BlockFlags.F_HEIGHT150);
             addModel(mat, MODEL_THICK_FENCE2);
         }
 

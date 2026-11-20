@@ -834,7 +834,7 @@ public class BlockChangeTracker {
         final int maxBlockY = blockCache.getMaxBlockY();
         final int iMinX = Location.locToBlock(minX);
         final int iMaxX = Location.locToBlock(maxX);
-        final int iMinY = Location.locToBlock(minY - 0.5626);
+        final int iMinY = Location.locToBlock(minY - 0.5);
         if (iMinY > maxBlockY) {
             return false;
         }

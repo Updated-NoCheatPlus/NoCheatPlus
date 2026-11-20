@@ -492,7 +492,8 @@ public class AxisAlignedBBUtils {
         if (bounds1 == null || bounds2 == null) {
             return bounds1 == bounds2;
         }
-        for (int i = 0; i < 6; i++) {
+        if (bounds1.length != bounds2.length) return false;
+        for (int i = 0; i < bounds1.length; i++) {
             if (bounds1[i] != bounds2[i]) {
                 return false;
             }
