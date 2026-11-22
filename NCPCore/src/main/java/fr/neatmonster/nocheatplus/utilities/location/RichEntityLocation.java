@@ -195,6 +195,18 @@ public class RichEntityLocation extends RichBoundsLocation {
         final Material supportingBlock = getBlockType(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ());
         return (BlockFlags.getBlockFlags(supportingBlock) & flag) != 0;
     }
+    /**
+     * Checks whether the player is currently supported by the block with the given material.<br>
+     * See {@link SupportingBlockUtils}.
+     * @param mat Material
+     * @return
+     */
+    public boolean isSupportedBy(Material mat) {
+        final IPlayerData pData = DataManager.getPlayerDataForEntity(entity, passengerUtil);
+        BlockCoord supportingBlockPos = SupportingBlockUtils.getOnPos(blockCache, getLocation(), pData == null ? null : pData.getSupportingBlockData(), (float)0.5000001D);
+        final Material supportingBlock = getBlockType(supportingBlockPos.getX(), supportingBlockPos.getY(), supportingBlockPos.getZ());
+        return supportingBlock == mat;
+    }
     
     /**
      * @return False, for 1.11 and lower clients jumping on beds.

@@ -46,6 +46,7 @@ import fr.neatmonster.nocheatplus.compat.*;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeEnchant;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeHealth;
 import fr.neatmonster.nocheatplus.compat.bukkit.BridgeMaterial;
+import fr.neatmonster.nocheatplus.compat.versions.ClientVersion;
 import fr.neatmonster.nocheatplus.compat.versions.ServerVersion;
 import fr.neatmonster.nocheatplus.components.modifier.IAttributeAccess;
 import fr.neatmonster.nocheatplus.components.registry.activation.Activation;
@@ -142,19 +143,25 @@ public class NoFall extends Check {
      * somehow. Contains checking for skipping conditions (getAllowFlight set +
      * configured to skip).
      * 
-     * @param data
+     * @param player
      * @param y
      * @param previousSetBackY
      *            The set back y from lift-off. If not present:
      *            Double.NEGATIVE_INFINITY.
+     * @param pLoc current location
+     * @param reallyOnGround if this function was fire as violation
+     * @param data MovingData
+     * @param cc MovingConfig
+     * @param pData generic PlayerData
      */
     private void handleOnGround(final Player player, final double y, final double previousSetBackY,
+                                final PlayerLocation pLoc,
                                 final boolean reallyOnGround, final MovingData data, final MovingConfig cc,
                                 final IPlayerData pData) {
         // Get the fall distance and modify it accordingly to the fallen on block (currently only related to pointed dripstone)
-        double fallDist = getAndRunFallDistanceDependentTasks(player, y, previousSetBackY, data);
+        double fallDist = getAndRunFallDistanceDependentTasks(player, y, previousSetBackY, pLoc, data);
         // Calculate damage and apply all possible modifiers.
-        double maxDamage = getDamage(fallDist, applyBlockDamageMultiplier(player, data), player);
+        double maxDamage = getDamage(fallDist, applyBlockDamageMultiplier(player, pLoc, data, pData), player);
         maxDamage = applyFeatherFalling(player, maxDamage, mcAccess.getHandle().dealFallDamageFiresAnEvent().decide());
         if (maxDamage > 0.0) {
             // Check skipping conditions.
@@ -182,14 +189,13 @@ public class NoFall extends Check {
     /**
      * Get the applicable fall-distance for the given data and run some tasks related to fall-distance specifically. <br>
      * (I.e.: altering the block the player fell on (farmland, turtle eggs) or modify the fall-distance (stalagmites))
+     * @param pLoc 
      */
-    private double getAndRunFallDistanceDependentTasks(final Player player, double y, double previousSetBackY, final MovingData data) {
+    private double getAndRunFallDistanceDependentTasks(final Player player, double y, double previousSetBackY, PlayerLocation pLoc, final MovingData data) {
         // Base fall-distance
-        double fallDist = getApplicableFallHeight(player, y, previousSetBackY, data);
-        // TODO: Need move data pTo, this location isn't updated
-        Block block = player.getLocation(useLoc2).subtract(0.0, 1.0, 0.0).getBlock();
+        double fallDist = getApplicableFallHeight(player, y, previousSetBackY, pLoc, data);
+        Block block = player.getWorld().getBlockAt(pLoc.getBlockX(), pLoc.getBlockY(), pLoc.getBlockZ());
         final IPlayerData pData = DataManager.getPlayerData(player);
-        
         // Falling on farmland has a chance of trampling it (wasn't always the case. On legacy versions, just walking on crops would have been enough to trample them :) )
         if (block.getType() == BridgeMaterial.FARMLAND && fallDist > 0.5 && ThreadLocalRandom.current().nextFloat() < fallDist - 0.5) {
             final BlockState newState = block.getState();
@@ -325,33 +331,50 @@ public class NoFall extends Check {
      * Modify the given fall-damage according to what block the player fell on.<br>
      *
      * @param player
+     * @param pLoc 
      * @param data
+     * @param pData 
      * @param damage The fall damage to correct.
      * @return Modified damage.
      */
-    public static float applyBlockDamageMultiplier(final Player player, final MovingData data) {
-        final PlayerMoveData validMove = data.playerMoves.getLatestValidMove();
-        if (validMove != null && validMove.toIsValid) {
-            // TODO: Need move data pTo, this location isn't updated
-            // TODO: Needs the supporting block mechanic in 1.20.
-            final Block block = player.getWorld().getBlockAt(Location.locToBlock(validMove.to.getX()), Location.locToBlock(validMove.to.getY()), Location.locToBlock(validMove.to.getZ()));
-            final Material mat = block.getType();
-            if ((BlockFlags.getBlockFlags(mat) & BlockFlags.F_STICKY) != 0) {
+    public static float applyBlockDamageMultiplier(final Player player, final PlayerLocation pLoc, final MovingData data, final IPlayerData pData) {
+        if (pData.getClientVersion().isAtLeast(ClientVersion.V_1_20)) {
+            if (pLoc.isSupportedBy(BlockFlags.F_STICKY)) {
                 return 0.2f;
             }
-            if (bedChange && MaterialUtil.BEDS.contains(mat)) {
+            if (pLoc.isSupportedBy(BlockFlags.F_BED)) {
                 return 0.5f;
             }
-            if (hayChange && mat == Material.HAY_BLOCK) {
+            if (pLoc.isSupportedBy(Material.HAY_BLOCK)) {
                 return 0.2f;
             }
-            if (BridgeMisc.hasIsFrozen()) {
-                if (block.getBlockData() instanceof PointedDripstone) {
-                    PointedDripstone dripstone = (PointedDripstone) block.getBlockData();
-                    boolean isStalagmite = dripstone.getThickness().equals(PointedDripstone.Thickness.TIP) && dripstone.getVerticalDirection().equals(BlockFace.UP);
-                    if (isStalagmite) {
-                        return 2f;
-                    }
+            final Block block = player.getWorld().getBlockAt(pLoc.getBlockX(), pLoc.getBlockY(), pLoc.getBlockZ());
+            if (block.getBlockData() instanceof PointedDripstone) {
+                PointedDripstone dripstone = (PointedDripstone) block.getBlockData();
+                boolean isStalagmite = dripstone.getThickness().equals(PointedDripstone.Thickness.TIP) && dripstone.getVerticalDirection().equals(BlockFace.UP);
+                if (isStalagmite) {
+                    return 2f;
+                }
+            }
+            return 1f;
+        }
+        final Block block = player.getWorld().getBlockAt(pLoc.getBlockX(), pLoc.getBlockY(), pLoc.getBlockZ());
+        final Material mat = block.getType();
+        if ((BlockFlags.getBlockFlags(mat) & BlockFlags.F_STICKY) != 0) {
+            return 0.2f;
+        }
+        if (bedChange && MaterialUtil.BEDS.contains(mat)) {
+            return 0.5f;
+        }
+        if (hayChange && mat == Material.HAY_BLOCK) {
+            return 0.2f;
+        }
+        if (BridgeMisc.hasIsFrozen()) {
+            if (block.getBlockData() instanceof PointedDripstone) {
+                PointedDripstone dripstone = (PointedDripstone) block.getBlockData();
+                boolean isStalagmite = dripstone.getThickness().equals(PointedDripstone.Thickness.TIP) && dripstone.getVerticalDirection().equals(BlockFace.UP);
+                if (isStalagmite) {
+                    return 2f;
                 }
             }
         }
@@ -367,10 +390,11 @@ public class NoFall extends Check {
      * @param previousSetBackY
      *            The set back y from lift-off. If not present:
      *            Double.NEGATIVE_INFINITY.
+     * @param pLoc 
      * @param data
      * @return
      */
-    private static double getApplicableFallHeight(final Player player, final double y, final double previousSetBackY, final MovingData data) {
+    private static double getApplicableFallHeight(final Player player, final double y, final double previousSetBackY, final PlayerLocation pLoc, final MovingData data) {
         final double yDistance = Math.max(data.noFallMaxY - y, data.noFallFallDistance);
         if (yDistance > 0.0 && !attributeAvailable && data.jumpAmplifier > 0.0 && previousSetBackY != Double.NEGATIVE_INFINITY) {
             // Fall height counts below previous set-back-y.
@@ -381,16 +405,14 @@ public class NoFall extends Check {
                 return Math.max(0.0, yDistance - correction);
             }
         }
-        // TODO: Needs the supporting block mechanic in 1.20.
-        final PlayerMoveData validMove = data.playerMoves.getLatestValidMove();
-        if (BridgeMisc.hasIsFrozen() && validMove != null && validMove.toIsValid && yDistance > 0.0) {
-            final Block fallenOnBlock = player.getWorld().getBlockAt(Location.locToBlock(validMove.to.getX()), Location.locToBlock(validMove.to.getY()), Location.locToBlock(validMove.to.getZ()));
+        if (BridgeMisc.hasIsFrozen() && yDistance > 0.0) {
+            final Block fallenOnBlock = player.getWorld().getBlockAt(pLoc.getBlockX(), pLoc.getBlockY(), pLoc.getBlockZ());
             if (fallenOnBlock.getBlockData() instanceof PointedDripstone) {
                 PointedDripstone dripstone = (PointedDripstone) fallenOnBlock.getBlockData();
                 boolean isStalagmite = dripstone.getThickness().equals(PointedDripstone.Thickness.TIP) && dripstone.getVerticalDirection().equals(BlockFace.UP);
                 if (isStalagmite) {
                     // Source of the formula: PointedDripstoneBlock.java -> fallOn() -> calculateFallDamage()
-                    return yDistance + 2D;
+                    return yDistance + (fallDistChange ? 2.5D : 2D); // Since 1.21.11 they switched to floor the dmg, so they added +0.5 in stalagmite in height so the floor doesn’t 0 out the damage. So we need to add +0.5 to the height as well.
                 }
             }
         }
@@ -398,8 +420,8 @@ public class NoFall extends Check {
     }
 
 
-    public static double getApplicableFallHeight(final Player player, final double y, final MovingData data) {
-        return getApplicableFallHeight(player, y, data.hasSetBack() ? data.getSetBackY() : Double.NEGATIVE_INFINITY, data);
+    public static double getApplicableFallHeight(final Player player, final double y, final PlayerLocation pLoc, final MovingData data) {
+        return getApplicableFallHeight(player, y, data.hasSetBack() ? data.getSetBackY() : Double.NEGATIVE_INFINITY, pLoc, data);
     }
 
 
@@ -414,8 +436,8 @@ public class NoFall extends Check {
      * @param data
      * @return
      */
-    public boolean willDealFallDamage(final Player player, final double y, final double previousSetBackY, final MovingData data) {
-        return getDamage(getApplicableFallHeight(player, y, previousSetBackY, data), 1f, player) > 0D;
+    public boolean willDealFallDamage(final Player player, final double y, final double previousSetBackY, final PlayerLocation pLoc, final MovingData data) {
+        return getDamage(getApplicableFallHeight(player, y, previousSetBackY, pLoc, data), 1f, player) > 0D;
     }
 
 
@@ -424,12 +446,13 @@ public class NoFall extends Check {
      * @param player
      * @param minY
      * @param previousSetBackY 
+     * @param pLoc 
      * @param reallyOnGround
      * @param data
      */
-    private void adjustFallDistance(final Player player, final double minY, double previousSetBackY, final boolean reallyOnGround, final MovingData data) {
+    private void adjustFallDistance(final Player player, final double minY, double previousSetBackY, final PlayerLocation pLoc, final boolean reallyOnGround, final MovingData data) {
         boolean adjust = false;
-        if (willDealFallDamage(player, minY, previousSetBackY, data)) {
+        if (willDealFallDamage(player, minY, previousSetBackY, pLoc, data)) {
             // Don't set fall distance yet, as they are being touch the ground, and fallDistance hasn't been updated
             //player.setFallDistance(noFallFallDistance);
             data.requestTrueForGround = true;
@@ -538,7 +561,7 @@ public class NoFall extends Check {
         }
         else if (fromOnGround || !toOnGround && thisMove.touchedGround) {
             // Check if to deal damage (fall back damage check).
-            touchDown(player, minY, previousSetBackY, data, cc, pData); // Includes the current y-distance on descend!
+            touchDown(player, minY, previousSetBackY, pTo, data, cc, pData); // Includes the current y-distance on descend!
             // Ensure very big/strange moves don't yield violations.
             if (toY - fromY <= -attributeAccess.getHandle().getSafeFallDistance(player)) {
                 data.noFallSkipAirCheck = true;
@@ -554,7 +577,7 @@ public class NoFall extends Check {
                 // In this case the player has traveled further: add the difference.
                 data.noFallFallDistance -= yDiff;
             }
-            touchDown(player, minY, previousSetBackY, data, cc, pData);
+            touchDown(player, minY, previousSetBackY, pTo, data, cc, pData);
         }
         else {
             // Ensure fall distance is correct, or "anyway"?
@@ -608,11 +631,12 @@ public class NoFall extends Check {
      * @param cc
      */
     private void touchDown(final Player player, final double minY, final double previousSetBackY,
+                           final PlayerLocation pLoc,
                            final MovingData data, final MovingConfig cc, IPlayerData pData) {
         if (cc.noFallDealDamage) {
-            handleOnGround(player, minY, previousSetBackY, true, data, cc, pData);
+            handleOnGround(player, minY, previousSetBackY, pLoc, true, data, cc, pData);
         }
-        else adjustFallDistance(player, minY, previousSetBackY, true, data);
+        else adjustFallDistance(player, minY, previousSetBackY, pLoc, true, data);
     }
 
 
@@ -657,10 +681,16 @@ public class NoFall extends Check {
 
     /**
      * This is called if a player fails a check and gets set back, to avoid using that to avoid fall damage the player might be dealt damage here.
+     * @param player
+     * @param y
+     * @param pLoc
+     *            The current/newest location
+     * @param data
+     * @param pData
      */
-    public void checkDamage(final Player player,  final double y, final MovingData data, final IPlayerData pData) {
+    public void checkDamage(final Player player, final double y, final PlayerLocation pLoc, final MovingData data, final IPlayerData pData) {
         final MovingConfig cc = pData.getGenericInstance(MovingConfig.class);
         // Deal damage.
-        handleOnGround(player, y, data.hasSetBack() ? data.getSetBackY() : Double.NEGATIVE_INFINITY, false, data, cc, pData);
+        handleOnGround(player, y, data.hasSetBack() ? data.getSetBackY() : Double.NEGATIVE_INFINITY, pLoc, false, data, cc, pData);
     }
 }

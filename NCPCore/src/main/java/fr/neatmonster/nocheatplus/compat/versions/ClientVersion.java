@@ -104,9 +104,13 @@ public enum ClientVersion {
     V_1_21_11(774),
     
     /**
-     * New version naming (year + release)
+     * New version naming (year + n. game drop + dev release for bugs etc...) 
+     * 26.1.1 / 26.1.2 have the same protocol version.
      */
     V_26_1(775),
+    V_26_2(776),
+    V_26_3(777),
+    
 
 
     LOWER_THAN_KNOWN_VERSIONS(V_1_7_2.protocolID - 1, false),
@@ -211,43 +215,6 @@ public enum ClientVersion {
      */
     public static ClientVersion getOldest() {
         return VALUES[0];
-    }
-
-    /**
-     * Test if the given version is between the two given ones.
-     * 
-     * @param versionLow
-     *            Lower version
-     * @param includeLow
-     *            If to check for equality with the lower version (>=)
-     * @param versionHigh
-     *            Upper version
-     * @param includeHigh
-     *            If to check for equality with the higher version (<=)
-     * @return true if the client version is in given range
-     */
-    public boolean isVersionBetween(ClientVersion versionLow, boolean includeLow, ClientVersion versionHigh, boolean includeHigh) {
-        if (includeLow) {
-            if (isLowerThan(versionLow)) {
-                return false;
-            }
-        } 
-        else {
-            if (isAtMost(versionLow)) {
-                return false;
-            }
-        }
-        if (includeHigh) {
-            if (isHigherThan(versionHigh)) {
-                return false;
-            }
-        } 
-        else {
-            if (isAtLeast(versionHigh)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**

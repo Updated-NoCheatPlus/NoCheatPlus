@@ -261,7 +261,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                 // Check if to deal damage.
                 double y = loc.getY();
                 if (data.hasSetBack()) y = Math.min(y, data.getSetBackY());
-                noFall.checkDamage(player, y, data, pData);
+                // DO use moveInfo.from as moveInfo.set(player, loc, null, cc.yOnGround); was "To" nulled
+                noFall.checkDamage(player, y, moveInfo.from, data, pData);
             }
             // Cleanup
             useBedLeaveLoc.setWorld(null);
@@ -716,7 +717,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         final CombinedData data = pData.getGenericInstance(CombinedData.class);
         final MovingData mData = pData.getGenericInstance(MovingData.class);
         data.lastMoveTime = now; 
-        mData.mcFallDistance = player.getFallDistance();
         final Location from = event.getFrom();
         // Feed yawrate and reset moving data positions if necessary.
         final int tick = TickTask.getTick();
@@ -887,7 +887,6 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         }
         if (from.getYaw() == data.correctedIncomingYaw) from.setYaw(data.originalIncomingYaw);
         if (to.getYaw() == data.correctedIncomingYaw) to.setYaw(data.originalIncomingYaw);
-        
         if (
             // 0: This is how we know if the event was fired correctly; player#getLocaton() and the event's "from" location are the same (More specifically, for Bukkit, from = the current Location of the player).
             // If these don't match, player#getLocation() will reflect a skipped move between from and to (for which no event was fired).
@@ -1492,7 +1491,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
             }
             else {
                 if (checkNf && cc.sfSetBackPolicyFallDamage) {
-                    if (!noFall.willDealFallDamage(player, from.getY(), previousSetBackY, data)) {
+                    if (!noFall.willDealFallDamage(player, from.getY(), previousSetBackY, pTo, data)) {
                         mightSkipNoFall = true;
                     }
                     // Check if to really skip.
@@ -1504,7 +1503,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
 
                     // (Don't deal damage where no fall damage is possible.)
                     if (!mightSkipNoFall && (!pTo.isResetCond() || !pFrom.isResetCond())) {
-                        noFall.checkDamage(player, Math.min(from.getY(), to.getY()), data, pData);
+                        noFall.checkDamage(player, Math.min(from.getY(), to.getY()), pTo, data, pData);
                     }
                 }
             }
@@ -2136,13 +2135,13 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         boolean allowReset = true;
         float fallDistance = player.getFallDistance();
         final double damage = BridgeHealth.getRawDamage(event);
-        final float dataDist = (float) NoFall.getApplicableFallHeight(player, loc.getY(), data);
+        final float dataDist = (float) NoFall.getApplicableFallHeight(player, loc.getY(), pLoc, data);
         if (debug) debug(player, "Damage(FALL/PRE): " + damage + " / mc=" + player.getFallDistance() + " nf=" + data.noFallFallDistance + " nfr=" + dataDist);
 
         // NoFall bypass checks.
         // TODO: data.noFallSkipAirCheck is used to skip checking in general, thus move into that block or not?
         // TODO: Could consider skipping accumulated fall distance for NoFall in general as well.
-        final float mult = NoFall.applyBlockDamageMultiplier(player, data);
+        final float mult = NoFall.applyBlockDamageMultiplier(player, pLoc, data, pData);
         if (!data.noFallSkipAirCheck) {
             
             // Cheat: let Minecraft gather and deal fall damage.
@@ -2179,13 +2178,8 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
                     }
                 }
             }
-            // Be sure not to lose that block.
-            // TODO: What is this and why is it right here?
-            // Answer: https://github.com/NoCheatPlus/NoCheatPlus/commit/50ebbb01fb3998f5e4ebba741ed6cbd318de00c5
-            data.noFallFallDistance += 1.0; 
-            // TODO: Account for liquid too?
             // Cheat: set ground to true in-air. Cancel the event and restore fall distance. NoFall data will not be reset 
-            if (!pLoc.isOnGround(1.0, 0.3, 0.1) && !pLoc.isResetCond() && !pLoc.isAboveLadder()) {
+            if (!pLoc.isOnGround() && !pLoc.isResetCond() && !pLoc.isAboveLadder()) {
                 if (noFallVL(player, "fakeground", data, cc) && data.hasSetBack()) {
                     allowReset = false;
                     Improbable.check(player, 1.0f, System.currentTimeMillis(), "nofall.fakeground",pData);
@@ -2561,7 +2555,7 @@ public class MovingListener extends CheckListener implements TickListener, IRemo
         // Check nofall damage (!).
         if (cc.sfHoverFallDamage && noFall.isEnabled(player, pData)) {
             // Consider adding 3/3.5 to fall distance if fall distance > 0?
-            noFall.checkDamage(player, loc.getY(), data, pData);
+            noFall.checkDamage(player, loc.getY(), loc, data, pData);
         }
         // Delegate violation handling.
         survivalFly.handleHoverViolation(player, loc, cc, data);
